@@ -1,0 +1,92 @@
+<div class="breakpoints-panel" data-testid="breakpoints-panel">
+    @if (lastHit(); as hit) {
+    <p class="hit" data-testid="breakpoint-hit">
+        <app-breakpoint-icon [isSet]="true" />
+        Paused at event #{{ hit.entry.sequence }}, {{ hit.entry.kind }}, which the breakpoint on {{
+        hit.breakpoint.kind }} matches. Resume or Step to go on.
+    </p>
+    }
+    <form class="add" (submit)="addBreakpoint($event, kind.value, source.value, order.value)">
+        <label>
+            Event kind
+            <input
+                #kind
+                type="text"
+                list="breakpoint-kinds"
+                data-testid="breakpoint-kind"
+                appTooltip="The kind of event to pause at, such as OrderPickedUp"
+                placeholder="OrderPickedUp"
+            />
+        </label>
+        <datalist id="breakpoint-kinds">
+            @for (option of kinds(); track option) {
+            <option [value]="option"></option>
+            }
+        </datalist>
+        <label>
+            Source
+            <select
+                #source
+                data-testid="breakpoint-source"
+                appTooltip="Only events from this module"
+            >
+                <option value="">Any</option>
+                @for (option of sources; track option) {
+                <option [value]="option">{{ option }}</option>
+                }
+            </select>
+        </label>
+        <label>
+            Order
+            <input
+                #order
+                type="text"
+                data-testid="breakpoint-order"
+                appTooltip="Only events about this order, such as order-1; blank for any"
+                placeholder="Any"
+            />
+        </label>
+        <button
+            type="submit"
+            data-testid="breakpoint-add"
+            appTooltip="Pause the run at events like this"
+        >
+            Add breakpoint
+        </button>
+    </form>
+    @if (breakpoints().length === 0) {
+    <p class="hint" data-testid="no-breakpoints">
+        No breakpoints. Add one here, or with the dot on any event.
+    </p>
+    } @else {
+    <ul class="list">
+        @for (breakpoint of breakpoints(); track breakpoint.id) {
+        <li data-testid="breakpoint" [class.is-off]="!breakpoint.isOn">
+            <label class="switch">
+                <input
+                    type="checkbox"
+                    data-testid="breakpoint-switch"
+                    [checked]="breakpoint.isOn"
+                    [appTooltip]="switchLabel(breakpoint)"
+                    [attr.aria-label]="switchLabel(breakpoint)"
+                    (change)="switchTo.emit({ id: breakpoint.id, isOn: !breakpoint.isOn })"
+                />
+                <app-breakpoint-icon [isSet]="breakpoint.isOn" />
+                <strong data-testid="breakpoint-kind-name">{{ breakpoint.kind }}</strong>
+            </label>
+            <span class="narrowing">{{ narrowing(breakpoint) }}</span>
+            <button
+                type="button"
+                class="icon"
+                data-testid="breakpoint-remove"
+                appTooltip="Remove this breakpoint"
+                [attr.aria-label]="'Remove the breakpoint on ' + breakpoint.kind"
+                (click)="remove.emit(breakpoint.id)"
+            >
+                ✕
+            </button>
+        </li>
+        }
+    </ul>
+    }
+</div>

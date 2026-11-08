@@ -1,0 +1,318 @@
+<div class="toolbar">
+    <span id="row-mode-heading">Rows</span>
+    <div class="button-group" role="group" aria-labelledby="row-mode-heading">
+        <button
+            type="button"
+            data-testid="rows-by-time"
+            appTooltip="Line commits up by simulated time, under hours and minutes"
+            [class.is-selected]="rowMode() === modes.ByTime"
+            [attr.aria-pressed]="rowMode() === modes.ByTime"
+            (click)="mode.emit(modes.ByTime)"
+        >
+            By time
+        </button>
+        <button
+            type="button"
+            data-testid="rows-by-number"
+            appTooltip="Line up each branch's nth job run or API call, under hundreds and tens"
+            [class.is-selected]="rowMode() === modes.ByNumber"
+            [attr.aria-pressed]="rowMode() === modes.ByNumber"
+            (click)="mode.emit(modes.ByNumber)"
+        >
+            By number
+        </button>
+    </div>
+    <span id="zoom-heading">Zoom</span>
+    <div class="button-group" role="group" aria-labelledby="zoom-heading">
+        @for (level of zoomLevels; track level) {
+        <button
+            type="button"
+            [attr.data-testid]="'zoom-' + level"
+            [appTooltip]="zoomTooltip(level)"
+            [class.is-selected]="zoom() === level"
+            [attr.aria-pressed]="zoom() === level"
+            (click)="zoomTo.emit(level)"
+        >
+            {{ zoomLabel(level) }}
+        </button>
+        }
+    </div>
+</div>
+<!-- The headings move sideways with the rows below, and the time and group heading stays put. -->
+<div class="headings-frame">
+    <div class="headings" [style.transform]="headingsShift()">
+        <span class="label-heading" [style.transform]="labelShift()">Time and group</span>
+        @for (heading of headings(); track heading.id) {
+        <span
+            class="heading"
+            data-testid="branch-heading"
+            [attr.data-branch-id]="heading.id"
+            [attr.data-lane]="heading.colour"
+            [class.is-current]="heading.isCurrent"
+        >
+            @if (editing() === heading.id) {
+            <span class="input-group">
+                <input
+                    #newName
+                    type="text"
+                    data-testid="branch-rename-input"
+                    appTooltip="Type the new name, then press Enter, or Escape to cancel"
+                    [attr.aria-label]="'New name for ' + heading.name"
+                    [value]="heading.name"
+                    (keydown.enter)="saveName(heading, newName.value)"
+                    (keydown.escape)="stopRenaming()"
+                />
+                <button
+                    type="button"
+                    data-testid="branch-save-name"
+                    appTooltip="Save the new name"
+                    (click)="saveName(heading, newName.value)"
+                >
+                    Save
+                </button>
+                <button type="button" appTooltip="Keep the name as it is" (click)="stopRenaming()">
+                    Cancel
+                </button>
+            </span>
+            } @else {
+            <button
+                type="button"
+                class="name"
+                data-testid="watch-branch"
+                [appTooltip]="heading.watchLabel"
+                [attr.aria-label]="heading.watchLabel"
+                [attr.aria-current]="heading.isCurrent ? 'true' : null"
+                (click)="watchBranch(heading)"
+            >
+                {{ heading.name }}
+            </button>
+            <span class="origin">{{ heading.origin }}</span>
+            <button
+                type="button"
+                class="icon"
+                data-testid="branch-rename"
+                [appTooltip]="heading.renameLabel"
+                [attr.aria-label]="heading.renameLabel"
+                (click)="startRenaming(heading)"
+            >
+                <app-pencil-icon />
+            </button>
+            }
+        </span>
+        }
+    </div>
+</div>
+@if (rows().length > 0) {
+<cdk-virtual-scroll-viewport
+    class="list"
+    data-testid="timeline-rows"
+    [itemSize]="rowHeight"
+    (scroll)="noticeScroll()"
+>
+    <div
+        *cdkVirtualFor="let row of rows(); trackBy: trackRow"
+        class="row"
+        data-testid="timeline-row"
+        [attr.data-kind]="row.kind"
+        [class.is-event]="row.isEvent"
+        [class.is-group]="row.kind !== nodeKinds.Commit && !row.isConnector"
+        [class.is-connector]="row.isConnector"
+    >
+        @if (row.isConnector) {
+        <span class="label connector-label" [style.--depth]="row.depth">
+            <span class="chevron-space" aria-hidden="true"></span>
+            <span class="label-text">{{ row.label }}</span>
+        </span>
+        @for (cell of row.cells; track cell.column) {
+        <span
+            class="cell"
+            aria-hidden="true"
+            [attr.data-lane]="cell.lane.colour"
+            [attr.data-unaware]="cell.unaware?.part"
+            [attr.data-crossing]="cell.lane.crossing"
+            [class.has-lane]="cell.lane.isOn"
+            [class.is-lane-from-left]="cell.lane.isStartFromLeft"
+            [class.is-lane-from-right]="cell.lane.isStartFromRight"
+            [class.is-lane-to-left]="cell.lane.isLeavingLeft"
+            [class.is-lane-to-right]="cell.lane.isLeavingRight"
+            [class.is-lane-crossed]="cell.lane.isCrossed"
+        ></span>
+        } } @else { @if (row.canOpen) {
+        <!-- A group's label opens it, and a commit's whole label opens its events. -->
+        <button
+            type="button"
+            class="label toggle"
+            data-testid="timeline-toggle"
+            [style.--depth]="row.depth"
+            [appTooltip]="(row.isOpen ? 'Close ' : 'Open ') + (row.label || 'this commit')"
+            [attr.aria-expanded]="row.isOpen"
+            [attr.aria-label]="(row.isOpen ? 'Close ' : 'Open ') + (row.label || 'this commit')"
+            (pointerdown)="stopFollowing()"
+            (click)="toggleRow(row)"
+        >
+            <svg
+                class="chevron"
+                [class.is-open]="row.isOpen"
+                viewBox="0 0 12 12"
+                aria-hidden="true"
+            >
+                <path d="M4 2l4 4-4 4" />
+            </svg>
+            <span class="label-text">{{ row.label }}</span>
+        </button>
+        } @else {
+        <span class="label" [style.--depth]="row.depth">
+            <span class="chevron-space" aria-hidden="true"></span>
+            <span class="label-text">{{ row.label }}</span>
+        </span>
+        } @for (cell of row.cells; track cell.column) { @if (cell.place !== null && !row.isEvent) {
+        <span
+            class="cell commit"
+            data-testid="commit-cell"
+            [attr.data-mark]="cell.mark"
+            [attr.data-branch-id]="cell.column"
+            [attr.data-lane]="cell.lane.colour"
+            [attr.data-unaware]="cell.unaware?.part"
+            [attr.data-crossing]="cell.lane.crossing"
+            [class.has-lane]="cell.lane.isOn"
+            [class.is-lane-from-left]="cell.lane.isStartFromLeft"
+            [class.is-lane-from-right]="cell.lane.isStartFromRight"
+            [class.is-lane-to-left]="cell.lane.isLeavingLeft"
+            [class.is-lane-to-right]="cell.lane.isLeavingRight"
+            [class.is-lane-crossed]="cell.lane.isCrossed"
+            [class.is-later]="cell.isLater"
+            [class.is-shown]="cell.isShown"
+            [class.is-fork-point]="cell.isForkPoint"
+        >
+            <button
+                type="button"
+                class="select"
+                [appTooltip]="cell.tooltip"
+                [attr.aria-label]="cell.tooltip"
+                [attr.aria-pressed]="cell.isShown"
+                (pointerdown)="stopFollowing()"
+                (click)="chooseCell(cell)"
+            >
+                <span class="mark" aria-hidden="true"></span>
+                @if (cell.module !== null) {
+                <span class="module" data-testid="commit-module" [attr.data-module]="cell.module"
+                    >{{ cell.module }}</span
+                >
+                }
+                <span class="cell-text">{{ cell.text }}</span>
+                @if (cell.calledFrom !== null) {
+                <span class="call-in" data-testid="commit-call" aria-hidden="true"></span>
+                } @if (cell.isCalling) {
+                <span class="call-out" aria-hidden="true"></span>
+                } @if (cell.from !== null) {
+                <span class="from">{{ cell.from }}</span>
+                } @if (cell.unaware?.text; as unawareText) {
+                <span class="unaware-text" data-testid="unaware-time">{{ unawareText }}</span>
+                }
+            </button>
+            @if (cell.isForkPoint) {
+            <button
+                type="button"
+                class="fork-at"
+                data-testid="commit-fork"
+                [appTooltip]="'Fork here: begin a new branch after commit ' + cell.place"
+                [attr.aria-label]="'Fork here: begin a new branch after commit ' + cell.place"
+                (pointerdown)="stopFollowing()"
+                (click)="forkCell(cell)"
+            >
+                <app-fork-icon />
+            </button>
+            }
+        </span>
+        } @else if (cell.place !== null) {
+        <span
+            class="cell event"
+            data-testid="timeline-event"
+            [attr.data-branch-id]="cell.column"
+            [attr.data-lane]="cell.lane.colour"
+            [attr.data-unaware]="cell.unaware?.part"
+            [class.has-lane]="cell.lane.isOn"
+            [class.is-later]="cell.isLater"
+            [class.is-selected]="cell.isSelected"
+        >
+            <button
+                type="button"
+                class="select"
+                [appTooltip]="cell.tooltip"
+                [attr.aria-pressed]="cell.isSelected"
+                (pointerdown)="stopFollowing()"
+                (click)="chooseCell(cell)"
+            >
+                <span class="cell-text">{{ cell.text }}</span>
+            </button>
+            @if (cell.eventKind; as kind) {
+            <!-- Pauses the run at every event of this kind, or stops doing so (FND-88). -->
+            <button
+                type="button"
+                class="pause"
+                data-testid="timeline-event-pause"
+                [class.is-set]="kindsPausedAt().has(kind)"
+                [appTooltip]="pauseLabel(kind)"
+                [attr.aria-label]="pauseLabel(kind)"
+                [attr.aria-pressed]="kindsPausedAt().has(kind)"
+                (click)="pauseOnKind.emit(kind)"
+            >
+                <app-breakpoint-icon [isSet]="kindsPausedAt().has(kind)" />
+            </button>
+            }
+        </span>
+        } @else if (cell.count > 0) {
+        <!-- A closed group's summary node, and the whole cell with it, opens and closes the group. -->
+        <button
+            type="button"
+            class="cell count"
+            data-testid="summary-node"
+            [attr.data-lane]="cell.lane.colour"
+            [attr.data-unaware]="cell.unaware?.part"
+            [attr.data-crossing]="cell.lane.crossing"
+            [class.has-lane]="cell.lane.isOn"
+            [class.is-lane-from-left]="cell.lane.isStartFromLeft"
+            [class.is-lane-from-right]="cell.lane.isStartFromRight"
+            [class.is-lane-to-left]="cell.lane.isLeavingLeft"
+            [class.is-lane-to-right]="cell.lane.isLeavingRight"
+            [class.is-lane-crossed]="cell.lane.isCrossed"
+            [class.has-shown]="cell.hasShown"
+            [appTooltip]="(row.isOpen ? 'Close ' : 'Open ') + row.label + ': ' + cell.text"
+            [attr.aria-label]="(row.isOpen ? 'Close ' : 'Open ') + row.label + ': ' + cell.text"
+            [attr.aria-expanded]="row.isOpen"
+            (pointerdown)="stopFollowing()"
+            (click)="toggleRow(row)"
+        >
+            <span class="summary" aria-hidden="true">{{ cell.count }}</span>
+            <span class="cell-text">{{ cell.text }}</span>
+        </button>
+        } @else {
+        <span
+            class="cell count"
+            [attr.data-lane]="cell.lane.colour"
+            [attr.data-unaware]="cell.unaware?.part"
+            [attr.data-crossing]="cell.lane.crossing"
+            [class.has-lane]="cell.lane.isOn"
+            [class.is-lane-from-left]="cell.lane.isStartFromLeft"
+            [class.is-lane-from-right]="cell.lane.isStartFromRight"
+            [class.is-lane-to-left]="cell.lane.isLeavingLeft"
+            [class.is-lane-to-right]="cell.lane.isLeavingRight"
+            [class.is-lane-crossed]="cell.lane.isCrossed"
+        ></span>
+        } } }
+    </div>
+</cdk-virtual-scroll-viewport>
+} @else {
+<p class="empty" data-testid="no-commits">No commits yet.</p>
+} @if (!isFollowing()) {
+<button
+    type="button"
+    class="follow"
+    data-testid="timeline-follow"
+    appTooltip="Follow the commit shown"
+    aria-label="Follow the commit shown"
+    (click)="follow()"
+>
+    <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v9M4 8l4 4 4-4" /></svg>
+</button>
+}

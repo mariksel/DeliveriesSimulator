@@ -1,0 +1,21 @@
+@for (column of columns(); track column.key) {
+<span class="heading" [class.is-number]="column.isNumber">
+    <span class="label" [title]="column.label">{{ column.label }}</span>
+    <span
+        class="handle"
+        cdkDrag
+        cdkDragLockAxis="x"
+        role="separator"
+        aria-orientation="vertical"
+        tabindex="0"
+        data-testid="column-handle"
+        appTooltip="Drag, or use the arrow keys, to resize the column"
+        [attr.aria-label]="'Resize the ' + column.label + ' column'"
+        (cdkDragStarted)="startDrag(column)"
+        (cdkDragMoved)="drag(column, $event.distance.x)"
+        (cdkDragEnded)="$event.source.reset()"
+        (keydown.arrowleft)="nudge(column, -1)"
+        (keydown.arrowright)="nudge(column, 1)"
+    ></span>
+</span>
+}

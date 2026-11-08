@@ -1,0 +1,59 @@
+:host {
+    display: grid;
+    grid-template-rows: 1fr auto;
+    grid-template-columns: 220px 1fr;
+    height: 100vh;
+}
+
+.sidebar {
+    overflow-y: auto;
+    padding: var(--space-3);
+    background-color: var(--color-sidebar);
+}
+
+h1 {
+    margin: var(--space-none);
+    margin-bottom: var(--space-3);
+    font-size: 16px;
+}
+
+ul {
+    margin: var(--space-none);
+    padding: var(--space-none);
+    list-style: none;
+}
+
+li {
+    margin-bottom: var(--space-1);
+}
+
+a {
+    display: block;
+    padding: var(--space-1) var(--space-2);
+    color: var(--color-text);
+    border-radius: 4px;
+    text-decoration: none;
+}
+
+a:hover {
+    background-color: var(--color-pressed);
+}
+
+a.is-active {
+    color: var(--color-accent-text);
+    background-color: var(--color-accent);
+}
+
+a.is-active:hover {
+    background-color: var(--color-accent-hover);
+}
+
+/* Each page sets its own padding, as the run workspace fills this edge to edge. */
+.content {
+    overflow: auto;
+    min-width: 0;
+}
+
+.status {
+    grid-column: 1 / -1;
+}

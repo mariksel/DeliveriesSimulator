@@ -1,0 +1,11 @@
+:host {
+    display: inline-flex;
+    vertical-align: middle;
+}
+
+svg {
+    fill: none;
+    stroke: currentcolor;
+    stroke-width: 1.5;
+    stroke-linecap: round;
+}

@@ -1,0 +1,23 @@
+{
+    "plugins": ["stylelint-declaration-strict-value"],
+    "rules": {
+        "scale-unlimited/declaration-strict-value": [
+            [
+                "/color$/",
+                "background",
+                "margin",
+                "/^margin-/",
+                "padding",
+                "/^padding-/",
+                "gap",
+                "row-gap",
+                "column-gap"
+            ],
+            {
+                "ignoreValues": ["transparent", "inherit", "currentColor", "auto"],
+                "expandShorthand": false,
+                "disableFix": true
+            }
+        ]
+    }
+}

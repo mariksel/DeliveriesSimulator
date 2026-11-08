@@ -1,0 +1,87 @@
+:host {
+    display: block;
+    overflow: auto;
+    min-height: 0;
+}
+
+.rules-panel {
+    padding: var(--space-2) var(--space-3);
+}
+
+h2 {
+    margin: var(--space-3) var(--space-none) var(--space-2);
+    font-size: 16px;
+}
+
+.rule {
+    padding: var(--space-2) var(--space-none);
+    border-bottom: 1px solid var(--color-border);
+}
+
+h3 {
+    margin: var(--space-none);
+    font-size: 14px;
+}
+
+h3 code {
+    margin-left: var(--space-1);
+    color: var(--color-muted);
+    font-weight: normal;
+}
+
+p {
+    margin: var(--space-1) var(--space-none);
+}
+
+.kind,
+.source,
+.hint,
+.no-parameters {
+    color: var(--color-muted);
+    font-size: 12px;
+    font-weight: normal;
+}
+
+.kind {
+    margin-left: var(--space-2);
+}
+
+.hint {
+    display: block;
+}
+
+table {
+    margin-top: var(--space-2);
+    border-collapse: collapse;
+}
+
+th,
+td {
+    padding: var(--space-1) var(--space-2);
+    text-align: left;
+    vertical-align: top;
+}
+
+thead th {
+    color: var(--color-muted);
+    font-size: 12px;
+    font-weight: normal;
+}
+
+.is-changed {
+    font-weight: bold;
+}
+
+/* A value a run uses although it is outside its valid range (FND-54). */
+.is-out-of-range,
+.out-of-range,
+.invalid {
+    color: var(--color-fail);
+}
+
+.out-of-range,
+.invalid {
+    display: block;
+    font-size: 12px;
+    font-weight: normal;
+}

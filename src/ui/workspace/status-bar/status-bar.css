@@ -1,0 +1,63 @@
+footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-1) var(--space-3);
+    background-color: var(--color-sidebar);
+    border-top-color: var(--color-border);
+    border-top-style: solid;
+    border-top-width: 1px;
+}
+
+.label {
+    margin-right: var(--space-1);
+    color: var(--color-muted);
+}
+
+.time {
+    font-variant-numeric: tabular-nums;
+}
+
+/* The run's state, coloured as the Start button is. */
+.state {
+    padding: var(--space-none) var(--space-2);
+    border-radius: 10px;
+    font-weight: 600;
+    line-height: 20px;
+}
+
+.state[data-state='Ready'] {
+    color: var(--color-accent-text);
+    background-color: var(--color-start);
+}
+
+.state[data-state='Running'] {
+    color: var(--color-accent-text);
+    background-color: var(--color-running);
+}
+
+.state[data-state='Paused'] {
+    color: var(--color-start);
+    background-color: var(--color-start-tint);
+}
+
+.state[data-state='Ended'] {
+    color: var(--color-muted);
+    background-color: var(--color-pressed);
+}
+
+.state[data-state='Failed'] {
+    color: var(--color-fail);
+    background-color: var(--color-fail-tint);
+}
+
+.is-passed {
+    color: var(--color-pass);
+    font-weight: 600;
+}
+
+.is-failed {
+    color: var(--color-fail);
+    font-weight: 600;
+}

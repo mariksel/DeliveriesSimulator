@@ -1,0 +1,401 @@
+.workspace {
+    display: grid;
+    grid-template-areas:
+        'controls controls controls'
+        'indirect indirect indirect'
+        'warnings warnings warnings'
+        'main divider-column detail'
+        'divider-row divider-column detail'
+        'timeline divider-column detail';
+    grid-template-rows: auto auto auto 1fr 6px var(--timeline-height);
+    grid-template-columns: minmax(0, 1fr) 6px var(--detail-width);
+    /*
+     * What a 1280-pixel window leaves beside the sidebar. Below that, the workspace scrolls
+     * sideways.
+     */
+    min-width: 1060px;
+    height: 100%;
+}
+
+:host {
+    display: block;
+    height: 100%;
+}
+
+.controls {
+    display: flex;
+    flex-wrap: wrap;
+    grid-area: controls;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.control-set {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    margin-left: var(--space-2);
+}
+
+/* The main action. It keeps its width as its label changes, so the controls beside it stay put. */
+.start {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    min-width: 92px;
+    padding: var(--space-1) var(--space-3);
+    color: var(--color-accent-text);
+    background-color: var(--color-start);
+    border-color: var(--color-start);
+    font-weight: 600;
+}
+
+/* The icon, so the state does not rest on colour alone: a triangle to start. */
+.start::before {
+    width: 0;
+    height: 0;
+    border-top: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+    border-left: 8px solid currentColor;
+    content: '';
+}
+
+.start:hover:not(:disabled) {
+    background-color: var(--color-start-hover);
+    border-color: var(--color-start-hover);
+}
+
+.start:active:not(:disabled) {
+    background-color: var(--color-start-pressed);
+    border-color: var(--color-start-pressed);
+}
+
+/* Paused partway: still the way to go on, but quieter than a run not yet begun. */
+.start[data-state='Paused'] {
+    color: var(--color-start);
+    background-color: var(--color-start-tint);
+}
+
+.start[data-state='Paused']:hover:not(:disabled) {
+    background-color: var(--color-start-tint-hover);
+}
+
+.start[data-state='Paused']:active:not(:disabled) {
+    color: var(--color-accent-text);
+}
+
+/* Running: the button pauses, so it changes colour, and its icon becomes two bars. */
+.start[data-state='Running'] {
+    background-color: var(--color-running);
+    border-color: var(--color-running);
+}
+
+.start[data-state='Running']::before {
+    width: 2px;
+    height: 10px;
+    border-top-width: 0;
+    border-right: 3px solid currentColor;
+    border-bottom-width: 0;
+    border-left-width: 3px;
+}
+
+.start[data-state='Running']:hover:not(:disabled) {
+    background-color: var(--color-running-hover);
+    border-color: var(--color-running-hover);
+}
+
+.start[data-state='Running']:active:not(:disabled) {
+    background-color: var(--color-running-pressed);
+    border-color: var(--color-running-pressed);
+}
+
+/* Over: nothing left to start, so it goes flat, and its icon becomes a square. */
+.start:disabled {
+    color: var(--color-disabled-text);
+    background-color: var(--color-disabled);
+    border-color: var(--color-border);
+}
+
+.start:disabled::before {
+    width: 9px;
+    height: 9px;
+    background-color: currentColor;
+    border-width: 0;
+}
+
+.start[data-state='Failed'] {
+    color: var(--color-fail);
+    background-color: var(--color-fail-tint);
+    border-color: var(--color-fail);
+}
+
+.typed-speed {
+    width: 72px;
+}
+
+/* A typed speed in use, marked as a chosen preset is. */
+.typed-speed.is-current {
+    z-index: 1;
+    background-color: var(--color-accent-tint);
+    border-color: var(--color-accent);
+    font-weight: 600;
+}
+
+.invalid {
+    color: var(--color-fail);
+}
+
+.main {
+    display: flex;
+    flex-direction: column;
+    grid-area: main;
+    overflow: hidden;
+    min-width: 0;
+    min-height: 0;
+}
+
+.main-tab {
+    flex-grow: 1;
+    min-height: 0;
+}
+
+.detail {
+    grid-area: detail;
+    overflow: auto;
+}
+
+.panel-body {
+    padding: var(--space-2);
+}
+
+.no-run {
+    margin: var(--space-none);
+    padding: var(--space-3);
+}
+
+.timeline {
+    grid-area: timeline;
+    overflow: hidden;
+    min-height: 0;
+}
+
+.tabs {
+    display: flex;
+    flex-shrink: 0;
+    padding-top: var(--space-2);
+}
+
+/* These carry the strip's line to both edges of the panel. */
+.tabs::before,
+.tabs::after {
+    border-bottom: 1px solid var(--color-border);
+    content: '';
+}
+
+.tabs::before {
+    width: var(--space-2);
+}
+
+.tabs::after {
+    flex-grow: 1;
+}
+
+.tabs [role='tab'] {
+    margin-right: var(--space-none);
+    padding: var(--space-1) var(--space-3);
+    color: var(--color-muted);
+    background-color: transparent;
+    border-color: transparent;
+    border-style: solid;
+    border-width: 2px 1px 1px;
+    border-bottom-color: var(--color-border);
+    border-radius: 4px 4px 0 0;
+}
+
+.tabs [role='tab']:hover {
+    color: var(--color-text);
+    background-color: var(--color-hover);
+}
+
+.tabs [role='tab']:active {
+    background-color: var(--color-pressed);
+}
+
+.tabs [role='tab']:focus-visible {
+    outline-offset: -2px;
+}
+
+/* The chosen tab has no line beneath it, so it joins the panel below. */
+.tabs [role='tab'].is-selected {
+    color: var(--color-text);
+    background-color: var(--color-surface);
+    border-color: var(--color-border);
+    border-top-color: var(--color-accent);
+    border-bottom-color: transparent;
+}
+
+.hint {
+    color: var(--color-muted);
+}
+
+/* The whole track can be grabbed, and only a thin line shows until someone reaches for it. */
+.divider {
+    position: relative;
+    /* The grid moves the divider as its region resizes, so the drag must not move it again. */
+    transform: none !important;
+}
+
+.divider::before {
+    position: absolute;
+    background-color: var(--color-border);
+    content: '';
+}
+
+.divider:hover::before {
+    background-color: var(--color-accent);
+}
+
+.divider:active::before,
+.divider:focus-visible::before {
+    background-color: var(--color-accent);
+}
+
+.divider:focus-visible {
+    outline-style: none;
+}
+
+.divider-column {
+    grid-area: divider-column;
+    cursor: col-resize;
+}
+
+.divider-column::before {
+    top: 0;
+    bottom: 0;
+    left: 2px;
+    width: 1px;
+}
+
+.divider-column:hover::before,
+.divider-column:active::before,
+.divider-column:focus-visible::before {
+    left: 1px;
+    width: 3px;
+}
+
+.divider-row {
+    grid-area: divider-row;
+    cursor: row-resize;
+}
+
+.divider-row::before {
+    top: 2px;
+    right: 0;
+    left: 0;
+    height: 1px;
+}
+
+.divider-row:hover::before,
+.divider-row:active::before,
+.divider-row:focus-visible::before {
+    top: 1px;
+    height: 3px;
+}
+
+.detail button {
+    margin-right: var(--space-2);
+}
+
+.is-failed {
+    color: var(--color-fail);
+}
+
+.verdict {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin: var(--space-none);
+    margin-bottom: var(--space-2);
+    padding: var(--space-2);
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.verdict.is-passed {
+    color: var(--color-pass);
+    background-color: var(--color-pass-tint);
+}
+
+.verdict.is-passed::before,
+.criteria > .is-passed::before {
+    color: var(--color-pass);
+    content: '✓';
+}
+
+.verdict.is-failed {
+    background-color: var(--color-fail-tint);
+}
+
+.verdict.is-failed::before,
+.criteria > .is-failed::before {
+    color: var(--color-fail);
+    content: '✗';
+}
+
+.verdict-note {
+    margin: var(--space-none);
+    margin-bottom: var(--space-2);
+    padding: var(--space-2);
+    background-color: var(--color-waiting);
+    border-radius: 4px;
+}
+
+.criteria {
+    margin: var(--space-none);
+    padding: var(--space-none);
+    list-style: none;
+}
+
+.criteria > li {
+    position: relative;
+    margin-bottom: var(--space-1);
+    padding-left: var(--space-4);
+}
+
+.criteria > li::before {
+    position: absolute;
+    left: var(--space-1);
+    font-weight: 700;
+}
+
+.violations {
+    margin-top: var(--space-1);
+    margin-bottom: var(--space-1);
+    padding-left: var(--space-3);
+}
+
+/* What reading the scenario warned about, styled like a scenario's problems on the runs page. */
+.indirect {
+    grid-area: indirect;
+}
+
+.warnings {
+    grid-area: warnings;
+    margin: var(--space-none);
+    padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+    color: var(--color-fail);
+    border-bottom: 1px solid var(--color-border);
+}
+
+/* The commit shown, among all of the run's commits (FND-86). */
+.place-slider {
+    width: 12rem;
+    max-width: 100%;
+}
+
+.repeat.is-same {
+    color: var(--color-pass);
+}

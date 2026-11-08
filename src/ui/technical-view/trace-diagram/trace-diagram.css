@@ -1,0 +1,179 @@
+:host {
+    --lanes-width: 340px;
+
+    display: block;
+    overflow: auto;
+    min-height: 0;
+    font-size: 12px;
+}
+
+/* Below this the labels get too short, so the tab scrolls sideways instead. */
+.inner {
+    min-width: 720px;
+}
+
+h4 {
+    margin: var(--space-none);
+    padding: var(--space-2);
+    font-size: 13px;
+}
+
+.columns {
+    display: grid;
+    grid-template-columns: 104px 44px minmax(0, 1fr) var(--lanes-width);
+    gap: var(--space-1);
+    align-items: center;
+    width: 100%;
+    padding: var(--space-none) var(--space-2);
+}
+
+.heading {
+    align-items: end;
+    padding-bottom: var(--space-1);
+    color: var(--color-muted);
+    border-bottom: 1px solid var(--color-border);
+    font-size: 11px;
+    line-height: 1.2;
+}
+
+.lane-names {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    align-items: end;
+    text-align: center;
+}
+
+.lane-names > * {
+    padding: var(--space-none) var(--space-1);
+}
+
+/* The drawing lies over the rows' last column, and lets clicks through to them. */
+.body {
+    position: relative;
+}
+
+.drawing {
+    position: absolute;
+    top: 0;
+    right: var(--space-2);
+    pointer-events: none;
+}
+
+/* Rows are 28 pixels and lanes 68: the same as trace-views.ts, which draws in them. */
+.step {
+    height: 28px;
+    color: var(--color-muted);
+    text-align: left;
+    background-color: transparent;
+    border-style: none;
+    border-radius: 0;
+    font-variant-numeric: tabular-nums;
+}
+
+.step:hover {
+    background-color: var(--color-hover);
+}
+
+.step:active {
+    background-color: var(--color-pressed);
+}
+
+.step:focus-visible {
+    outline-offset: -2px;
+}
+
+.step.is-on-path {
+    color: var(--color-text);
+}
+
+.step.is-on-path .label {
+    font-weight: 600;
+}
+
+.step.is-waiting {
+    background-color: var(--color-waiting);
+}
+
+.step.is-waiting:hover {
+    background-color: var(--color-waiting-hover);
+}
+
+/* A tint, not the lists' solid blue, so that the blue path stays visible across the row. */
+.step.is-selected {
+    background-color: var(--color-accent-tint);
+}
+
+.gap {
+    color: var(--color-muted);
+    font-size: 11px;
+}
+
+.label {
+    display: flex;
+    gap: var(--space-1);
+    align-items: center;
+    min-width: 0;
+}
+
+.label-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.waiting {
+    flex-shrink: 0;
+    padding: var(--space-none) var(--space-1);
+    color: var(--color-running);
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.lane-line {
+    stroke: var(--color-border);
+}
+
+.arrow {
+    stroke: var(--color-border-strong);
+    stroke-width: 1;
+}
+
+.arrow.is-dashed {
+    stroke-dasharray: 4 3;
+}
+
+.arrow.is-on-path {
+    stroke: var(--color-accent);
+    stroke-width: 2;
+}
+
+.head {
+    fill: var(--color-border-strong);
+}
+
+.head.is-on-path {
+    fill: var(--color-accent);
+}
+
+.dot {
+    fill: var(--color-surface);
+    stroke: var(--color-border-strong);
+    stroke-width: 1.5;
+}
+
+.dot.is-on-path {
+    fill: var(--color-accent);
+    stroke: var(--color-accent);
+}
+
+.dot.is-selected {
+    stroke: var(--color-accent-pressed);
+    stroke-width: 2;
+}
+
+.hint {
+    margin: var(--space-none);
+    padding: var(--space-2);
+    color: var(--color-muted);
+}

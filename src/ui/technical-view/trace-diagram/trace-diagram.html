@@ -1,0 +1,99 @@
+@if (trace(); as view) {
+<div class="inner">
+    <h4 data-testid="trace-title">Trace #{{ view.root }}: {{ view.steps.length }} steps</h4>
+    <div class="columns heading">
+        <span>Time</span>
+        <span></span>
+        <span>Step</span>
+        <span class="lane-names">
+            @for (lane of lanes; track lane) {
+            <span>{{ lane }}</span>
+            }
+        </span>
+    </div>
+    <div class="body" data-testid="trace-body">
+        @for (step of view.steps; track step.sequence) {
+        <button
+            type="button"
+            class="columns step"
+            data-testid="trace-step"
+            [class.is-on-path]="step.isOnPath"
+            [class.is-selected]="step.isSelected"
+            [class.is-waiting]="step.isWaiting"
+            [attr.aria-pressed]="step.isSelected"
+            [appTooltip]="step.hover"
+            (click)="choose.emit(step.sequence)"
+        >
+            <span>{{ step.time }}</span>
+            <span class="gap" data-testid="trace-gap">{{ step.gap }}</span>
+            <span class="label">
+                <span class="label-text">#{{ step.sequence }} {{ step.label }}</span>
+                @if (step.isWaiting) {
+                <span class="waiting" data-testid="trace-waiting">waiting</span>
+                }
+            </span>
+        </button>
+        }
+        <svg class="drawing" aria-hidden="true" [attr.width]="lanesWidth" [attr.height]="height()">
+            <defs>
+                <marker
+                    id="trace-head"
+                    markerWidth="7"
+                    markerHeight="7"
+                    refX="6"
+                    refY="3"
+                    orient="auto"
+                >
+                    <path class="head" d="M0 0L6 3L0 6Z" />
+                </marker>
+                <marker
+                    id="trace-head-on-path"
+                    markerWidth="7"
+                    markerHeight="7"
+                    refX="6"
+                    refY="3"
+                    orient="auto"
+                >
+                    <path class="head is-on-path" d="M0 0L6 3L0 6Z" />
+                </marker>
+            </defs>
+            @for (lane of lanes; track lane) {
+            <line
+                class="lane-line"
+                [attr.x1]="laneX($index)"
+                y1="0"
+                [attr.x2]="laneX($index)"
+                [attr.y2]="height()"
+            />
+            } @for (line of lines(); track $index) {
+            <line
+                class="arrow"
+                data-testid="trace-arrow"
+                [class.is-dashed]="line.isDashed"
+                [class.is-on-path]="line.isOnPath"
+                [attr.x1]="line.x1"
+                [attr.y1]="line.y1"
+                [attr.x2]="line.x2"
+                [attr.y2]="line.y2"
+                [attr.marker-end]="
+                    line.hasHead ? (line.isOnPath ? 'url(#trace-head-on-path)' : 'url(#trace-head)') : null
+                "
+            />
+            } @for (step of view.steps; track step.sequence) {
+            <circle
+                class="dot"
+                data-testid="trace-dot"
+                [class.is-on-path]="step.isOnPath"
+                [class.is-selected]="step.isSelected"
+                [attr.data-lane]="lanes[step.lane]"
+                [attr.cx]="laneX(step.lane)"
+                [attr.cy]="rowY($index)"
+                [attr.r]="step.isSelected ? 6 : 4"
+            />
+            }
+        </svg>
+    </div>
+</div>
+} @else {
+<p class="hint" data-testid="trace-hint">Select an event to see its trace.</p>
+}

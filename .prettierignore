@@ -1,0 +1,12 @@
+# Wrapped by hand, under document governance.
+*.md
+
+package-lock.json
+dist/
+coverage/
+reports/
+test-results/
+playwright-report/
+.stryker-tmp/
+.idea/
+.vitest/

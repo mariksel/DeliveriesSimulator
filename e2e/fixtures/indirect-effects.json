@@ -1,0 +1,60 @@
+{
+    "format": 1,
+    "name": "One order, a driver ignores the request",
+    "description": "The driver ignores the delivery request at first, then accepts it.",
+    "version": "V1.0.0",
+    "seed": 42,
+    "runUntil": "h00:m05:s00:ms00",
+    "restaurants": [
+        {
+            "id": "restaurant-1",
+            "area": "area-1",
+            "location": { "latitude": 10.33, "longitude": 20.82 }
+        }
+    ],
+    "drivers": [
+        {
+            "id": "driver-1",
+            "area": "area-1",
+            "availability": "Available",
+            "location": { "latitude": 10.331, "longitude": 20.82 },
+            "locatedAt": "h00:m00:s00:ms00"
+        }
+    ],
+    "steps": [
+        {
+            "at": "h00:m00:s01:ms00",
+            "actor": "restaurant-1",
+            "command": "create-order",
+            "order": "A"
+        },
+        {
+            "at": "h00:m00:s02:ms00",
+            "actor": "restaurant-1",
+            "command": "request-delivery",
+            "order": "A"
+        },
+        {
+            "at": "h00:m00:s40:ms00",
+            "actor": "restaurant-1",
+            "command": "mark-ready",
+            "order": "A"
+        },
+        {
+            "at": "h00:m00:s45:ms00",
+            "indirect": "driver-ignores-request",
+            "actor": "driver-1",
+            "order": "A",
+            "label": "ignored"
+        },
+        {
+            "at": "h00:m01:s10:ms00",
+            "actor": "driver-1",
+            "command": "accept",
+            "order": "A",
+            "after": "ignored"
+        },
+        { "at": "h00:m02:s00:ms00", "actor": "driver-1", "command": "pick-up", "order": "A" },
+        { "at": "h00:m04:s00:ms00", "actor": "driver-1", "command": "deliver", "order": "A" }
+    ]
+}

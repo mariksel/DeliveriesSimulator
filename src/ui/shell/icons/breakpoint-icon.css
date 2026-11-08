@@ -1,0 +1,14 @@
+:host {
+    display: inline-flex;
+    vertical-align: middle;
+}
+
+svg {
+    fill: none;
+    stroke: var(--color-fail);
+    stroke-width: 1.5;
+}
+
+:host(.is-set) svg {
+    fill: var(--color-fail);
+}

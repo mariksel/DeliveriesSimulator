@@ -1,0 +1,432 @@
+@if (view(); as run) {
+<div
+    class="workspace"
+    [style.--detail-width]="detailWidth()"
+    [style.--timeline-height]="timelineHeight()"
+>
+    <div class="controls">
+        <strong data-testid="scenario-name">{{ run.scenarioName }}</strong>
+        <button
+            type="button"
+            class="start"
+            data-testid="start"
+            [appTooltip]="run.startLabel + ' the run (Space)'"
+            [attr.data-state]="run.state"
+            [disabled]="!run.canStart && !run.isRunning"
+            (click)="startOrPause()"
+        >
+            {{ run.startLabel }}
+        </button>
+        <button
+            type="button"
+            appTooltip="Run the next piece of work, then pause (S)"
+            [disabled]="!run.canStep"
+            (click)="step()"
+        >
+            Step
+        </button>
+        <div class="control-set" data-testid="travel">
+            <div class="button-group" role="group" aria-label="Move through the run">
+                <button
+                    type="button"
+                    data-testid="back"
+                    appTooltip="Show the run one step earlier"
+                    [disabled]="run.place === 0"
+                    (click)="back()"
+                >
+                    Back
+                </button>
+                <button
+                    type="button"
+                    data-testid="forward"
+                    appTooltip="Show the run one step later"
+                    [disabled]="run.isShowingLatest"
+                    (click)="forward()"
+                >
+                    Forward
+                </button>
+            </div>
+            <span id="step-size-heading">By</span>
+            <div class="button-group" role="group" aria-labelledby="step-size-heading">
+                <button
+                    type="button"
+                    data-testid="step-by-commit"
+                    appTooltip="Back and Forward move one commit"
+                    [class.is-selected]="stepSize() === stepSizes.Commit"
+                    [attr.aria-pressed]="stepSize() === stepSizes.Commit"
+                    (click)="chooseStepSize(stepSizes.Commit)"
+                >
+                    Commit
+                </button>
+                <button
+                    type="button"
+                    data-testid="step-by-group"
+                    appTooltip="Back and Forward move one job run or API call"
+                    [class.is-selected]="stepSize() === stepSizes.Group"
+                    [attr.aria-pressed]="stepSize() === stepSizes.Group"
+                    (click)="chooseStepSize(stepSizes.Group)"
+                >
+                    Job run or call
+                </button>
+            </div>
+            <input
+                #placeSlider
+                id="place-slider"
+                class="place-slider"
+                type="range"
+                min="0"
+                aria-label="Commit shown"
+                data-testid="place-slider"
+                appTooltip="Drag to show the run at any commit"
+                [max]="run.latestPlace"
+                [value]="run.place"
+                (input)="showPlace(placeSlider.value)"
+            />
+            <button
+                type="button"
+                data-testid="latest"
+                appTooltip="Show the latest commit, where the run goes on from"
+                [disabled]="run.isShowingLatest"
+                (click)="showLatest()"
+            >
+                Latest
+            </button>
+            <button
+                type="button"
+                data-testid="repeat"
+                appTooltip="Run again from the commit shown, and check every commit comes out the same"
+                (click)="repeatFromHere()"
+            >
+                Repeat from here
+            </button>
+            <button
+                type="button"
+                class="icon-button"
+                data-testid="fork-here"
+                appTooltip="Fork here: begin a new branch at the commit shown"
+                aria-label="Fork here: begin a new branch at the commit shown"
+                (click)="forkHere()"
+            >
+                <app-fork-icon />
+            </button>
+            <button
+                type="button"
+                data-testid="state-indirect"
+                appTooltip="State an indirect effect: a decision outside the service, which it does not see, at the commit shown"
+                [class.is-selected]="isStatingIndirect()"
+                [attr.aria-expanded]="isStatingIndirect()"
+                (click)="toggleIndirectForm()"
+            >
+                Indirect effect
+            </button>
+        </div>
+        @if (run.repeat; as repeat) {
+        <span
+            class="repeat"
+            data-testid="repeat-result"
+            [class.is-same]="run.isRepeatSame"
+            [class.invalid]="!run.isRepeatSame"
+            >{{ repeat }}</span
+        >
+        }
+        <div class="control-set">
+            <span id="speed-heading">Speed</span>
+            <div class="button-group" role="group" aria-labelledby="speed-heading">
+                @for (preset of presets; track preset) {
+                <button
+                    type="button"
+                    [appTooltip]="'Run at ' + label(preset) + ' speed'"
+                    [class.is-selected]="preset === run.rawSpeed"
+                    [attr.aria-pressed]="preset === run.rawSpeed"
+                    (click)="chooseSpeed(preset)"
+                >
+                    {{ label(preset) }}
+                </button>
+                }
+            </div>
+        </div>
+        <div class="control-set">
+            <label for="other-speed">Other speed</label>
+            <div class="input-group" data-testid="speed-entry">
+                <input
+                    #typedSpeed
+                    id="other-speed"
+                    class="typed-speed"
+                    type="text"
+                    data-testid="typed-speed"
+                    appTooltip="Type any speed, such as 250 or 0.5, then press Enter"
+                    [class.is-current]="run.customSpeed !== ''"
+                    [attr.aria-invalid]="isSpeedInvalid()"
+                    [value]="typedSpeedText()"
+                    (input)="editTypedSpeed(typedSpeed.value)"
+                    (keydown.enter)="chooseTypedSpeed(typedSpeed.value)"
+                />
+                <button
+                    type="button"
+                    appTooltip="Run at the speed typed"
+                    (click)="chooseTypedSpeed(typedSpeed.value)"
+                >
+                    Set
+                </button>
+            </div>
+        </div>
+        @if (isSpeedInvalid()) {
+        <span class="invalid" data-testid="speed-invalid"
+            >A speed is a number above 0, such as 250 or 0.5.</span
+        >
+        }
+    </div>
+    @if (isStatingIndirect()) {
+    <app-indirect-effect-form
+        class="indirect"
+        [names]="names()"
+        (stated)="stateIndirect($event)"
+        (closed)="isStatingIndirect.set(false)"
+    />
+    } @if (warnings().length > 0) {
+    <ul class="warnings" aria-label="Scenario warnings" data-testid="scenario-warnings">
+        @for (warning of warnings(); track $index) {
+        <li>{{ warning }}</li>
+        }
+    </ul>
+    }
+    <section class="main" aria-label="Main area">
+        <div class="tabs" role="tablist">
+            <button
+                type="button"
+                role="tab"
+                [attr.aria-selected]="mainTab() === mainTabs.Inspector"
+                appTooltip="Show what each module's outbox and inbox hold"
+                [class.is-selected]="mainTab() === mainTabs.Inspector"
+                (click)="showMainTab(mainTabs.Inspector)"
+            >
+                Outbox and inbox
+            </button>
+            <button
+                type="button"
+                role="tab"
+                [attr.aria-selected]="mainTab() === mainTabs.Trace"
+                appTooltip="Show the whole action the selected event belongs to"
+                [class.is-selected]="mainTab() === mainTabs.Trace"
+                (click)="showMainTab(mainTabs.Trace)"
+            >
+                Trace
+            </button>
+            <button
+                type="button"
+                role="tab"
+                data-testid="rules-tab"
+                appTooltip="Show each module's rules, and change their values"
+                [attr.aria-selected]="mainTab() === mainTabs.Rules"
+                [class.is-selected]="mainTab() === mainTabs.Rules"
+                (click)="showMainTab(mainTabs.Rules)"
+            >
+                Rules
+            </button>
+            <button
+                type="button"
+                role="tab"
+                data-testid="events-tab"
+                appTooltip="Show every entry of the log, with its source, order, and cause"
+                [attr.aria-selected]="mainTab() === mainTabs.Events"
+                [class.is-selected]="mainTab() === mainTabs.Events"
+                (click)="showMainTab(mainTabs.Events)"
+            >
+                Events
+            </button>
+            <button
+                type="button"
+                role="tab"
+                data-testid="breakpoints-tab"
+                appTooltip="Show the breakpoints the run pauses at, and add or switch them"
+                [attr.aria-selected]="mainTab() === mainTabs.Breakpoints"
+                [class.is-selected]="mainTab() === mainTabs.Breakpoints"
+                (click)="showMainTab(mainTabs.Breakpoints)"
+            >
+                Breakpoints
+            </button>
+        </div>
+        @if (mainTab() === mainTabs.Inspector) {
+        <app-outbox-inbox-inspector
+            class="main-tab"
+            [entries]="entries()"
+            [now]="run.now"
+            [selected]="selected()"
+            [(mode)]="inspectorMode"
+            (choose)="select($event)"
+        />
+        } @else if (mainTab() === mainTabs.Events) {
+        <app-event-list
+            class="main-tab"
+            [entries]="allEntries()"
+            [shownCount]="entries().size"
+            [selected]="selected()"
+            [kindsPausedAt]="kindsPausedAt()"
+            (choose)="select($event)"
+            (pauseOnKind)="toggleKindBreakpoint($event)"
+        />
+        } @else if (mainTab() === mainTabs.Breakpoints) {
+        <app-breakpoints-panel
+            class="main-tab"
+            [breakpoints]="breakpoints()"
+            [lastHit]="lastHit()"
+            [kinds]="loggedKinds()"
+            (add)="addBreakpoint($event)"
+            (switchTo)="switchBreakpoint($event)"
+            (remove)="removeBreakpoint($event)"
+        />
+        } @else if (mainTab() === mainTabs.Rules) {
+        <app-rules-panel
+            class="main-tab"
+            [modules]="rules()"
+            [problem]="ruleProblem()"
+            (edit)="changeRule($event)"
+        />
+        } @else {
+        <app-trace-diagram
+            class="main-tab"
+            [entries]="allEntries()"
+            [selected]="selected()"
+            (choose)="select($event)"
+        />
+        }
+    </section>
+    <div
+        class="divider divider-column"
+        cdkDrag
+        cdkDragLockAxis="x"
+        role="separator"
+        aria-label="Resize the detail panel"
+        aria-orientation="vertical"
+        tabindex="0"
+        data-testid="detail-divider"
+        appTooltip="Drag, or use the arrow keys, to resize the detail panel"
+        (cdkDragStarted)="startDetailDrag()"
+        (cdkDragMoved)="dragDetail($event.distance.x)"
+        (cdkDragEnded)="$event.source.reset()"
+        (keydown.arrowleft)="nudgeDetail(1)"
+        (keydown.arrowright)="nudgeDetail(-1)"
+    ></div>
+    <section class="detail" aria-label="Detail" data-testid="detail-panel">
+        <div class="tabs" role="tablist">
+            <button
+                type="button"
+                role="tab"
+                [attr.aria-selected]="tab() === tabs.Event"
+                appTooltip="Show the selected event's payload"
+                [class.is-selected]="tab() === tabs.Event"
+                (click)="showTab(tabs.Event)"
+            >
+                Event
+            </button>
+            <button
+                type="button"
+                role="tab"
+                [attr.aria-selected]="tab() === tabs.Verdict"
+                appTooltip="Show whether the run passed its checks"
+                [class.is-selected]="tab() === tabs.Verdict"
+                (click)="showTab(tabs.Verdict)"
+            >
+                Verdict
+            </button>
+        </div>
+        <div class="panel-body">
+            @if (tab() === tabs.Event) { @if (selectedEntry(); as entry) {
+            <app-payload-viewer
+                [entry]="entry"
+                (choose)="select($event)"
+                (showTrace)="showMainTab(mainTabs.Trace)"
+            />
+            } @else {
+            <p class="hint">Select an event to see its payload.</p>
+            } } @else { @if (run.verdict; as verdict) {
+            <h3
+                class="verdict"
+                data-testid="run-verdict"
+                [class.is-passed]="run.isPassed"
+                [class.is-failed]="!run.isPassed"
+            >
+                {{ verdict }}
+            </h3>
+            @if (run.verdictNote; as note) {
+            <p class="verdict-note" data-testid="run-verdict-note">{{ note }}</p>
+            }
+            <ul class="criteria" data-testid="run-criteria">
+                @for (criterion of run.criteria; track criterion.name) {
+                <li [class.is-passed]="criterion.isPassed" [class.is-failed]="!criterion.isPassed">
+                    {{ criterion.name }}<span class="visually-hidden"
+                        >: {{ criterion.isPassed ? 'passed' : 'failed' }}</span
+                    >
+                    @if (!criterion.isPassed) {
+                    <ul class="violations">
+                        @for (violation of criterion.violations; track $index) {
+                        <li>{{ violation }}</li>
+                        }
+                    </ul>
+                    }
+                </li>
+                }
+            </ul>
+            <p>Digest: <span data-testid="run-digest">{{ run.digest }}</span></p>
+            <p>This verdict is for the run as it stood at the time its scenario states it ends.</p>
+            @if (run.failure; as failure) {
+            <p class="is-failed" data-testid="run-failure">{{ failure }}</p>
+            } @if (run.canRunOn) {
+            <button
+                type="button"
+                appTooltip="Run on past the scenario's end; the verdict stays as it was"
+                (click)="runOn()"
+            >
+                Keep going
+            </button>
+            }
+            <button type="button" appTooltip="Start the scenario afresh" (click)="runAgain()">
+                Run again
+            </button>
+            } @else {
+            <p class="hint">The verdict shows here when the run ends.</p>
+            } }
+        </div>
+    </section>
+    <div
+        class="divider divider-row"
+        cdkDrag
+        cdkDragLockAxis="y"
+        role="separator"
+        aria-label="Resize the timeline"
+        aria-orientation="horizontal"
+        tabindex="0"
+        data-testid="timeline-divider"
+        appTooltip="Drag, or use the arrow keys, to resize the timeline"
+        (cdkDragStarted)="startTimelineDrag()"
+        (cdkDragMoved)="dragTimeline($event.distance.y)"
+        (cdkDragEnded)="$event.source.reset()"
+        (keydown.arrowup)="nudgeTimeline(1)"
+        (keydown.arrowdown)="nudgeTimeline(-1)"
+    ></div>
+    <section class="timeline" aria-label="Timeline" data-testid="timeline">
+        <app-timeline-panel
+            [headings]="timelineHeadings()"
+            [rows]="timelineRows()"
+            [rowMode]="rowMode()"
+            [zoom]="zoom()"
+            [heightPx]="timelineSize()"
+            (openOrClose)="toggleNode($event)"
+            (choose)="chooseOnTimeline($event)"
+            (mode)="chooseRowMode($event)"
+            (zoomTo)="chooseZoom($event)"
+            (watch)="watchBranch($event)"
+            (forkAt)="forkAtCommit($event)"
+            (rename)="renameBranch($event)"
+            [kindsPausedAt]="kindsPausedAt()"
+            (pauseOnKind)="toggleKindBreakpoint($event)"
+        />
+    </section>
+</div>
+} @else {
+<p class="no-run" data-testid="no-run">
+    No run is open.
+    <a routerLink="/runs" appTooltip="Go to Runs and scenarios to open one">Choose a scenario</a>
+    to start one.
+</p>
+}

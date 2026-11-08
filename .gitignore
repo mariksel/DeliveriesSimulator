@@ -1,0 +1,12 @@
+node_modules/
+dist/
+coverage/
+reports/
+test-results/
+playwright-report/
+.stryker-tmp/
+.idea/
+.vitest/
+.env
+.env.*
+*.log

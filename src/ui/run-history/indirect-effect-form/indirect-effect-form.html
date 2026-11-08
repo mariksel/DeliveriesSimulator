@@ -1,0 +1,67 @@
+<form
+    class="indirect-form"
+    data-testid="indirect-form"
+    aria-label="State an indirect effect"
+    (submit)="state($event, actor.value, order.value, lateBy.value)"
+>
+    <span class="unseen">Unseen by the service</span>
+    <label>
+        What happens
+        <select
+            #kindChoice
+            data-testid="indirect-kind"
+            appTooltip="The decision or change outside the service"
+            (change)="chooseKind(kindChoice.value)"
+        >
+            @for (choice of choices; track choice.kind) {
+            <option [value]="choice.kind" [selected]="choice.kind === kind()">
+                {{ choice.label }}
+            </option>
+            }
+        </select>
+    </label>
+    <label [hidden]="!hasActor()">
+        Who
+        <select #actor data-testid="indirect-actor" appTooltip="Who decides">
+            @for (name of actors(); track name) {
+            <option [value]="name">{{ name }}</option>
+            }
+        </select>
+    </label>
+    <label>
+        Order
+        <select #order data-testid="indirect-order" appTooltip="The order it is about">
+            @for (name of names().orders; track name) {
+            <option [value]="name">{{ name }}</option>
+            }
+        </select>
+    </label>
+    <label [hidden]="!isLate()">
+        How much later
+        <input
+            #lateBy
+            type="text"
+            data-testid="indirect-late-by"
+            appTooltip="How much later the restaurant expects the order ready"
+            placeholder="h00:m01:s30:ms00"
+        />
+    </label>
+    <button
+        type="submit"
+        data-testid="indirect-state"
+        appTooltip="Make an indirect commit at the commit shown, forking first from an earlier one"
+    >
+        State it
+    </button>
+    <button
+        type="button"
+        data-testid="indirect-cancel"
+        appTooltip="Close the form, stating nothing"
+        (click)="closed.emit()"
+    >
+        Cancel
+    </button>
+    @if (problem(); as message) {
+    <span class="invalid" data-testid="indirect-problem" role="alert">{{ message }}</span>
+    }
+</form>

@@ -1,0 +1,17 @@
+{
+    "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+    "testRunner": "vitest",
+    "vitest": { "configFile": "vitest.stryker.config.ts" },
+    "checkers": ["typescript"],
+    "tsconfigFile": "tsconfig.spec.json",
+    "mutate": [
+        "src/domain/**/*.ts",
+        "src/application-core/**/*.ts",
+        "src/application/**/*.ts",
+        "!src/**/*.spec.ts",
+        "!src/**/*.testing.ts"
+    ],
+    "reporters": ["clear-text", "progress", "html"],
+    "htmlReporter": { "fileName": "reports/mutation/index.html" },
+    "tempDirName": ".stryker-tmp"
+}

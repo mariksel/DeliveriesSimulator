@@ -1,0 +1,46 @@
+<h2>Runs and scenarios</h2>
+<h3>Built-in scenarios</h3>
+<ul class="scenarios">
+    @for (scenario of builtIn; track scenario.id) {
+    <li class="card" data-testid="scenario-card">
+        <span class="card-name">{{ scenario.name }}</span>
+        <button
+            type="button"
+            [appTooltip]="'Start a run of ' + scenario.name"
+            [attr.aria-label]="'Open: ' + scenario.name"
+            (click)="openBuiltIn(scenario.id)"
+        >
+            Open
+        </button>
+    </li>
+    }
+</ul>
+<h3>Your own scenario</h3>
+<div
+    class="drop-area"
+    data-testid="drop-area"
+    [class.is-dragging]="isDragging()"
+    (dragover)="dragOver($event)"
+    (dragleave)="isDragging.set(false)"
+    (drop)="dropFile($event)"
+>
+    <span>Drop a scenario file here, or</span>
+    <label class="choose" appTooltip="Open a scenario file from your computer">
+        Choose file
+        <input
+            #picker
+            class="visually-hidden"
+            type="file"
+            accept=".json,application/json"
+            aria-label="Open a scenario file"
+            (change)="openChosenFile(picker.files)"
+        />
+    </label>
+</div>
+@if (problems().length > 0) {
+<ul class="problems" data-testid="scenario-problems">
+    @for (problem of problems(); track $index) {
+    <li>{{ problem }}</li>
+    }
+</ul>
+}

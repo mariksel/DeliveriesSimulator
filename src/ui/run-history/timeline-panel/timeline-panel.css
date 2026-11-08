@@ -1,0 +1,710 @@
+:host {
+    --label-width: 13rem;
+    --branch-width: minmax(17rem, 1fr);
+    --grid-width: calc(var(--label-width) + var(--branch-columns) * 17rem);
+    --row-height: 30px;
+    /* Each branch's line, left of its column's middle, so the text beside it has room. */
+    --lane-x: 35%;
+    --lane-width: 2px;
+    /* How far each level of groups is set in. */
+    --indent: 14px;
+    /* Room at a commit's right for its fork icon. */
+    --fork-room: 32px;
+    /* How round a fork's line turns, on its connector row. */
+    --curve: 12px;
+
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-width: 0;
+    font-size: 12px;
+}
+
+.toolbar {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-1) var(--space-2);
+}
+
+/*
+ * Only the rows scroll, both ways, so their scroll bar stays at the panel's edge; the headings
+ * move sideways with them. Both keep room for the scroll bar, so their columns line up.
+ */
+.headings-frame {
+    flex: none;
+    overflow: hidden;
+    scrollbar-gutter: stable;
+    border-bottom: 1px solid var(--color-border);
+}
+
+/* The headings and the rows share one grid of columns: the label, then one per branch. */
+.headings,
+.row {
+    display: grid;
+    grid-template-columns: var(--label-width) repeat(var(--branch-columns), var(--branch-width));
+    align-items: center;
+    min-width: var(--grid-width);
+}
+
+.headings {
+    padding: var(--space-1) var(--space-none);
+}
+
+/* It stays put while the headings move sideways, over whatever passes under it. */
+.label-heading {
+    position: relative;
+    z-index: 2;
+    align-self: stretch;
+    display: flex;
+    align-items: center;
+    padding-left: var(--space-2);
+    color: var(--color-muted);
+    background-color: var(--color-surface);
+}
+
+/* A heading starts at its branch's lane, in line with the commits, underlined in its colour. */
+.heading {
+    --lane: var(--color-border-strong);
+
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    min-width: 0;
+    padding: var(--space-none) var(--space-1) var(--space-none) calc(var(--lane-x) - 4px);
+    border-bottom: 3px solid var(--lane);
+}
+
+.heading {
+    position: relative;
+}
+
+.heading.is-current {
+    background-color: var(--color-accent-tint);
+}
+
+.heading:not(.is-current):hover {
+    background-color: var(--color-hover);
+}
+
+/* The whole heading is the target, with the rename icon above it. */
+.heading .name::after {
+    position: absolute;
+    inset: 0;
+    content: '';
+}
+
+.heading .icon {
+    position: relative;
+    z-index: 1;
+}
+
+.heading .name {
+    flex: none;
+    padding: var(--space-none);
+    white-space: nowrap;
+    color: var(--color-accent);
+    font-weight: 600;
+    text-decoration: underline;
+    background-color: transparent;
+    border-style: none;
+}
+
+.heading.is-current .name {
+    color: inherit;
+    text-decoration: none;
+}
+
+.origin {
+    overflow: hidden;
+    min-width: 0;
+    color: var(--color-muted);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.icon,
+.fork-at {
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 24px;
+    padding: var(--space-none);
+}
+
+.list {
+    flex-grow: 1;
+    min-height: 0;
+    scrollbar-gutter: stable;
+}
+
+/* Cells touch, so a fork's line runs unbroken from its parent's commit to its own column. */
+.row {
+    --row-background: var(--color-surface);
+
+    position: relative;
+    height: var(--row-height);
+    background-color: var(--row-background);
+}
+
+/* A group is a shaded band, with no node: a node is always a commit. */
+.row.is-group {
+    --row-background: var(--color-band);
+}
+
+.row.is-group:hover {
+    --row-background: var(--color-hover);
+}
+
+/* The time and group column stays put while the branches scroll sideways. */
+.label {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    overflow: hidden;
+    min-width: 0;
+    height: 100%;
+    padding: var(--space-none) var(--space-2) var(--space-none)
+        calc(var(--space-2) + var(--depth, 0) * var(--indent));
+    white-space: nowrap;
+    background-color: var(--row-background);
+}
+
+.label-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-variant-numeric: tabular-nums;
+}
+
+/* The whole label is the target, and for a group the whole row. */
+.toggle {
+    width: 100%;
+    color: inherit;
+    text-align: left;
+    border-style: none;
+    border-radius: 0;
+    cursor: pointer;
+}
+
+.row:not(.is-group) .toggle:hover {
+    --row-background: var(--color-hover);
+}
+
+.chevron,
+.chevron-space {
+    flex: none;
+    width: 14px;
+    height: 14px;
+}
+
+.chevron {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition: transform 0.1s;
+}
+
+.chevron.is-open {
+    transform: rotate(90deg);
+}
+
+/* Each branch's lane takes its own colour, and a fork's line takes the fork's. */
+.cell {
+    --lane: var(--color-border-strong);
+    --crossing: var(--color-border-strong);
+
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    overflow: hidden;
+    min-width: 0;
+    height: 100%;
+    padding: var(--space-none) var(--space-2) var(--space-none) calc(var(--lane-x) + 12px);
+    color: inherit;
+    text-align: left;
+    white-space: nowrap;
+    background-color: transparent;
+    border-style: none;
+    border-radius: 0;
+}
+
+[data-lane='0'] {
+    --lane: var(--color-lane-1);
+}
+
+[data-lane='1'] {
+    --lane: var(--color-lane-2);
+}
+
+[data-lane='2'] {
+    --lane: var(--color-lane-3);
+}
+
+[data-lane='3'] {
+    --lane: var(--color-lane-4);
+}
+
+[data-lane='4'] {
+    --lane: var(--color-lane-5);
+}
+
+[data-crossing='0'] {
+    --crossing: var(--color-lane-1);
+}
+
+[data-crossing='1'] {
+    --crossing: var(--color-lane-2);
+}
+
+[data-crossing='2'] {
+    --crossing: var(--color-lane-3);
+}
+
+[data-crossing='3'] {
+    --crossing: var(--color-lane-4);
+}
+
+[data-crossing='4'] {
+    --crossing: var(--color-lane-5);
+}
+
+/* The branch's line, down the whole row. */
+.cell.has-lane::before {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: var(--lane-x);
+    border-left: var(--lane-width) solid var(--lane);
+    content: '';
+}
+
+/*
+ * On a fork's connector row, its line curves off its parent's lane, runs across any columns
+ * between, and curves down into its own lane; the row is there so the curves have room.
+ */
+.cell.is-lane-to-right::after,
+.cell.is-lane-to-left::after {
+    position: absolute;
+    top: 0;
+    height: calc(50% + var(--lane-width));
+    border-bottom: var(--lane-width) solid var(--crossing);
+    content: '';
+}
+
+.cell.is-lane-to-right::after {
+    right: 0;
+    left: var(--lane-x);
+    border-left: var(--lane-width) solid var(--crossing);
+    border-bottom-left-radius: var(--curve);
+}
+
+.cell.is-lane-to-left::after {
+    right: calc(100% - var(--lane-x) - var(--lane-width));
+    left: 0;
+    border-right: var(--lane-width) solid var(--crossing);
+    border-bottom-right-radius: var(--curve);
+}
+
+.cell.is-lane-crossed::after {
+    position: absolute;
+    top: 50%;
+    right: 0;
+    left: 0;
+    border-top: var(--lane-width) solid var(--crossing);
+    content: '';
+}
+
+.cell.is-lane-from-left::after,
+.cell.is-lane-from-right::after {
+    position: absolute;
+    top: 50%;
+    bottom: 0;
+    border-top: var(--lane-width) solid var(--lane);
+    content: '';
+}
+
+.cell.is-lane-from-left::after {
+    left: 0;
+    width: calc(var(--lane-x) + var(--lane-width));
+    border-right: var(--lane-width) solid var(--lane);
+    border-top-right-radius: var(--curve);
+}
+
+.cell.is-lane-from-right::after {
+    right: 0;
+    left: var(--lane-x);
+    border-left: var(--lane-width) solid var(--lane);
+    border-top-left-radius: var(--curve);
+}
+
+.connector-label {
+    color: var(--color-muted);
+    font-size: 11px;
+    font-style: italic;
+}
+
+.cell.count {
+    color: var(--color-muted);
+}
+
+/*
+ * A closed group's summary node: a pill on the lane with how many commits it holds, drawn unlike
+ * a commit's round node. The whole row opens it.
+ */
+.summary {
+    position: absolute;
+    top: calc(50% - 9px);
+    left: calc(var(--lane-x) + var(--lane-width) / 2 - 14px);
+    z-index: 1;
+    min-width: 28px;
+    height: 18px;
+    padding: var(--space-none) var(--space-1);
+    color: var(--lane);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 14px;
+    text-align: center;
+    background-color: var(--color-surface);
+    border: var(--lane-width) solid var(--lane);
+    border-radius: 9px;
+}
+
+.cell.count .cell-text {
+    padding-left: var(--space-3);
+}
+
+button.cell.count {
+    cursor: pointer;
+}
+
+button.cell.count:hover {
+    color: var(--color-text);
+}
+
+button.cell.count:hover .summary {
+    box-shadow:
+        0 0 0 2px var(--color-surface),
+        0 0 0 4px var(--lane);
+}
+
+button.cell.count:focus-visible {
+    outline-offset: -2px;
+}
+
+/* The group holding the commit shown, found even when zoomed out. */
+.cell.has-shown .summary {
+    color: var(--color-accent-text);
+    background-color: var(--color-accent);
+    border-color: var(--color-accent);
+}
+
+/* A commit: its node on the lane and its text are one target, and a fork point has a fork. */
+.cell.commit {
+    padding: var(--space-none);
+}
+
+.select {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    padding: var(--space-none) var(--space-2) var(--space-none) calc(var(--lane-x) + 12px);
+    color: inherit;
+    text-align: left;
+    white-space: nowrap;
+    background-color: transparent;
+    border-style: none;
+    border-radius: 0;
+    cursor: pointer;
+}
+
+.select:focus-visible,
+.cell.event:focus-visible {
+    outline-offset: -2px;
+}
+
+.select:hover,
+.cell.event:hover {
+    background-color: var(--color-hover);
+    box-shadow: inset 0 0 0 1px var(--color-border-strong);
+}
+
+.cell.is-fork-point .select {
+    padding-right: var(--fork-room);
+}
+
+/* An event: its text selects it, and its kind's breakpoint dot sits at the right (FND-88). */
+.cell.event {
+    padding: var(--space-none);
+}
+
+.cell.event.is-selected .select {
+    color: var(--color-accent-text);
+    background-color: var(--color-accent);
+}
+
+.pause {
+    position: absolute;
+    top: calc(50% - 12px);
+    right: var(--space-1);
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: var(--space-none);
+    background-color: transparent;
+    border-style: none;
+    opacity: 0;
+}
+
+.row:hover .pause,
+.pause:focus-visible,
+.pause.is-set {
+    opacity: 1;
+}
+
+/* The fork shows on the commit shown, and under the pointer, so the lanes stay readable. */
+.fork-at {
+    position: absolute;
+    top: calc(50% - 12px);
+    right: var(--space-1);
+    z-index: 1;
+    opacity: 0;
+}
+
+.row:hover .fork-at,
+.cell.is-shown .fork-at,
+.fork-at:focus-visible {
+    opacity: 1;
+}
+
+.cell.event {
+    cursor: pointer;
+}
+
+.cell-text {
+    position: relative;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.is-event .cell-text {
+    padding-left: var(--space-3);
+}
+
+/* Each commit is a round node on its branch's lane, coloured by its kind (FND-81). */
+.mark {
+    position: absolute;
+    top: calc(50% - 7px);
+    left: calc(var(--lane-x) + var(--lane-width) / 2 - 7px);
+    z-index: 1;
+    width: 14px;
+    height: 14px;
+    border: 3px solid var(--color-surface);
+    border-radius: 50%;
+    background-color: var(--color-accent);
+}
+
+[data-mark='Job'] .mark {
+    background-color: var(--color-deliveries);
+}
+
+[data-mark='Input'] .mark {
+    background-color: var(--color-actors);
+}
+
+[data-mark='ConfigChange'] .mark {
+    background-color: var(--color-orders);
+}
+
+/* An indirect commit's node is hollow, with a dashed edge: the service does not see it (FND-89). */
+[data-mark='Indirect'] .mark {
+    background-color: var(--color-surface);
+    border: 2px dashed var(--color-actors);
+}
+
+/*
+ * From an indirect commit to the call that followed from it, a hatched strip along the lane shows
+ * how long the service was unaware (FND-89).
+ */
+.cell[data-unaware] {
+    background-image: repeating-linear-gradient(
+        45deg,
+        var(--color-actors) 0 2px,
+        transparent 2px 6px
+    );
+    background-repeat: no-repeat;
+    background-position: calc(var(--lane-x) - 5px) 0;
+    background-size: 12px 100%;
+}
+
+.cell[data-unaware='start'] {
+    background-position: calc(var(--lane-x) - 5px) 100%;
+    background-size: 12px 50%;
+}
+
+.cell[data-unaware='end'] {
+    background-size: 12px 50%;
+}
+
+.unaware-text {
+    position: absolute;
+    top: calc(50% - 8px);
+    right: calc(100% - var(--lane-x) + 14px);
+    font-size: 10px;
+    line-height: 16px;
+    color: var(--color-actors);
+    white-space: nowrap;
+}
+
+/* A fork point's node is ringed in its lane's colour: a branch can start after it. */
+.cell.is-fork-point .mark {
+    box-shadow: 0 0 0 2px var(--lane);
+}
+
+/*
+ * Left of the lane, where nothing else is drawn: the module a state commit changed, in its
+ * colour, and the arrow of a call between modules, which points at the badge of the module called.
+ */
+.module {
+    position: absolute;
+    top: calc(50% - 8px);
+    right: calc(100% - var(--lane-x) + 18px);
+    padding: var(--space-none) var(--space-1);
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 16px;
+    white-space: nowrap;
+    border-radius: 4px;
+}
+
+[data-module='Orders'] {
+    color: var(--color-orders);
+    background-color: var(--color-orders-tint);
+}
+
+[data-module='Deliveries'] {
+    color: var(--color-deliveries);
+    background-color: var(--color-deliveries-tint);
+}
+
+[data-module='Drivers'] {
+    color: var(--color-actors);
+    background-color: var(--color-actors-tint);
+}
+
+/* A call: from the caller's node, down beside the lane, into the node of the commit called. */
+.call-out,
+.call-in {
+    position: absolute;
+    left: calc(var(--lane-x) - 13px);
+    border-left: var(--lane-width) solid var(--color-muted);
+}
+
+.call-out {
+    top: 50%;
+    bottom: 0;
+    width: 10px;
+    border-top: var(--lane-width) solid var(--color-muted);
+    border-top-left-radius: 6px;
+}
+
+.call-in {
+    top: 0;
+    height: 50%;
+    width: 4px;
+    border-bottom: var(--lane-width) solid var(--color-muted);
+    border-bottom-left-radius: 6px;
+}
+
+/* The arrow's head, pointing at the commit called. */
+.call-in::after {
+    position: absolute;
+    right: -6px;
+    bottom: -5px;
+    border: 4px solid transparent;
+    border-left: 5px solid var(--color-muted);
+    content: '';
+}
+
+.from {
+    position: relative;
+    flex: none;
+    color: var(--color-muted);
+    font-size: 11px;
+}
+
+/* The commit shown, and the event selected, keep their colours under the pointer. */
+.cell.is-shown .select,
+.cell.is-shown .select:hover {
+    color: var(--color-text);
+    background-color: var(--color-accent-tint);
+    box-shadow: inset 0 0 0 2px var(--color-accent);
+}
+
+.cell.event.is-selected,
+.cell.event.is-selected:hover {
+    color: var(--color-accent-text);
+    background-color: var(--color-accent);
+    box-shadow: none;
+}
+
+.cell.event.is-selected:hover {
+    background-color: var(--color-accent-hover);
+}
+
+/* A commit or event after the commit shown: it had not happened yet there (FND-86). */
+.cell.is-later {
+    color: var(--color-disabled-text);
+}
+
+.cell.is-later .mark {
+    opacity: 0.5;
+}
+
+.empty {
+    margin: var(--space-none);
+    padding: var(--space-2);
+    color: var(--color-muted);
+}
+
+/* It floats over the list, so showing it never changes the list's height. */
+.follow {
+    position: absolute;
+    right: var(--space-4);
+    bottom: var(--space-3);
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: var(--space-none);
+    color: var(--color-accent);
+    border-color: var(--color-border-strong);
+    border-radius: 50%;
+    box-shadow: 0 1px 4px var(--color-shadow);
+}
+
+.follow svg {
+    width: 14px;
+    height: 14px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}

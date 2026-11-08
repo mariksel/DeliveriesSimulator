@@ -1,0 +1,79 @@
+:host {
+    display: block;
+    overflow: auto;
+    min-height: 0;
+}
+
+.breakpoints-panel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding: var(--space-3);
+}
+
+.hit {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin: var(--space-none);
+    padding: var(--space-2);
+    background-color: var(--color-fail-tint);
+    border-radius: 4px;
+}
+
+.add {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: var(--space-2);
+}
+
+.add label {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    color: var(--color-muted);
+}
+
+.hint {
+    margin: var(--space-none);
+    color: var(--color-muted);
+}
+
+.list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    margin: var(--space-none);
+    padding: var(--space-none);
+    list-style: none;
+}
+
+.list li {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-1) var(--space-2);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.list li.is-off {
+    color: var(--color-muted);
+}
+
+.switch {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    cursor: pointer;
+}
+
+.narrowing {
+    flex-grow: 1;
+    color: var(--color-muted);
+}
+
+.icon {
+    width: 28px;
+    padding: var(--space-none);
+}

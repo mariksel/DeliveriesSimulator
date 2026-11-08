@@ -1,0 +1,10 @@
+{
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+        "lib": ["ES2024"],
+        "types": [],
+        "noEmit": true
+    },
+    "include": ["src/domain/**/*.ts", "src/application-core/**/*.ts", "src/application/**/*.ts"],
+    "exclude": ["src/**/*.spec.ts", "src/**/*.testing.ts"]
+}

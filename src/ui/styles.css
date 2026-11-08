@@ -1,0 +1,237 @@
+/* Where the CDK places what floats over the page, such as tooltips. */
+@import '@angular/cdk/overlay-prebuilt.css';
+
+:root {
+    --color-text: #1b2430;
+    --color-muted: #5a6675;
+    --color-surface: #ffffff;
+    --color-sidebar: #eef1f5;
+    --color-border: #d3d9e1;
+    --color-border-strong: #8d98a6;
+    --color-hover: #eef1f5;
+    --color-pressed: #dde3ea;
+    --color-disabled: #f4f6f8;
+    --color-disabled-text: #87919e;
+    --color-accent: #1c5fb8;
+    --color-accent-hover: #174e99;
+    --color-accent-pressed: #123e7a;
+    --color-accent-tint: #e4eefb;
+    --color-accent-text: #ffffff;
+    --color-start: #1a7f4b;
+    --color-start-hover: #15693e;
+    --color-start-pressed: #105331;
+    --color-start-tint: #e3f3ea;
+    --color-start-tint-hover: #cfe9da;
+    --color-running: #b45f06;
+    --color-running-hover: #964f05;
+    --color-running-pressed: #784004;
+    --color-fail-tint: #fbe9e7;
+    --color-on-accent-tint: #ffffff33;
+    --color-shadow: #1b243040;
+    --color-orders: #0f766e;
+    --color-orders-tint: #dcf3ef;
+    --color-deliveries: #8a4baf;
+    --color-deliveries-tint: #f2e9f8;
+    --color-actors: #5a6675;
+    --color-actors-tint: #e9edf1;
+    --color-waiting: #fff3d6;
+    --color-waiting-hover: #ffe8b0;
+    --color-pass: #1a7f4b;
+    /* The timeline's branch lanes, in the order branches are made: distinct from each other (FND-87). */
+    /* A group's band on the timeline, a shade off the surface. */
+    --color-band: #f4f6f8;
+    --color-lane-1: #1f5fbf;
+    --color-lane-2: #c2410c;
+    --color-lane-3: #8a4baf;
+    --color-lane-4: #1a7f4b;
+    --color-lane-5: #b4235a;
+    --color-pass-tint: #e3f3ea;
+    --color-fail: #b3261e;
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 16px;
+    --space-4: 24px;
+    --space-none: 0;
+    --space-overlap: -1px;
+    font-family: system-ui, sans-serif;
+    font-size: 14px;
+}
+
+html,
+body {
+    height: 100%;
+    margin: var(--space-none);
+    color: var(--color-text);
+    background-color: var(--color-surface);
+}
+
+button {
+    padding: var(--space-1) var(--space-2);
+    color: var(--color-text);
+    background-color: var(--color-surface);
+    border-color: var(--color-border);
+    border-style: solid;
+    border-width: 1px;
+    border-radius: 4px;
+    cursor: pointer;
+    font: inherit;
+}
+
+/* In :where, so a component's own look for a button always wins over these. */
+button:where(:hover:not(:disabled)) {
+    background-color: var(--color-hover);
+    border-color: var(--color-border-strong);
+}
+
+button:where(:active:not(:disabled)) {
+    background-color: var(--color-pressed);
+}
+
+button:disabled {
+    color: var(--color-disabled-text);
+    background-color: var(--color-disabled);
+    cursor: not-allowed;
+}
+
+button.is-selected {
+    color: var(--color-accent-text);
+    background-color: var(--color-accent);
+    border-color: var(--color-accent);
+}
+
+button.is-selected:hover {
+    background-color: var(--color-accent-hover);
+    border-color: var(--color-accent-hover);
+}
+
+button.is-selected:active {
+    background-color: var(--color-accent-pressed);
+    border-color: var(--color-accent-pressed);
+}
+
+:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 1px;
+}
+
+input[type='text'] {
+    padding: var(--space-1) var(--space-2);
+    color: var(--color-text);
+    background-color: var(--color-surface);
+    border-color: var(--color-border-strong);
+    border-style: solid;
+    border-width: 1px;
+    border-radius: 4px;
+    font: inherit;
+}
+
+input[type='text']:hover {
+    border-color: var(--color-text);
+}
+
+input[type='text']:focus-visible {
+    border-color: var(--color-accent);
+    outline-width: 1px;
+    outline-offset: 0;
+}
+
+input[type='text'][aria-invalid='true'] {
+    background-color: var(--color-fail-tint);
+    border-color: var(--color-fail);
+    outline-color: var(--color-fail);
+}
+
+input::file-selector-button {
+    margin-right: var(--space-2);
+    padding: var(--space-1) var(--space-2);
+    color: var(--color-text);
+    background-color: var(--color-surface);
+    border-color: var(--color-border);
+    border-style: solid;
+    border-width: 1px;
+    border-radius: 4px;
+    cursor: pointer;
+    font: inherit;
+}
+
+input::file-selector-button:hover {
+    background-color: var(--color-hover);
+    border-color: var(--color-border-strong);
+}
+
+input::file-selector-button:active {
+    background-color: var(--color-pressed);
+}
+
+/* Read by screen readers, and not shown. */
+.visually-hidden {
+    position: absolute;
+    overflow: hidden;
+    width: 1px;
+    height: 1px;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+/*
+ * A table scrolls sideways when its columns are wider than it, with its headings and rows
+ * together.
+ */
+.table-scroll {
+    display: flex;
+    flex-grow: 1;
+    overflow-x: auto;
+    overflow-y: hidden;
+    min-height: 0;
+}
+
+/*
+ * Stretched by the row above, not given a percentage, which Firefox and Safari do not resolve
+ * here.
+ */
+.table-inner {
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    width: max-content;
+    min-width: 100%;
+}
+
+/*
+ * Controls that belong together: they share their borders, and only the outer corners are round.
+ */
+.button-group,
+.input-group {
+    display: inline-flex;
+}
+
+.button-group > *,
+.input-group > * {
+    position: relative;
+    margin-left: var(--space-overlap);
+    border-radius: 0;
+}
+
+.button-group > :first-child,
+.input-group > :first-child {
+    margin-left: var(--space-none);
+    border-radius: 4px 0 0 4px;
+}
+
+.button-group > :last-child,
+.input-group > :last-child {
+    border-radius: 0 4px 4px 0;
+}
+
+/* A shared border belongs to whichever side is showing a state. */
+.button-group > :hover,
+.input-group > :hover,
+.button-group > .is-selected,
+.input-group > .is-selected {
+    z-index: 1;
+}
+
+.button-group > :focus-visible,
+.input-group > :focus-visible {
+    z-index: 2;
+}

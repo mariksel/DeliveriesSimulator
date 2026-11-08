@@ -1,0 +1,8 @@
+{
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+        "outDir": "./dist/tsc-spec",
+        "types": []
+    },
+    "include": ["src/**/*.ts", "e2e/**/*.ts", "*.config.ts"]
+}

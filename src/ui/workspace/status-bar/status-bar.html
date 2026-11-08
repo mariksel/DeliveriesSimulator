@@ -1,0 +1,41 @@
+<footer>
+    @if (view(); as run) {
+    <span class="state" data-testid="status-state" [attr.data-state]="run.state"
+        >{{ run.state }}</span
+    >
+    <span class="time" data-testid="status-time">{{ run.time }}</span>
+    @if (run.placeLabel; as placeLabel) {
+    <span class="place" data-testid="status-place">{{ placeLabel }}</span>
+    }
+    <span
+        ><span class="label">Version</span>
+        <span data-testid="status-version">{{ run.version }}</span></span
+    >
+    <span
+        ><span class="label">Seed</span>
+        <span data-testid="status-seed">{{ run.seed }}</span></span
+    >
+    <span
+        ><span class="label">Speed</span>
+        <span data-testid="status-speed">{{ run.speed }}</span></span
+    >
+    <span
+        ><span class="label">Events</span>
+        <span data-testid="status-events">{{ run.eventCount }}</span></span
+    >
+    <span
+        ><span class="label">Orders finished</span>
+        <span data-testid="status-orders">{{ run.orders }}</span></span
+    >
+    @if (run.verdict; as verdict) {
+    <span
+        data-testid="status-verdict"
+        [class.is-passed]="run.isPassed"
+        [class.is-failed]="!run.isPassed"
+    >
+        {{ verdict }}
+    </span>
+    } } @else {
+    <span class="label" data-testid="status-state">No run open</span>
+    }
+</footer>

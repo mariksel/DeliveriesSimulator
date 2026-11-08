@@ -1,0 +1,19 @@
+<nav class="sidebar" aria-label="Sections">
+    <h1>Deliveries Simulator</h1>
+    <ul>
+        @for (section of sections; track section.path) {
+        <li>
+            <a
+                [routerLink]="section.path"
+                routerLinkActive="is-active"
+                [appTooltip]="section.summary"
+                >{{ section.title }}</a
+            >
+        </li>
+        }
+    </ul>
+</nav>
+<main class="content">
+    <router-outlet />
+</main>
+<app-status-bar class="status" />

@@ -1,0 +1,69 @@
+<div class="table-scroll">
+    <div class="table-inner">
+        <app-column-headings [group]="group" [columns]="columns" />
+        @if (rows().length > 0) {
+        <cdk-virtual-scroll-viewport
+            class="list"
+            data-testid="event-list"
+            [itemSize]="rowHeight"
+            (scroll)="noticeScroll()"
+        >
+            <div
+                *cdkVirtualFor="let entry of rows()"
+                class="row"
+                data-testid="event-row"
+                [class.is-selected]="entry.sequence === selected()"
+                [class.is-later]="shownCount() !== null && entry.sequence >= shownCount()!"
+            >
+                @let row = rowOf(entry);
+                <button
+                    type="button"
+                    class="select"
+                    [appTooltip]="'Select event #' + entry.sequence + ' to see its payload'"
+                    [attr.aria-pressed]="entry.sequence === selected()"
+                    (pointerdown)="stopFollowing()"
+                    (click)="chooseRow(entry.sequence)"
+                >
+                    <span class="row-cells">
+                        <span class="is-number">{{ row.sequence }}</span>
+                        <span>{{ row.time }}</span>
+                        <span class="source" [class]="'source-' + row.source"
+                            >{{ row.source }}</span
+                        >
+                        <span class="kind" [title]="row.kind">{{ row.kind }}</span>
+                        <span>{{ row.order }}</span>
+                        <span class="is-number">{{ row.causedBy }}</span>
+                    </span>
+                </button>
+                <!-- Pauses the run at every event of this kind, or stops doing so (FND-88). -->
+                <button
+                    type="button"
+                    class="pause"
+                    data-testid="event-pause"
+                    [class.is-set]="kindsPausedAt().has(entry.kind)"
+                    [appTooltip]="pauseLabel(entry.kind)"
+                    [attr.aria-label]="pauseLabel(entry.kind)"
+                    [attr.aria-pressed]="kindsPausedAt().has(entry.kind)"
+                    (click)="pauseOnKind.emit(entry.kind)"
+                >
+                    <app-breakpoint-icon [isSet]="kindsPausedAt().has(entry.kind)" />
+                </button>
+            </div>
+        </cdk-virtual-scroll-viewport>
+        } @else {
+        <p class="empty" data-testid="no-events">No events yet.</p>
+        }
+    </div>
+</div>
+@if (!isFollowing()) {
+<button
+    type="button"
+    class="follow"
+    data-testid="follow"
+    appTooltip="Follow the newest event"
+    aria-label="Follow the newest event"
+    (click)="follow()"
+>
+    <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v9M4 8l4 4 4-4" /></svg>
+</button>
+}

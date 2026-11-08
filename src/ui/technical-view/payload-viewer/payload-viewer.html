@@ -1,0 +1,64 @@
+<h3 data-testid="payload-kind">#{{ view().sequence }} {{ view().kind }}</h3>
+<dl>
+    <dt>Time</dt>
+    <dd data-testid="payload-time">{{ view().time }}</dd>
+    <dt>Source</dt>
+    <dd data-testid="payload-source">{{ view().source }}</dd>
+    <dt>Caused by</dt>
+    <dd>
+        @if (view().causedBy; as causedBy) {
+        <button
+            type="button"
+            class="link"
+            data-testid="payload-caused-by"
+            [appTooltip]="'Select event #' + causedBy + ', the event that caused this one'"
+            (click)="choose.emit(causedBy)"
+        >
+            #{{ causedBy }}
+        </button>
+        } @else if (view().causedBy === 0) {
+        <button
+            type="button"
+            class="link"
+            data-testid="payload-caused-by"
+            appTooltip="Select event #0, the event that caused this one"
+            (click)="choose.emit(0)"
+        >
+            #0
+        </button>
+        } @else { Nothing }
+    </dd>
+    <dt>Trace</dt>
+    <dd>
+        <button
+            type="button"
+            class="link"
+            data-testid="payload-trace"
+            appTooltip="Select the event this trace started from"
+            (click)="choose.emit(view().trace)"
+        >
+            #{{ view().trace }}
+        </button>
+    </dd>
+</dl>
+<pre data-testid="payload-json">{{ view().json }}</pre>
+<button
+    type="button"
+    data-testid="payload-copy"
+    appTooltip="Copy the payload as JSON"
+    (click)="copy()"
+>
+    Copy
+</button>
+<button
+    type="button"
+    class="show-trace"
+    data-testid="payload-show-trace"
+    appTooltip="Show this event's whole trace in the Trace tab"
+    (click)="showTrace.emit()"
+>
+    Show trace
+</button>
+@if (copyMessage(); as message) {
+<span class="message" data-testid="payload-copied">{{ message }}</span>
+}

@@ -1,0 +1,31 @@
+{
+    "format": 1,
+    "name": "No orders",
+    "description": "A scenario that creates no orders.",
+    "version": "V1.0.0",
+    "seed": 42,
+    "runUntil": "h00:m05:s00:ms00",
+    "restaurants": [
+        {
+            "id": "restaurant-1",
+            "area": "area-1",
+            "location": {
+                "latitude": 10.33,
+                "longitude": 20.82
+            }
+        }
+    ],
+    "drivers": [
+        {
+            "id": "driver-1",
+            "area": "area-1",
+            "availability": "Available",
+            "location": {
+                "latitude": 10.331,
+                "longitude": 20.82
+            },
+            "locatedAt": "h00:m00:s00:ms00"
+        }
+    ],
+    "steps": []
+}

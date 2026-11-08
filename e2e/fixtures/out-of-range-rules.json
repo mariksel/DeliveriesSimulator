@@ -1,0 +1,12 @@
+{
+    "format": 1,
+    "name": "Rules outside their ranges",
+    "description": "A distance limit set below its valid range, which the run still uses.",
+    "version": "V1.0.0",
+    "seed": 42,
+    "runUntil": "h00:m05:s00:ms00",
+    "restaurants": [],
+    "drivers": [],
+    "rules": [{ "rule": "drivers.near-restaurant", "parameter": "max-distance", "value": 100 }],
+    "steps": []
+}

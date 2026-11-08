@@ -1,0 +1,48 @@
+h3 {
+    margin-top: var(--space-none);
+}
+
+dl {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: var(--space-1) var(--space-2);
+    margin: var(--space-none);
+}
+
+dt {
+    color: var(--color-muted);
+}
+
+dd {
+    margin: var(--space-none);
+}
+
+pre {
+    overflow: auto;
+    margin-top: var(--space-2);
+    margin-bottom: var(--space-2);
+    padding: var(--space-2);
+    background-color: var(--color-sidebar);
+    font-size: 12px;
+}
+
+.link {
+    padding: var(--space-none);
+    color: var(--color-accent);
+    background-color: transparent;
+    border-style: none;
+    text-decoration: underline;
+}
+
+.link:hover {
+    color: var(--color-accent-pressed);
+}
+
+.show-trace {
+    margin-left: var(--space-1);
+}
+
+.message {
+    margin-left: var(--space-2);
+    color: var(--color-muted);
+}

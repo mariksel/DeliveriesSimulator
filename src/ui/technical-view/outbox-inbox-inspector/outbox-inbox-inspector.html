@@ -1,0 +1,34 @@
+<div class="modes">
+    <span id="inspector-view-heading">Show</span>
+    <div class="button-group" role="group" aria-labelledby="inspector-view-heading">
+        <button
+            type="button"
+            appTooltip="Group the tables by flow: each outbox beside the inbox it feeds"
+            [class.is-selected]="mode() === modes.ByFlow"
+            [attr.aria-pressed]="mode() === modes.ByFlow"
+            (click)="mode.set(modes.ByFlow)"
+        >
+            By flow
+        </button>
+        <button
+            type="button"
+            appTooltip="Group the tables by module: each module's outbox and inbox together"
+            [class.is-selected]="mode() === modes.ByModule"
+            [attr.aria-pressed]="mode() === modes.ByModule"
+            (click)="mode.set(modes.ByModule)"
+        >
+            By module
+        </button>
+    </div>
+</div>
+<div class="tables" data-testid="inspector-tables" [class.by-module]="mode() === modes.ByModule">
+    @for (table of tables(); track table.title) {
+    <app-inspector-table
+        data-testid="inspector-table"
+        [table]="table"
+        [now]="now()"
+        [selected]="selected()"
+        (choose)="choose.emit($event)"
+    />
+    }
+</div>

@@ -1,0 +1,81 @@
+<div class="rules-panel" data-testid="rules-panel">
+    @for (module of modules(); track module.name) {
+    <section class="module" [attr.aria-label]="module.name + ' rules'">
+        <h2>{{ module.name }}</h2>
+        @for (rule of module.rules; track rule.id) {
+        <article class="rule" data-testid="rule" [attr.data-rule-id]="rule.id">
+            <h3>
+                {{ rule.name }} <code>{{ rule.id }}</code>
+                <span class="kind">{{ rule.kind }}</span>
+            </h3>
+            <p>{{ rule.text }}</p>
+            <p class="source">{{ rule.source }}</p>
+            @if (rule.parameters.length === 0) {
+            <p class="no-parameters">It takes no values, so it is shown but not tuned.</p>
+            } @else {
+            <table>
+                <thead>
+                    <tr>
+                        <th scope="col">Parameter</th>
+                        <th scope="col">In use</th>
+                        <th scope="col">Default</th>
+                        <th scope="col">Valid range</th>
+                        <th scope="col">New value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (parameter of rule.parameters; track parameter.key) {
+                    <tr data-testid="parameter" [attr.data-parameter-id]="parameter.parameterId">
+                        <th scope="row">
+                            {{ parameter.name }}
+                            <span class="hint">{{ parameter.kind }}</span>
+                        </th>
+                        <td
+                            data-testid="parameter-value"
+                            [class.is-out-of-range]="parameter.isOutOfRange"
+                            [class.is-changed]="!parameter.isDefault"
+                        >
+                            {{ parameter.value }} @if (parameter.isOutOfRange) {
+                            <span class="out-of-range" data-testid="out-of-range"
+                                >Outside its valid range</span
+                            >
+                            }
+                        </td>
+                        <td>{{ parameter.defaultValue }}</td>
+                        <td>{{ parameter.range }}</td>
+                        <td>
+                            <div class="input-group">
+                                <input
+                                    #typed
+                                    type="text"
+                                    data-testid="parameter-input"
+                                    appTooltip="Type a new value, then press Enter"
+                                    [attr.aria-label]="'New value for ' + parameter.name"
+                                    [attr.aria-invalid]="problem()?.key === parameter.key"
+                                    [value]="parameter.value"
+                                    (keydown.enter)="setValue(parameter, typed.value)"
+                                />
+                                <button
+                                    type="button"
+                                    [appTooltip]="'Use the value typed for ' + parameter.name"
+                                    (click)="setValue(parameter, typed.value)"
+                                >
+                                    Set
+                                </button>
+                            </div>
+                            @if (problem()?.key === parameter.key) {
+                            <span class="invalid" data-testid="parameter-problem"
+                                >{{ problem()?.message }}</span
+                            >
+                            }
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+            }
+        </article>
+        }
+    </section>
+    }
+</div>

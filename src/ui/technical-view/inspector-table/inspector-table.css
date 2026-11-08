@@ -1,0 +1,137 @@
+:host {
+    --table-gap: var(--space-1);
+
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    overflow: hidden;
+    min-height: 0;
+    font-size: 12px;
+}
+
+h4 {
+    flex-shrink: 0;
+    margin: var(--space-none);
+    margin-bottom: var(--space-1);
+    padding: var(--space-none) var(--space-2);
+    font-size: 13px;
+}
+
+.counts {
+    color: var(--color-muted);
+    font-weight: 400;
+}
+
+.cells {
+    display: grid;
+    grid-template-columns: var(--table-columns);
+    gap: var(--table-gap);
+    align-items: center;
+    min-width: 0;
+    font-variant-numeric: tabular-nums;
+}
+
+.cells > * {
+    overflow: hidden;
+    min-width: 0;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.list {
+    flex-grow: 1;
+    min-height: 0;
+}
+
+.row {
+    position: relative;
+    height: 26px;
+    padding: var(--space-none) var(--space-2);
+    line-height: 26px;
+}
+
+.row:hover {
+    background-color: var(--color-hover);
+}
+
+.row:active {
+    background-color: var(--color-pressed);
+}
+
+.row.is-waiting {
+    background-color: var(--color-waiting);
+}
+
+.row.is-waiting:hover {
+    background-color: var(--color-waiting-hover);
+}
+
+.row.is-selected {
+    color: var(--color-accent-text);
+    background-color: var(--color-accent);
+}
+
+.row.is-selected:hover {
+    background-color: var(--color-accent-hover);
+}
+
+/* The row is what selects, so the row shows the focus. */
+.row:has(.select:focus-visible) {
+    outline: 2px solid var(--color-accent);
+    outline-offset: -2px;
+}
+
+.select:focus-visible {
+    outline-style: none;
+}
+
+.row.is-selected .read-link {
+    color: inherit;
+}
+
+.clip,
+.select {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.select {
+    padding: var(--space-none);
+    color: inherit;
+    text-align: left;
+    background-color: transparent;
+    border-style: none;
+    font-size: inherit;
+}
+
+/* The whole row selects, while the link to the read stays clickable above it. */
+.select::after {
+    position: absolute;
+    inset: 0;
+    content: '';
+}
+
+.read-link {
+    position: relative;
+    padding: var(--space-none);
+    color: var(--color-accent);
+    background-color: transparent;
+    border-style: none;
+    font-size: inherit;
+    font-variant-numeric: inherit;
+}
+
+.read-link:hover,
+.read-link:focus-visible {
+    text-decoration: underline;
+}
+
+.read-link:hover {
+    color: var(--color-accent-pressed);
+}
+
+.empty {
+    margin: var(--space-2);
+    color: var(--color-muted);
+}

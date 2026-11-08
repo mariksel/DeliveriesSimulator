@@ -1,0 +1,56 @@
+<h4>
+    {{ table().title }}:
+    <span class="counts" data-testid="inspector-counts">{{ table().counts }}</span>
+</h4>
+<div class="table-scroll">
+    <div class="table-inner">
+        <app-column-headings [group]="group()" [columns]="columns()" />
+        @if (table().records.length > 0) {
+        <cdk-virtual-scroll-viewport class="list" [itemSize]="rowHeight">
+            <div
+                *cdkVirtualFor="let record of table().records"
+                class="row"
+                data-testid="inspector-row"
+                [class.is-waiting]="record.readSequence === null"
+                [class.is-selected]="isSelected(record)"
+            >
+                @let row = rowOf(record);
+                <div class="cells">
+                    <button
+                        type="button"
+                        class="select"
+                        [appTooltip]="'Select the event that wrote ' + row.id"
+                        (click)="choose.emit(record.sequence)"
+                    >
+                        {{ row.id }}
+                    </button>
+                    <span class="clip" data-testid="inspector-kind" [title]="row.kind"
+                        >{{ row.kind }}</span
+                    >
+                    <span>{{ row.order }}</span>
+                    @if (hasWritten()) {
+                    <span>{{ row.written }}</span>
+                    } @if (hasRead()) {
+                    <span>
+                        @if (record.readSequence === null) { waiting } @else {
+                        <button
+                            type="button"
+                            class="read-link"
+                            data-testid="inspector-read-link"
+                            appTooltip="Select the event that read it"
+                            (click)="choose.emit(record.readSequence)"
+                        >
+                            {{ row.read }}
+                        </button>
+                        }
+                    </span>
+                    }
+                    <span data-testid="inspector-waited">{{ row.waited }}</span>
+                </div>
+            </div>
+        </cdk-virtual-scroll-viewport>
+        } @else {
+        <p class="empty">None yet.</p>
+        }
+    </div>
+</div>

@@ -1,0 +1,35 @@
+:host {
+    display: block;
+    padding: var(--space-3);
+}
+
+h2 {
+    margin-top: var(--space-none);
+}
+
+.placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+    max-width: 520px;
+    margin: var(--space-4) auto;
+    padding: var(--space-4);
+    color: var(--color-muted);
+    text-align: center;
+    background-color: var(--color-hover);
+    border-radius: 8px;
+}
+
+p {
+    margin: var(--space-none);
+}
+
+.badge {
+    padding: var(--space-none) var(--space-2);
+    background-color: var(--color-pressed);
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 20px;
+}

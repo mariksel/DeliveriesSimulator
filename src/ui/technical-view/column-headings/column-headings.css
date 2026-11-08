@@ -1,0 +1,65 @@
+:host {
+    display: grid;
+    flex-shrink: 0;
+    grid-template-columns: var(--table-columns);
+    gap: var(--table-gap);
+    padding: var(--space-1) var(--space-2);
+    color: var(--color-muted);
+    border-bottom-color: var(--color-border);
+    border-bottom-style: solid;
+    border-bottom-width: 1px;
+}
+
+.heading {
+    position: relative;
+    min-width: 0;
+}
+
+.label {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.is-number .label {
+    text-align: right;
+}
+
+/* It sits in the gap between columns, so it never covers a heading. */
+.handle {
+    position: absolute;
+    top: 0;
+    right: calc(var(--table-gap) / -2 - 4px);
+    bottom: 0;
+    z-index: 1;
+    width: 8px;
+    /* The drag only reports distance: the new width moves the handle. */
+    transform: none !important;
+    cursor: col-resize;
+}
+
+.handle::after {
+    position: absolute;
+    top: 2px;
+    bottom: 2px;
+    left: 4px;
+    width: 1px;
+    background-color: var(--color-border);
+    content: '';
+}
+
+.handle:hover::after {
+    background-color: var(--color-border-strong);
+}
+
+.handle:active::after,
+.handle:focus-visible::after {
+    left: 3px;
+    width: 2px;
+    background-color: var(--color-accent);
+}
+
+.handle:focus-visible {
+    outline-style: none;
+}
