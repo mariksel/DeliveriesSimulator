@@ -6,9 +6,7 @@
   ([FND-40](../../decisions/project-foundation.md#fnd-40--kinds-of-version)).
 - **State described:** the real service's working tree on 2026-11-03
   ([FND-45](../../decisions/project-foundation.md#fnd-45--version-folder-layout)).
-- **Status:** Observed in the real service's code, and confirmed by the user on 2026-11-03.
-  I01-E02-003
-  recorded the confirmation.
+- **Status:** Observed in the real service's code.
 
 The simulation models all of this in full detail, down to individual records, including the push
 pipeline and devices
@@ -150,9 +148,9 @@ after downtime, not once per missed tick.
 
 ## Framework and library behaviour
 
-This section was read from the real service's code on 2026-11-05, at the user's request, in
-[FND-81](../../decisions/project-foundation.md#fnd-81--runs-as-a-tree-of-state-transitions), which
-also says what is simulated and when. The job framework's rules are under
+This section was read from the real service's code.
+[FND-81](../../decisions/project-foundation.md#fnd-81--runs-as-a-tree-of-state-transitions) says
+what is simulated and when. The job framework's rules are under
 [Jobs and schedules](#jobs-and-schedules), and it stores each run in its own tables.
 
 **Session state cache.** Every signed-in call checks that its session is still valid, in each

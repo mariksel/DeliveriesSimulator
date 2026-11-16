@@ -443,7 +443,8 @@ export class OrdersState {
             (version) => version.acceptDeliveryRequest(driverId),
             { deliveriesEventId: event.eventId },
         );
-        // Refusals and retries are off the happy path, and arrive with I04.
+        // Refusals and retries are off the happy path, and arrive with the Faults, races, and
+        // verification stage.
         if (!result.isOk) {
             throw new Error(`Orders refused ${event.eventId}: ${result.refusal}.`);
         }

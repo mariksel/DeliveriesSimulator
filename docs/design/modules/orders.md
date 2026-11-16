@@ -40,9 +40,8 @@ Orders writes its `V1.0.0` rules with the [Business rules](business-rules.md) ab
 the order below, which the Rules panel lists them in. The communication values are the ones the
 [module communication](../versions/V1.0.0/module-communication.md) page states, and the
 transitions are the [lifecycle](../versions/V1.0.0/lifecycle.md#transitions)'s, for the statuses
-built so far. No source states the valid ranges, so the simulator proposed them and the user
-accepted them on 2026-11-07
-([FND-84](../decisions/project-foundation.md#fnd-84--rule-abstractions)).
+built so far. No source states the valid ranges, so they are set in
+[FND-84](../decisions/project-foundation.md#fnd-84--rule-abstractions).
 
 | Rule ID | Kind | Parameter | Default | Valid range |
 | --- | --- | --- | --- | --- |
@@ -58,7 +57,7 @@ accepted them on 2026-11-07
 
 A transition's check covers only the statuses it is allowed from, and refuses with
 `NotAllowedFromStatus`. Its other guards, such as a pending request, the assigned driver, and
-readiness, stay in the code, as the user chose.
+readiness, stay in the code.
 
 ## Scope so far
 

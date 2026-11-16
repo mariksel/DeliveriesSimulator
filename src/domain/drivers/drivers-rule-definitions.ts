@@ -7,7 +7,7 @@ import { UsableValues } from '../business-rules/usable-values';
 
 /**
  * Drivers' rules of V1.0.0, written with the Business rules abstractions (FND-84). The values
- * are as the V1.0.0 rules state them, and the user accepted the ranges on 2026-11-07.
+ * are as the V1.0.0 rules state them.
  */
 
 const SOURCE = 'V1.0.0 business rules';

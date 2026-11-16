@@ -4,16 +4,15 @@
 
 - **Design version:** `D0.6.0`.
 - **Status:** Approved as a capability in
-  [FND-8](../decisions/project-foundation.md#fnd-8--capability-list). Partly implemented: the
-  clock, working out the work due, seeded randomness, and the determinism check exist. The
-  [implementation roadmap](../roadmap/implementation-roadmap.md) says which stage builds it.
-  [How a run is held](#how-a-run-is-held) is approved, and
-  I03-E02
-  builds it. So far, records are split, and a run keeps one state commit per transaction, an
-  effect commit for each job run, API call, and config change, and an indirect commit for each
-  indirect effect, over a main root that holds only its two sub-roots. The simulator's own data
-  is worked out from the commits and the scenario, or held in the effects sub-root. Output and
-  library effects, and implementation changes, are not built yet.
+  [FND-8](../decisions/project-foundation.md#fnd-8--capability-list). Partly implemented: the clock,
+  working out the work due, seeded randomness, and the determinism check exist. The [implementation
+  roadmap](../roadmap/implementation-roadmap.md) says which stage builds it. [How a run is
+  held](#how-a-run-is-held) is approved, and the Full V1.0.0 lifecycle and rules stage builds it. So
+  far, records are split, and a run keeps one state commit per transaction, an effect commit for
+  each job run, API call, and config change, and an indirect commit for each indirect effect, over a
+  main root that holds only its two sub-roots. The simulator's own data is worked out from the
+  commits and the scenario, or held in the effects sub-root. Output and library effects, and
+  implementation changes, are not built yet.
 
 ## Current and approved responsibilities
 
@@ -46,7 +45,7 @@ drives the other modules.
   that wrote it, and Resume and Step go on from the latest commit. While a breakpoint is on, the
   work checks each piece's new entries; with none on, it runs as before. Breakpoints belong to
   the person watching, are kept when the run starts again, and are not saved with the run.
-  Breakpoints on rules come with the Rule evaluation log, I03-E04-007
+  Breakpoints on rules come with the Rule evaluation log
   ([FND-88](../decisions/project-foundation.md#fnd-88--step-debugger)).
 
 ## Dependencies
@@ -112,8 +111,8 @@ other as it is.
   comparison. A test on every run shows that each commit changes only its own sub-root.
 - **A true effect changes something.** An effect that is only internal, and changes neither
   internal nor external state, makes no commit. A cache hit is one example.
-- **The commits of one action** run back to back at one simulated time in `I03`. `I04` lets other
-  work land between them.
+- **The commits of one action** run back to back at one simulated time in the Full V1.0.0 lifecycle
+  and rules stage. The Faults, races, and verification stage lets other work land between them.
 
 ### Kinds of effect
 
@@ -130,11 +129,11 @@ The dividing line is whether the service took part.
 
 - **Indirect effects** cover decisions and changes that can alter what happens later, and not
   continuous movement. The service can't see them, so the simulator knows more than the service
-  does. A direct effect records which indirect effect led to it, when that is known. `I03` states
-  them by hand, in scenario steps and Manual mode, and behaviour profiles add them later. Each
-  kind of indirect effect has its own typed data
-  ([FND-72](../decisions/project-foundation.md#fnd-72--code-style)). There are three kinds: a
-  driver ignores a request, a restaurant runs late, and a customer won't take an order
+  does. A direct effect records which indirect effect led to it, when that is known. The Full V1.0.0
+  lifecycle and rules stage states them by hand, in scenario steps and Manual mode, and behaviour
+  profiles add them later. Each kind of indirect effect has its own typed data
+  ([FND-72](../decisions/project-foundation.md#fnd-72--code-style)). There are three kinds: a driver
+  ignores a request, a restaurant runs late, and a customer won't take an order
   ([FND-89](../decisions/project-foundation.md#fnd-89--indirect-effects-stated-by-hand)).
 - **An indirect commit** states one. It changes only the indirect part of the effects sub-root,
   and shares the state, the direct part, and the randomness with the root before it. It happens
@@ -142,9 +141,8 @@ The dividing line is whether the service took part.
   due before it, as a config change does. It writes an `IndirectEffectHappened` entry from the
   actors, which the service did not see, and holds it. An indirect effect can have a label, which
   a later input names to say it follows from it; an API call's effect records the indirect commit
-  it follows from, or nothing. A label given by hand, and a config change recording one, come
-  with
-  I03-E02-022.
+  it follows from, or nothing. A label given by hand, and a config change recording one, are
+  planned.
   A fork can start at an indirect commit, to explore a different
   decision.
 - **Stating one:** a scenario's [indirect step](scenario-format.md#an-indirect-step) is one of the
@@ -160,15 +158,15 @@ The dividing line is whether the service took part.
 - **A cache** behaves as the real library does. A time limit passing is no event. A commit happens
   when the library removes an entry, or when a call changes the cache. Cached state lives in the
   direct part.
-- **Tuning** rule parameters during a run makes a config change commit, and the values a run
-  starts with sit in its start root without one. A script's step can change rules too, as a
-  config change commit that counts as a step run. A change names a rule and a parameter by ID,
-  and goes to the module that holds the rule; a rule no module holds is refused
-  ([FND-84](../decisions/project-foundation.md#fnd-84--rule-abstractions)). Switching a function's version during a run is an
-  implementation change, a planned kind: `I03-E02-025` gives functions versions and the run the
-  versions it uses, and `I03-E02-026` builds the `ImplementationChange` commit, with its
-  `FunctionVersionSwitched` log entry. A scenario's `use` step can switch a version, and so can
-  a person in the Rules panel, forking first when an earlier commit is shown, as rule changes do
+- **Tuning** rule parameters during a run makes a config change commit, and the values a run starts
+  with sit in its start root without one. A script's step can change rules too, as a config change
+  commit that counts as a step run. A change names a rule and a parameter by ID, and goes to the
+  module that holds the rule; a rule no module holds is refused
+  ([FND-84](../decisions/project-foundation.md#fnd-84--rule-abstractions)). Switching a function's
+  version during a run is an implementation change, a planned kind: functions get versions and the
+  run the versions it uses, and an `ImplementationChange` commit, with its `FunctionVersionSwitched`
+  log entry. A scenario's `use` step can switch a version, and so can a person in the Rules panel,
+  forking first when an earlier commit is shown, as rule changes do
   ([FND-81](../decisions/project-foundation.md#fnd-81--runs-as-a-tree-of-state-transitions)).
 - **Groups:** a commit stores which job run or API call it happened in, and those commits group
   under it on the timeline. The effect commit comes last in its group, because only then is the
@@ -179,11 +177,8 @@ The dividing line is whether the service took part.
 The record split and version chains are built, and so are copies that hold only what their module
 knows: orders' copy of a deliveries event keeps the fields orders has, not the deliveries record.
 Collections keyed by the parent's ID, links across the modules, and the in-memory form are built
-too. Order items are not records yet:
-I03-E04-002
-makes them. Links across the sub-roots are not built:
-I03-E02-021
-builds them.
+too. Order items are not records yet, and links across the sub-roots are not built; both are
+planned.
 
 - **Two parts:** every record that changes splits into an unchanging part and a version part, such
   as `Order` and `OrderVersion`. Events and outbox rows never change, so they have no version
@@ -216,8 +211,7 @@ builds them.
 
 The main root holds exactly its two sub-roots. A run holds only its scenario's script, its line
 of commits, the root it has reached, and the cache beside that line, which is never saved and is
-rebuilt from the commits on loading. The simulator data a run held beside its root until
-`I03-E02-006` went here:
+rebuilt from the commits on loading. The simulator data a run held beside its root went here:
 
 | Was beside the root | Where it went |
 | --- | --- |
@@ -243,11 +237,10 @@ no module calls another. These are named follow-ups, to keep "effect" for effect
 
 ### Memory
 
-Every commit keeps its main root in memory, which `I07` revisits at a full city day. A city day
-now makes 254,524 commits, of which 169,800 are state commits, and holds about 749 MB once the
-run ends. Pending requests and the push pipeline should take that to about 324,000 commits.
-I03-E02-017
-measures it properly.
+Every commit keeps its main root in memory, which the City, actors, and scale stage revisits at a
+full city day. A city day now makes 254,524 commits, of which 169,800 are state commits, and holds
+about 749 MB once the run ends. Pending requests and the push pipeline should take that to about
+324,000 commits. The measurement below checks it.
 
 ## Performance
 
@@ -313,8 +306,7 @@ Deliveries' rules the same way also kept the digest, at 48.8 s and a peak of 1,2
 
 The benchmark also reports what the heap holds after full garbage collections: before the run,
 with the run and every root its commits keep, and with only its latest root, together with the
-number of commits. Measured on 2026-11-07 for
-I03-E02-017,
+number of commits. Measured on 2026-11-07,
 on the same PC as the measurements above, the city day made 254,524 commits and 204,800 log
 entries, delivered all 5,000 orders with the same digest, and took 51.9 s, at 1,665 simulated
 seconds per real second, with a peak of 976 MB. The heap held 25 MB before the run, 761 MB with
@@ -322,7 +314,7 @@ every root, and 119 MB with only the latest root. The estimate in
 [FND-81](../decisions/project-foundation.md#fnd-81--runs-as-a-tree-of-state-transitions) was
 about 1,046 MB with every root and 108 MB with the latest only: keeping every root costs about
 640 MB for the day, less than estimated, and the latest root alone about what was estimated.
-`I07` revisits keeping every root with these numbers.
+The City, actors, and scale stage revisits keeping every root with these numbers.
 
 Keeping every commit's place for time-travel replay kept the same digest and time, at 51.9 s,
 and took what the heap held with every root from 761 MB to 771 MB.

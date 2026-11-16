@@ -74,9 +74,7 @@ stored states, in two ways:
 They run in two places: as automated tests, which `npm run check` runs over saved runs kept in
 the repository, and as a Snapshot test action on a saved run in the app. The repository keeps one
 saved run for each built-in scenario, at the minimum level, made again only when a new function
-version is added.
-I03-E02-009
-builds them.
+version is added. The Full V1.0.0 lifecycle and rules stage builds them.
 
 ## Code map
 

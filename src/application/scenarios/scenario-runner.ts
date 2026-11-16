@@ -13,7 +13,10 @@ import type {
 } from '../../application-core/scenarios/scenario';
 import { problemAt } from '../../application-core/scenarios/scenario';
 
-/** The versions this simulator can run. The Versions module takes this over in I06. */
+/**
+ * The versions this simulator can run. The Versions module takes this over in the Versions and
+ * comparison stage.
+ */
 const AVAILABLE_VERSIONS: readonly string[] = ['V1.0.0'];
 
 const versionProblems = (): List<IScenarioProblem> =>

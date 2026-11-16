@@ -30,21 +30,15 @@ Decision records:
 
 - [Project foundation](decisions/project-foundation.md) — purpose, stack, data
   location, integrations, users, capability list, rule sources, and architecture.
-- [Implementation roadmap](roadmap/implementation-roadmap.md) — the approved stages `I02` to
-  `I11`, and which stage builds each capability.
-
-List each decision record and roadmap here as it is added. New pages start from:
-[module](modules/_module-template.md),
-[integration](integrations/_integration-template.md),
-[decision](decisions/_decision-template.md),
-[roadmap](roadmap/_roadmap-template.md).
+- [Implementation roadmap](roadmap/implementation-roadmap.md) — the approved stages, from the
+  End-to-end skeleton to the Later capabilities, and which stage builds each capability.
 
 ## Version snapshot
 
 | Version type | Recorded baseline | Meaning |
 |---|---|---|
-| Design (`D`) | `D0.6.0` | First built baseline, with stage `I02` built: the approved purpose, goal, stack, data location and mechanism, capability list, business rule sources, version comparison, and public safety. |
-| Architecture (`A`) | `A0.6.0` | Clean architecture with a framework-free core, five layers, a composition root, a custom Vite build with type checking, Node 26, TypeScript 6.0, an architecture check, code style tools, and test tools. |
+| Design (`D`) | `D0.6.0` | First built baseline, with the End-to-end skeleton stage built: the approved purpose, goal, stack, data location and mechanism, capability list, business rule sources, version comparison, and public safety. |
+| Architecture (`A`) | `A0.6.0` | Clean architecture with a framework-free core, five layers, a composition root, a custom Vite build with type checking, Node 22.12 or later, TypeScript 6.0, an architecture check, code style tools, and test tools. |
 
 These are independent labels. A change to one dimension does not automatically
 change another. The labels identify the documented baselines and must not be
@@ -56,7 +50,7 @@ interpreted as proof of a deployed or approved product release. See
 The source holds the workspace, the simulation core, the first order's path, its scenario and
 checks, and a basic technical view. The system overview, UI, and module pages therefore still
 mostly record approved intent, not observed behavior;
-their code maps show what exists so far. Update them as source arrives.
+their code maps show what exists so far.
 Product decisions and planned work are taken from
 approved records and are linked to their sources.
 Implementation status is intentionally distinct from product approval: an

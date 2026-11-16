@@ -3,11 +3,8 @@
 ## Version and status
 
 - **Design version:** `D0.6.0`.
-- **Status:** Consolidated on 2026-11-03 in
-  I01-E06-001,
-  and approved by the user area by area the same day
-  ([FND-59](decisions/project-foundation.md#fnd-59--requirements-approved)). Not implemented: no
-  source exists.
+- **Status:** Approved area by area
+  ([FND-59](decisions/project-foundation.md#fnd-59--requirements-approved)).
 
 What the simulator must do, by area. Each line summarises an approved record and links to it;
 the linked record is authoritative, and this page adds no rule of its own.
@@ -70,9 +67,6 @@ the linked record is authoritative, and this page adds no rule of its own.
   ([FND-81](decisions/project-foundation.md#fnd-81--runs-as-a-tree-of-state-transitions)),
   described in [Simulation engine](modules/simulation-engine.md#how-a-run-is-held) and
   [Run history](modules/run-history.md).
-- Where the real service's sources conflict, the user decides, one conflict at a time
-  ([FND-9](decisions/project-foundation.md#fnd-9--sources-of-business-rules),
-  [FND-39](decisions/project-foundation.md#fnd-39--source-conflicts-resolved)).
 
 ## Scenarios, tuning, and analysis
 
@@ -114,11 +108,6 @@ the linked record is authoritative, and this page adds no rule of its own.
   in [data](data/persistence.md).
 - Safe to publish: only identity is private
   ([FND-23](decisions/project-foundation.md#fnd-23--safe-to-publish)).
-
-## Process
-
-- Backlog first: requirements are gathered by asking the user before implementation starts
-  ([FND-28](decisions/project-foundation.md#fnd-28--backlog-first)).
 
 ## Still undecided
 

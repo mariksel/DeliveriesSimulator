@@ -6,10 +6,7 @@
   ([FND-40](../../decisions/project-foundation.md#fnd-40--kinds-of-version)).
 - **State described:** the real service's working tree on 2026-11-03
   ([FND-45](../../decisions/project-foundation.md#fnd-45--version-folder-layout)).
-- **Status:** Observed in the real service's code and documents, and confirmed by the user on
-  2026-11-03.
-  I01-E02-004
-  recorded the confirmation.
+- **Status:** Observed in the real service's code and documents.
 
 Each entry names the failure, what the real service does, and what can still go wrong. The IDs
 are the simulator's, except C1 to C4, which are the real service's own conflict cases. The

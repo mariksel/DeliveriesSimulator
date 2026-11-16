@@ -386,7 +386,7 @@ export class DeliveriesState {
     /**
      * What the deliveries inbox job has still to read of the orders outbox, which the engine
      * passes in. An event for an order with no delivery yet is read once it has one. Retries
-     * arrive with I04.
+     * arrive with the Faults, races, and verification stage.
      */
     static dueOrdersEvents(
         state: DeliveriesState,

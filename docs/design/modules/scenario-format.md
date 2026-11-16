@@ -3,16 +3,16 @@
 ## Version and status
 
 - **Design version:** `D0.6.0`.
-- **Status:** Approved by the user on 2026-11-04, in I02-E04-001
-  ([FND-70](../decisions/project-foundation.md#fnd-70--scenario-format)). Implemented for the
-  fields below; I03 and later stages add to them. The user added rule settings on 2026-11-07
-  ([FND-84](../decisions/project-foundation.md#fnd-84--rule-abstractions)), and indirect steps
-  on 2026-11-08
-  ([FND-89](../decisions/project-foundation.md#fnd-89--indirect-effects-stated-by-hand)).
+- **Status:** Approved in
+  [FND-70](../decisions/project-foundation.md#fnd-70--scenario-format). Implemented for the
+  fields below; the Full V1.0.0 lifecycle and rules stage and later stages add to them. Rule
+  settings come from [FND-84](../decisions/project-foundation.md#fnd-84--rule-abstractions), and
+  indirect steps from
+  [FND-89](../decisions/project-foundation.md#fnd-89--indirect-effects-stated-by-hand).
 
 A scenario is a JSON file that people can read and edit
 ([FND-49](../decisions/project-foundation.md#fnd-49--scenarios)). This page describes format 1, as
-far as `I02` needs it. [Scenarios](scenarios.md) owns the format.
+far as the End-to-end skeleton stage needs it. [Scenarios](scenarios.md) owns the format.
 
 ## Example
 

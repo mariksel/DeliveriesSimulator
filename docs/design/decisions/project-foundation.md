@@ -4,18 +4,6 @@
 
 - **Design version:** `D0.6.0`.
 - **Scope:** The whole project, at its pre-implementation baseline.
-- **Approval:** Approved by the user on 2026-11-03, while adopting the documentation
-  template. Items under [Undecided](#undecided) are not approved.
-- **Implementation status:** Approved, not implemented. The first initiative,
-  I01,
-  gathered the requirements. The
-  [implementation roadmap](../roadmap/implementation-roadmap.md) tracks the stages, from `I02`.
-- **Current behavior:** An empty application. The source holds only the workspace.
-
-## Problem
-
-The design documents need project facts, and there is no source to observe them from.
-This record holds what the user stated, so the other pages can link to one source.
 
 ## Approved decisions
 
@@ -28,8 +16,7 @@ service and its orders. It simulates that service in a self-contained manner.
 
 These documents do not name the real service. They call it "the real service".
 
-Amended 2026-11-03 by the user: the documents do not record its name or location either, which
-resolves the former U1. See [FND-23](#fnd-23--safe-to-publish).
+The documents do not record its name or location either. See [FND-23](#fnd-23--safe-to-publish).
 
 ### FND-3 — Technology stack
 
@@ -60,25 +47,21 @@ Run history, Import and export, Business view, and Technical view. Each has a pa
 [modules](../modules/README.md). Drivers and guided walkthroughs were offered as modules
 and not chosen.
 
-Amended 2026-11-03 by the user: the Versions, Verification, and Analysis modules are added, and
-the Deliveries module owns drivers ([FND-56](#fnd-56--module-boundaries)).
+The Versions, Verification, and Analysis modules are added, and the Deliveries module owns drivers
+([FND-56](#fnd-56--module-boundaries)).
 
 ### FND-9 — Sources of business rules
 
-Business rules are taken from the real service's documentation, its source code, and the
-people who know it. If these sources conflict, the user decides, and no source is chosen by
-inference.
-
-Confirmed 2026-11-03 by the user: every conflict, including one between the real service's
-documents and its code, is presented to the user one at a time. No source wins by default.
-Resolved conflicts are listed in [FND-39](#fnd-39--source-conflicts-resolved).
+Business rules are taken from the real service's documentation, its source code, and the people who
+know it. No source wins by default. Resolved conflicts are listed in
+[FND-39](#fnd-39--source-conflicts-resolved).
 
 ### FND-10 — Checking against the real service
 
 People who know the real service review the simulation's behavior against it. No
 comparison with exported data from the service is planned.
 
-Amended 2026-11-03 by the user: a real service conformance check is required. See
+A real service conformance check is required. See
 [FND-34](#fnd-34--required-capabilities). A comparison with the real service is therefore
 planned, in addition to people reviewing the behaviour. How it works is decided in
 [FND-52](#fnd-52--conformance-exchange).
@@ -154,7 +137,7 @@ real service's name stays generic. What counts as private beyond its name and lo
 undecided (U9); until then, these documents do not record the real service's rules, values, or
 internal identifiers.
 
-Amended 2026-11-03 by the user, deciding U9: only identity is private. That is the real
+Only identity is private. That is the real
 service's name and location, the people involved, and real data. Its rules, values, event names,
 and identifiers may be recorded, described generically, so versions of the real service can ship
 with the simulator.
@@ -180,14 +163,6 @@ compared side by side.
 ### FND-27 — Covered in stages
 
 The simulator covers the whole delivery lifecycle, delivered in stages.
-
-### FND-28 — Backlog first
-
-Implementation does not start directly. The first initiative,
-I01,
-gathers requirements by asking the user and creates the implementation initiatives. This
-foundation is its baseline: it asks only what is still open, and a conflict with a decision is
-raised with the user.
 
 ### FND-29 — Business correctness
 
@@ -423,10 +398,7 @@ refer to are set as [FND-50](#fnd-50--targets-and-limits) describes.
 - **Driver cancels own confirmation:** only the driver who requested a cash confirmation can
   cancel it while pending, with a reason.
 
-The user approved these on 2026-11-03 and asked for further suggestions, so more criteria may be
-added.
-I01-E01-001
-tracks the question.
+More criteria may be added.
 
 ### FND-30 — Technical correctness
 
@@ -653,9 +625,7 @@ they refer to are set as [FND-50](#fnd-50--targets-and-limits) describes.
   notification belongs to exactly one generation.
 - **Outbox for every event:** every order event and every delivery event that takes effect writes
   exactly one outbox event in its own module. A replayed command writes none, and a delivery
-  request and the restaurant's cancel of it write theirs once deliveries acknowledges them. The
-  user widened this from delivery events on 2026-11-03, in I01-E06-002, after it was checked
-  against `V1.0.0`.
+  request and the restaurant's cancel of it write theirs once deliveries acknowledges them.
 - **Payload per kind:** each event kind has its own versioned payload.
 - **Inbox start point:** an inbox starts reading from its last processed event's time, minus the
   read lag.
@@ -669,10 +639,7 @@ they refer to are set as [FND-50](#fnd-50--targets-and-limits) describes.
 - **Failed dispatch isolated:** if dispatching one request fails, the other requests still go
   ahead.
 
-The user approved these on 2026-11-03 and asked for further suggestions, so more criteria may be
-added.
-I01-E01-001
-tracks the question.
+More criteria may be added.
 
 ### FND-31 — Decisions the results support
 
@@ -826,10 +793,7 @@ The simulator's results support these decisions:
   them.
 - **Read lag size:** decide how far behind the latest events each inbox reads.
 
-The user approved these on 2026-11-03 and asked for further suggestions, so more decisions may
-be added.
-I01-E01-001
-tracks the question.
+More decisions may be added.
 
 ### FND-32 — Success
 
@@ -1071,9 +1035,7 @@ The simulator is a success when:
 - **All staff reassignment outcomes covered:** a staff reassignment that the target driver
   accepts, and one they reject, each appear in at least one scenario.
 
-The user approved these on 2026-11-03 and asked for further suggestions, so more may be added.
-I01-E01-001
-tracks the question.
+More may be added.
 
 ### FND-33 — Out of scope
 
@@ -1141,21 +1103,17 @@ These are out of scope for the simulator:
 - **Role layouts:** ready-made layouts for business and technical users are not provided.
 - **Business-language explanations:** technical events are not translated into business terms.
 
-The user approved these on 2026-11-03; more may be added.
-I01-E01-001
-tracks the question.
+More may be added.
 
-Amended 2026-11-03 by the user: a stored run may be saved as a file and opened in another copy
+A stored run may be saved as a file and opened in another copy
 of the simulator. That is not a results data export for other tools
 ([FND-58](#fnd-58--stored-records-and-shared-files)).
 
 ### FND-34 — Required capabilities
 
-The simulator provides these capabilities. Which module of FND-8 owns each one is decided in
-I01-E03-006,
-and which stage each is built in is in the
-[implementation roadmap](../roadmap/implementation-roadmap.md#capabilities-by-stage), decided in
-I01-E06-002.
+The simulator provides these capabilities. Which module of FND-8 owns each one is in
+[capability ownership](../modules/capability-ownership.md), and which stage each is built in is in
+the [implementation roadmap](../roadmap/implementation-roadmap.md#capabilities-by-stage).
 
 - **Scenario runner:** scripted, repeatable runs that check an outcome and report pass or fail.
 - **Offline dispatch model:** a fast simulation of only the dispatch rules, to compare tuning
@@ -1394,18 +1352,16 @@ I01-E06-002.
 - **Order criteria check:** shows whether one order met every correctness criterion, and which
   it broke.
 
-The user approved these on 2026-11-03; the list is complete for now, and more may be added.
-I01-E01-002
-recorded the question.
+The list is complete for now, and more may be added.
 
-Amended 2026-11-08 by the user: Order replay shows the commits that touched one order, and its
+Order replay shows the commits that touched one order, and its
 version chain, as [FND-81](#fnd-81--runs-as-a-tree-of-state-transitions) settled, not one order's
 events replayed on their own.
 
 ### FND-35 — Later capabilities
 
-These capabilities are wanted, but not in the first stages. When they are built is decided in
-I01-E06-002.
+These capabilities are wanted, but not in the first stages. They are built in the Later
+capabilities stage of the [implementation roadmap](../roadmap/implementation-roadmap.md).
 
 - **Report generator:** turns a run or a comparison into a written report.
 - **Version merge:** combine the changes from two versions into one.
@@ -1413,16 +1369,14 @@ I01-E06-002.
 - **Dashboard builder:** arrange chosen views into a custom dashboard.
 - **Bookmarks:** bookmark moments in a run and jump back to them.
 
-The user approved these on 2026-11-03; more may be added.
-I01-E01-002
-tracks the question.
+More may be added.
 
 ### FND-36 — Inventory per version
 
 Each version of the real service gets its own folder of design documents under
 `docs/design/versions/<version>/`. The inventory of flows, states, actors, events, and decisions
-is that version's specification. How versions are named and created is decided in
-I01-E04-001.
+is that version's specification. How versions are named and created is in
+[FND-41](#fnd-41--version-numbers) and [FND-44](#fnd-44--version-lifecycle).
 
 ### FND-37 — Inventory coverage
 
@@ -1442,14 +1396,13 @@ The simulation models the order in full detail:
 
 ### FND-39 — Source conflicts resolved
 
-Where the real service's documents disagree, the user decides which the simulator follows
-([FND-9](#fnd-9--sources-of-business-rules)). Decided so far:
+Where the real service's documents disagree, the simulator follows these resolutions
+([FND-9](#fnd-9--sources-of-business-rules)):
 
 - **Rejected requests:** a driver's rejection closes the request, and an ignore keeps it open
   for other drivers (2026-11-03; recorded under FND-29).
 - **When a return may be requested:** the driver holding the order may request a return only
-  after a failed delivery attempt, as the real service's code does. The user first chose any
-  time after pickup, then corrected it on 2026-11-03 once the code was checked.
+  after a failed delivery attempt, as the real service's code does.
 - **Return acceptance and payment return:** accepting a return never waits for a payment return,
   as the code does and the revised dispatch rules say; the older text that blocks it is
   superseded (2026-11-03). The FND-29 criterion "Return not gated" stands.
@@ -1492,7 +1445,7 @@ The first versions are these. The other approved but unbuilt features come later
 
 - **`V1.0.0`:** the real service as built today, including today's dispatch.
 - **`V1.1.0-planned-dispatch`:** dispatch as its planned design describes it.
-- **`V2.0.0-module-copies`:** dropped on 2026-11-03 by the user, because the module copies are
+- **`V2.0.0-module-copies`:** dropped, because the module copies are
   already built in `V1.0.0`.
 
 ### FND-43 — What may differ between versions
@@ -1528,8 +1481,6 @@ modules.
   duplicates. Apps are simulated actors acting through behaviour profiles, with no screens.
   Device hardware stays out of scope ([FND-33](#fnd-33--out-of-scope)).
 
-The user decided these on 2026-11-03, in I01-E02-003.
-
 ### FND-47 — Failures
 
 - **Priority:** races, give-ups, duplicates and timing, and outside failures and data problems
@@ -1540,8 +1491,6 @@ The user decided these on 2026-11-03, in I01-E02-003.
 - **Drift report:** when the modules drift apart, the simulator reports which order and which
   part of its state differ, the cause traced back to its fault, how long they have been apart
   against the convergence bound, and what each actor sees wrongly as a result.
-
-The user decided these on 2026-11-03, in I01-E02-004.
 
 ### FND-48 — Simulation model
 
@@ -1639,8 +1588,6 @@ The user decided these on 2026-11-03, in I01-E02-004.
   - **Availability times:** being at the address only during certain hours.
   - **Complaints:** reporting missing items or a wrong order after delivery.
 
-The user decided these on 2026-11-03, in I01-E03-001.
-
 ### FND-49 — Scenarios
 
 - **Format:** a scenario is stored as JSON, in a documented format that people can read.
@@ -1661,16 +1608,12 @@ The user decided these on 2026-11-03, in I01-E03-001.
 - **First built-in library:** every lifecycle path without faults; the known races C1 to C4 and
   R1 to R4; the give-ups D1 to D4; and a city-scale busy day with default profiles.
 
-The user decided these on 2026-11-03, in I01-E03-004.
-
 ### FND-50 — Targets and limits
 
 - **Convergence bound:** tunable per version and per scenario, 1 minute by default.
 - **Business performance targets:** such as time to assign and delivery time, are stated by each
   scenario or load profile. There are no global defaults.
 - **Clock limits:** each scenario states the clock skew it tests.
-
-The user decided these on 2026-11-03, in I01-E03-004, which resolves the former U11.
 
 ### FND-51 — Comparison
 
@@ -1693,7 +1636,7 @@ The user decided these on 2026-11-03, in I01-E03-004, which resolves the former 
 - **Changed event kinds:** renamed or split kinds are mapped to each other, and kinds that exist in
   only one version are marked added or removed.
 
-The user decided these on 2026-11-03, in I01-E04-002; the list is complete for now.
+The list is complete for now.
 
 ### FND-52 — Conformance exchange
 
@@ -1721,11 +1664,8 @@ The conformance check works through an exchange of standard files:
   [versioning](../governance/versioning.md).
 - **Updates:** new versions are drafted from changes to the real service's documents or code, and
   confirmed by a person ([FND-44](#fnd-44--version-lifecycle)).
-- **Who reviews:** the user states the rules and reviews the simulation, which resolves the
-  former U2.
 
-The user decided these on 2026-11-03, in I01-E04-003; the contents of both formats are complete
-for now.
+The contents of both formats are complete for now.
 
 ### FND-53 — UI organisation
 
@@ -1752,8 +1692,7 @@ for now.
     service's backlog.
   - **Stored data:** stored runs, import and export, and storage use.
 
-The user decided these on 2026-11-03, in I01-E03-002, which resolves the former U6. The list of
-sections is complete for now.
+The list of sections is complete for now.
 
 ### FND-54 — Tunability
 
@@ -1765,8 +1704,6 @@ sections is complete for now.
 - **Sharing:** tuned setups are saved in the browser and shared as files, like scenarios.
 - **Ranges:** each value has a valid range, and version validation warns when a value is outside
   it. A value may go outside its range on purpose, to test extremes.
-
-The user decided these on 2026-11-03, in I01-E03-003.
 
 ### FND-55 — Offline dispatch model
 
@@ -1780,8 +1717,6 @@ The user decided these on 2026-11-03, in I01-E03-003.
 - **Input:** generated from the synthetic city and the profiles, or taken from a scenario's
   starting state.
 
-The user decided these on 2026-11-03, in I01-E03-005.
-
 ### FND-56 — Module boundaries
 
 - **Drivers:** the Deliveries module owns drivers.
@@ -1791,7 +1726,7 @@ The user decided these on 2026-11-03, in I01-E03-005.
   conformance exchange. This amends [FND-8](#fnd-8--capability-list).
 - **Event log:** the Event log is the single record of a run; the Technical view and Run history
   both read it. [FND-81](#fnd-81--runs-as-a-tree-of-state-transitions) amends this: commits become
-  the single record, and the log a readable view worked out from them. I03-E02-006 built this.
+  the single record, and the log a readable view worked out from them.
 - **Customers and restaurants:** restaurants create orders and hand them over, and customers
   receive deliveries; all of them follow behaviour profiles ([FND-48](#fnd-48--simulation-model)).
 - **Verification and Analysis modules:** a Verification module owns criteria, invariants, proofs,
@@ -1806,17 +1741,14 @@ The user decided these on 2026-11-03, in I01-E03-005.
   [module map](../modules/README.md#dependency-graph), confirmed on 2026-11-03, which resolves the
   former U8.
 
-The user decided these on 2026-11-03, in I01-E03-006, which resolves the former U7 and U10.
-
-Amended 2026-11-03 by the user: Import and export also uses Run history, for run files
+Import and export also uses Run history, for run files
 ([FND-58](#fnd-58--stored-records-and-shared-files)).
 
-Amended 2026-11-06 and 2026-11-07 by the user, in
-[FND-83](#fnd-83--types-owned-by-their-modules): each module holds its own rules, and Business
+In [FND-83](#fnd-83--types-owned-by-their-modules), each module holds its own rules, and Business
 rules becomes a module of rule abstractions that the others use; Drivers becomes a module, with
 Deliveries as its submodule; Restaurants becomes a module, with Customers as its submodule; and
-a System module holds the abstractions about time, randomness, and math. I03-E02-019 and
-I03-E04-012 build this, and until then the modules above stay as they are.
+a System module holds the abstractions about time, randomness, and math. The Full V1.0.0
+lifecycle and rules stage builds this.
 
 ### FND-57 — Hosting and data
 
@@ -1829,11 +1761,9 @@ I03-E04-012 build this, and until then the modules above stay as they are.
   when it loads it.
 - **Sharing:** between people, everything is shared as files through Import and export
   ([FND-54](#fnd-54--tunability), [FND-56](#fnd-56--module-boundaries)).
-- **Repository:** the project is a git repository, which the user created on 2026-11-03.
+- **Repository:** the project is a git repository.
 
-The user decided these on 2026-11-03, in I01-E05-001, which resolves the former U3 and U5.
-
-Amended 2026-11-03 by the user: "everything" means scenarios, with the cities and profiles they
+"Everything" means scenarios, with the cities and profiles they
 use, versions, tuning presets, and stored runs
 ([FND-58](#fnd-58--stored-records-and-shared-files)).
 
@@ -1850,9 +1780,6 @@ use, versions, tuning presets, and stored runs
 - **Lifetime:** cities and profiles follow the same rule as other stored data: kept until the
   user deletes them, and migrated across releases ([FND-57](#fnd-57--hosting-and-data)).
 
-The user decided these on 2026-11-03, in I01-E06-001, resolving a conflict between FND-33,
-FND-57, and the module pages.
-
 ### FND-59 — Requirements approved
 
 - **Approved:** the requirements, summarised in [requirements](../requirements.md), are complete
@@ -1861,8 +1788,6 @@ FND-57, and the module pages.
   the report generator is built, U14 before anything is published, and U12 once versions are
   being added.
 
-The user decided these on 2026-11-03, in I01-E06-001.
-
 ### FND-60 — Implementation stages
 
 - **First stage:** an end-to-end skeleton. The project setup, and one `V1.0.0` order going end to
@@ -1870,43 +1795,30 @@ The user decided these on 2026-11-03, in I01-E06-001.
   delivered, through both modules' outboxes and inboxes. It has the virtual clock, the event log,
   a basic technical view, and a scenario that passes or fails on four criteria: Valid final state,
   Modules agree, Exactly-once effect, and Outbox for every event.
-- **Stage gate:** a stage is complete, and the next one starts, only when its built-in scenarios
-  pass in the browser and headless; the user has run it and approved it; the design pages, code
-  maps, and statuses match the code, with Implemented evidence; and the unit, component, and
-  end-to-end tests pass, with the architecture and public-safety checks.
-- **Order:** correctness first. Each stage is one initiative:
-  1. `I02` End-to-end skeleton.
-  2. `I03` Full `V1.0.0` lifecycle and rules: every path, command, and rule.
-  3. `I04` Faults, races, and verification: fault injection, the known races C1 to C4 and R1 to
+- **Order:** correctness first:
+  1. End-to-end skeleton.
+  2. Full `V1.0.0` lifecycle and rules: every path, command, and rule.
+  3. Faults, races, and verification: fault injection, the known races C1 to C4 and R1 to
      R4, the give-ups D1 to D4, invariants, and the drift report.
-  4. `I05` Stored runs and files: run history, and import and export.
-  5. `I06` Versions and comparison: `V1.1.0-planned-dispatch` and option switches.
-  6. `I07` City, actors, and scale: behaviour profiles, the map, and the business view.
-  7. `I08` Analysis and the offline dispatch model.
-  8. `I09` The conformance exchange.
-  9. `I10` Remaining views and checks: the model checker, coverage, and metrics.
-  10. `I11` The later capabilities of [FND-35](#fnd-35--later-capabilities), all five together.
+  4. Stored runs and files: run history, and import and export.
+  5. Versions and comparison: `V1.1.0-planned-dispatch` and option switches.
+  6. City, actors, and scale: behaviour profiles, the map, and the business view.
+  7. Analysis and the offline dispatch model.
+  8. The conformance exchange.
+  9. Remaining views and checks: the model checker, coverage, and metrics.
+  10. The later capabilities of [FND-35](#fnd-35--later-capabilities), all five together.
      U13 is decided when it starts.
 - **Capabilities by stage:** each FND-34 capability is built in one stage, as the
   [implementation roadmap](../roadmap/implementation-roadmap.md#capabilities-by-stage) lists them.
-- **Backlog detail:** `I02` is written in full, with epics and items. Each of `I03` to `I11` has
-  one epic with one planning item until it starts, because the backlog derives an epic's status
-  from its items. Its intended epics are in the
-  [implementation roadmap](../roadmap/implementation-roadmap.md#capabilities-by-stage), and are
-  created when it starts, so they reflect what the earlier stages taught.
-- **Priority:** the `I02` items are High, and the planning items are Normal until each stage
-  starts.
-
-The user decided these on 2026-11-03, in I01-E06-002.
 
 ### FND-61 — Node and TypeScript versions
 
-- **Node:** the project uses Node 26 or later. Angular 22 supports `^22.22.3`, `^24.15.0`, and
-  `>=26.0.0`.
+- **Node:** the project runs on Node 22.12 or later, and `.nvmrc` selects 26 for local
+  development. Angular 22 lists `^22.22.3`, `^24.15.0`, and `>=26.0.0`; on an earlier Node 22,
+  npm only warns, and the build and every check still pass.
 - **TypeScript:** the project uses TypeScript 6.0, the only line Angular 22 accepts.
 
-The user chose Node on 2026-11-03, in I02-E01-001. The TypeScript line follows from
-[FND-16](#fnd-16--angular-version).
+The TypeScript line follows from [FND-16](#fnd-16--angular-version).
 
 ### FND-62 — Dependency injection and architecture check
 
@@ -1917,8 +1829,6 @@ The user chose Node on 2026-11-03, in I02-E01-001. The TypeScript line follows f
   dependency-cruiser, and compiles the core without browser types, so a browser API in the core
   fails it.
 - **First binding:** the wall clock, which the virtual clock's wall-clock mode needs.
-
-The user decided these on 2026-11-03, in I02-E01-002.
 
 ### FND-63 — Tests and public-safety check
 
@@ -1931,8 +1841,6 @@ The user decided these on 2026-11-03, in I02-E01-002.
   it does not read git history or commit authors. Commit authors do hold a person's identity. U14
   decides what else must be checked before anything is published.
 
-The user decided the check's coverage on 2026-11-03, in I02-E01-003.
-
 ### FND-64 — Clock speed
 
 - **Speed:** a run's speed is a multiple of real time, or `max`, which jumps from one piece of
@@ -1944,8 +1852,6 @@ The user decided the check's coverage on 2026-11-03, in I02-E01-003.
   the order of that work.
 - **Same-time order:** work due at the same simulated time runs in the order it was scheduled,
   which [FND-48](#fnd-48--simulation-model)'s repeatability needs.
-
-The user decided the speed and its default on 2026-11-04, in I02-E02-001.
 
 ### FND-65 — Event log entries
 
@@ -1963,8 +1869,6 @@ The user decided the speed and its default on 2026-11-04, in I02-E02-001.
   by that outbox write, and an event made while reading an inbox by that read. An event made from
   a direct call's answer is caused by the event in the module that answered.
 
-The user decided the entry's contents on 2026-11-04, in I02-E02-003.
-
 ### FND-66 — Seeded randomness
 
 - **Named streams:** the run's seed gives each actor or purpose its own stream of random numbers.
@@ -1975,24 +1879,22 @@ The user decided the entry's contents on 2026-11-04, in I02-E02-003.
 - **Nothing from outside the run:** the core uses no `Math.random`, date, or `crypto`, and a test
   checks this.
 
-The user decided the named streams on 2026-11-04, in I02-E02-002.
-
 ### FND-67 — Scope of the skeleton
 
-- **Order detail:** in `I02`, an order holds only what the path needs: its ID, restaurant, status,
-  version, readiness, driver, and events. The rest of [FND-38](#fnd-38--order-detail) arrives in
-  `I03`, and FND-38 is unchanged.
-- **Idempotency:** `I02`'s commands take no idempotency keys, because nothing on its path repeats.
-  They arrive in `I03`.
-- **Dispatch:** `I02` has all of `V1.0.0`'s eligibility, ranking, and notification sequence
-  rules. A notification is a durable record; pushes and devices arrive in `I03`. A driver's status
-  and location come from the scenario.
-- **Communication:** `I02` has both outboxes, both inbox jobs, the handoff and its retry, and the
-  direct calls. Inbox retries, dead letters, pending driver commands, cleanups, and refused events
-  arrive with `I03` and `I04`; until then, an event the path cannot handle stops the run with an
-  error rather than being lost.
-
-The user decided these on 2026-11-04, in I02-E03-001.
+- **Order detail:** in the End-to-end skeleton stage, an order holds only what the path needs: its
+  ID, restaurant, status, version, readiness, driver, and events. The rest of
+  [FND-38](#fnd-38--order-detail) arrives in the Full V1.0.0 lifecycle and rules stage, and FND-38
+  is unchanged.
+- **Idempotency:** the End-to-end skeleton's commands take no idempotency keys, because nothing on
+  its path repeats. They arrive in the Full V1.0.0 lifecycle and rules stage.
+- **Dispatch:** the End-to-end skeleton has all of `V1.0.0`'s eligibility, ranking, and notification
+  sequence rules. A notification is a durable record; pushes and devices arrive in the Full V1.0.0
+  lifecycle and rules stage. A driver's status and location come from the scenario.
+- **Communication:** the End-to-end skeleton has both outboxes, both inbox jobs, the handoff and its
+  retry, and the direct calls. Inbox retries, dead letters, pending driver commands, cleanups, and
+  refused events arrive with the Full V1.0.0 lifecycle and rules stage and the Faults, races, and
+  verification stage; until then, an event the path cannot handle stops the run with an error rather
+  than being lost.
 
 ### FND-68 — Equal scores and open request order
 
@@ -2002,9 +1904,8 @@ The user decided these on 2026-11-04, in I02-E03-001.
   reported to the real service ([FND-31](#fnd-31--decisions-the-results-support)).
 - **In `V1.0.0`:** the simulator breaks a tie by the lowest driver ID, and goes through open
   requests oldest first, so a run stays repeatable.
-- **Later:** other tie rules become option switches when `I06` adds them.
-
-The user decided these on 2026-11-04, in I02-E03-002.
+- **Later:** other tie rules become option switches when the Versions and comparison stage adds
+  them.
 
 ### FND-69 — Module jobs and the module graph check
 
@@ -2017,8 +1918,6 @@ The user decided these on 2026-11-04, in I02-E03-002.
 - **Scripted actors:** the simulation engine drives them, because the graph gives Scenarios no
   dependency on Orders. A scenario's steps are its input.
 
-The user decided the jobs and the check on 2026-11-04, in I02-E03-004.
-
 ### FND-70 — Scenario format
 
 - **Times:** a scenario writes simulated time as `h00:m05:s00:ms00`, with each unit labelled. `ms`
@@ -2027,8 +1926,6 @@ The user decided the jobs and the check on 2026-11-04, in I02-E03-004.
   Each file names its version and seed, so a run can be repeated exactly.
 - **Validation:** reading a file reports everything wrong with it, as a typed result. A field the
   format does not have is refused, because it is usually a typing mistake.
-
-The user decided the time format on 2026-11-04, in I02-E04-001.
 
 ### FND-71 — Code style and quality tools
 
@@ -2046,56 +1943,46 @@ The user decided the time format on 2026-11-04, in I02-E04-001.
 - **Mutation testing:** Stryker plants faults in the core and reports the ones the tests miss. It
   takes minutes, so it runs on demand with `npm run test:mutation`, and not in `npm run check`.
 
-The user decided these on 2026-11-04, between I02-E04-002 and I02-E04-003. They are not a backlog
-item. This adds to [FND-17](#fnd-17--test-tools) and
+This adds to [FND-17](#fnd-17--test-tools) and
 [FND-63](#fnd-63--tests-and-public-safety-check).
 
 ### FND-72 — Code style
 
-The user chose these on 2026-11-04.
-
-- **Layout:** 4 spaces, single quotes, semicolons, and trailing commas everywhere, up to 120
-  characters a line, which the user lowered on 2026-11-05: "we prefer the code ty be styled
-  verticaly instead of horizontaly, in general the code line length should stay under 100
-  characters". `package.json` and its lock file stay at 2 spaces, as npm writes them, and
-  Markdown stays under 100 characters a line, wrapped by hand.
+- **Layout:** 4 spaces, single quotes, semicolons, and trailing commas everywhere. Lines stay under
+  100 characters, with code styled vertically rather than horizontally. `package.json` and its lock
+  file stay at 2 spaces, as npm writes them, and Markdown stays under 100 characters a line, wrapped
+  by hand.
 - **Braces:** every `if` has braces, even on one line.
-- **Typed core:** the user chose on 2026-11-06 that Domain and Application work only with strongly
-  typed values: "the applicationa and core layer should not work with json or primitive types,
-  instead we prefer strongly typed types. the json parsing and manipulation should be in the
-  infrastructure layer like persistence or io in general". This amends
-  [FND-65](#fnd-65--event-log-entries)'s rule that log data is JSON: the JSON check moves to
-  persistence. The user then chose how far it goes: fields with a fixed set of values or an
-  identity get const-object types or branded IDs, and simulated times, durations, counts, and
-  amounts get branded number types too. The run digest and the run comparison work over typed
-  entries, with no JSON, so every pinned digest changes once. I03-E02-018 does this. For
-  indirect effects, which nothing records yet, the user chose on 2026-11-06 a set of kinds that
-  starts empty: each kind has its own typed data, and I03-E02-013 adds the first. For scenario
-  files, the user chose the same day that Infrastructure reads, parses, and validates them, and
-  the port for a chosen file gives Application a typed scenario or its problems. The built-in
-  scenarios stay JSON files, in Infrastructure, behind a port that lists them and gives one by
-  its ID. The self-tests' known case is a typed scenario, run directly. For the digest, the user
-  chose per-kind encoders: each kind of entry, and each module's records, is written field by
-  field, and a test checks that every field is written. The run comparison uses typed equality
-  per kind, with tests that it and the digest never disagree. For fixed sets and identities, the
-  user chose: a scripted step's actor and order name are a branded `ScenarioActor` and
-  `ScenarioOrderName`, a scenario's version a branded `VersionId`, and a built-in scenario's ID a
-  branded `BuiltInScenarioId`. Output effects become a set of kinds that starts empty, like
-  indirect effects, for the item that first calls a provider. Verification uses Orders and
-  Deliveries, so its run record holds `OrderStatus` and each module's event kinds. For numbers,
-  the user chose branded `SimTime`, `Duration`, `Count`, and `VersionNumber`, plus a
-  `LogSequence` for an entry's place, `Metres`, `Seed` and `RandomWord`, `Degrees`, and `Score`.
-  Arithmetic goes through typed helpers in Domain, such as `later(at, duration)`, so plain `+` and
-  `-` on them stay out of Domain and Core, and the creators check their values and throw.
-  Amounts wait for `Money`, which nothing holds yet. On the user's request for more, they added
-  `WallTime` for the browser's real clock, kept apart from `SimTime`, `Fraction` for a number from
-  0 up to 1, `Factor` for a multiplier such as a boost, a decay, or a clock speed, and `Position`
-  for a place in a list. Numbers used only inside a function's own working, such as a hash's
-  state or a loop's index, stay plain. A `Duration` must be from 0, so a tuned duration below 0
-  becomes something a run cannot use, beside the job intervals; this amends the tuned values'
-  invariants below. `Metres` takes any finite number, so a distance limit can still go below 0
-  to test extremes, as [FND-54](#fnd-54--tunability) allows.
-- **Numbers, as built:** I03-E02-018-P06 put the types, their creators, and the helpers in
+- **Typed core:** Domain and Application work only with strongly typed values, never JSON or
+  primitive types; parsing and handling JSON belong in Infrastructure, at persistence and other IO.
+  This amends [FND-65](#fnd-65--event-log-entries)'s rule that log data is JSON: the JSON check
+  moves to persistence. Fields with a fixed set of values or an identity get const-object types or
+  branded IDs, and simulated times, durations, counts, and amounts get branded number types too. The
+  run digest and the run comparison work over typed entries, with no JSON, so every pinned digest
+  changes once. Indirect effects are a set of kinds that starts empty, and each kind has its own
+  typed data. Infrastructure reads, parses, and validates scenario files, and the port for a chosen
+  file gives Application a typed scenario or its problems. The built-in scenarios stay JSON files,
+  in Infrastructure, behind a port that lists them and gives one by its ID. The self-tests' known
+  case is a typed scenario, run directly. The digest uses per-kind encoders: each kind of entry, and
+  each module's records, is written field by field, and a test checks that every field is written.
+  The run comparison uses typed equality per kind, with tests that it and the digest never disagree.
+  For fixed sets and identities, a scripted step's actor and order name are a branded
+  `ScenarioActor` and `ScenarioOrderName`, a scenario's version a branded `VersionId`, and a
+  built-in scenario's ID a branded `BuiltInScenarioId`. Output effects become a set of kinds that
+  starts empty, like indirect effects, for the first code that calls a provider. Verification uses
+  Orders and Deliveries, so its run record holds `OrderStatus` and each module's event kinds. The
+  numbers are branded `SimTime`, `Duration`, `Count`, and `VersionNumber`, plus a `LogSequence` for
+  an entry's place, `Metres`, `Seed` and `RandomWord`, `Degrees`, and `Score`. Arithmetic goes
+  through typed helpers in Domain, such as `later(at, duration)`, so plain `+` and `-` on them stay
+  out of Domain and Core, and the creators check their values and throw. Amounts wait for `Money`,
+  which nothing holds yet. There are also `WallTime` for the browser's real clock, kept apart from
+  `SimTime`, `Fraction` for a number from 0 up to 1, `Factor` for a multiplier such as a boost, a
+  decay, or a clock speed, and `Position` for a place in a list. Numbers used only inside a
+  function's own working, such as a hash's state or a loop's index, stay plain. A `Duration` must be
+  from 0, so a tuned duration below 0 becomes something a run cannot use, beside the job intervals;
+  this amends the tuned values' invariants below. `Metres` takes any finite number, so a distance
+  limit can still go below 0 to test extremes, as [FND-54](#fnd-54--tunability) allows.
+- **Numbers, as built:** the types, their creators, and the helpers are in
   `src/domain/quantities.ts`, the one file besides `ids.ts` where `as` is allowed. Each layer
   outside Infrastructure takes typed numbers. Infrastructure makes them with the creators when it
   reads a scenario or loads a run, so a stored value a run cannot use fails there. A value
@@ -2105,30 +1992,25 @@ The user chose these on 2026-11-04.
   speed is a `Factor` or `max`, and a run told to go on past its end has no end, rather than an
   infinite one. Constants keep their numbers as stated, in a plain object or a named constant,
   and pass them to the creators, so no unnamed number appears in code.
-- **Arguments:** the user chose on 2026-11-05 that a call's result is stored in a local before
-  it is passed on, everywhere, tests included, with no exceptions: "we prefer to store the
-  resullt of an expression into a local variable firest istead of passing the whole expression
-  as a argumetn".
+- **Arguments:** a call's result is stored in a local before it is passed on, everywhere, tests
+  included, with no exceptions.
 - **Functions:** a top-level function on one line is an arrow function, and anything longer is a
-  function declaration. The user chose on 2026-11-05 that a function short enough for one line
-  stays an arrow function when the formatter wraps it.
+  function declaration. A function short enough for one line stays an arrow function when the
+  formatter wraps it.
 - **Return types:** every function states its return type, unless it is a callback whose type comes
   from where it is passed.
 - **Comments:** every exported function, class, type, and constant has a doc comment.
 - **Fixed sets of values:** const objects, not enums or unions of literals.
 - **Object shapes:** `interface`, and `type` for unions and aliases.
 - **Private members:** the `private` keyword, not `#`.
-- **Member order:** the user chose on 2026-11-06 the order of a class's members: "the static
-  membvers should come fires than fielsts and getters setters than constructors than public
-  methods than private methods". So statics come first, static fields before static methods,
-  then fields, then getters and setters, then constructors, then public methods, then private
-  methods. Among fields, private ones come before public ones; among methods, private ones come
-  after public ones. The user then chose that protected members sit between the two, that
-  getters and setters go private first, like fields, with a getter and its setter side by side,
-  and that statics follow the same access order as instance members. In an Angular class, the
-  Angular members, such as inputs, outputs, `inject()`, and queries, lead the fields of their own
-  access level: where the two rules met, the user chose access first. It applies to every
-  class, tests included. ESLint enforces the order of kinds and access, and review checks the
+- **Member order:** statics come first, static fields before static methods, then fields, then
+  getters and setters, then constructors, then public methods, then private methods. Among fields,
+  private ones come before public ones; among methods, private ones come after public ones.
+  Protected members sit between the two, getters and setters go private first, like fields, with a
+  getter and its setter side by side, and statics follow the same access order as instance members.
+  In an Angular class, the Angular members, such as inputs, outputs, `inject()`, and queries, lead
+  the fields of their own access level: where the two rules meet, access comes first. It applies to
+  every class, tests included. ESLint enforces the order of kinds and access, and review checks the
   Angular part.
 
 ESLint enforces all of these except one: it can check that a long top-level function is not an
@@ -2144,7 +2026,7 @@ and status.
   problem, and a comment saying so.
 - **Runs:** a run is immutable. Its whole state is one value, and each step returns a new one, so a
   snapshot is just a reference. Work is data, not closures, and the event log is an immutable list.
-  Since I03-E02-006, the work due is worked out from the commits and the scenario, and each random
+  The work due is worked out from the commits and the scenario, and each random
   stream's position sits in the effects sub-root
   ([FND-81](#fnd-81--runs-as-a-tree-of-state-transitions)).
 - **Modules:** a module is a state type plus pure functions in Domain, not a stateful class. A
@@ -2158,11 +2040,11 @@ and status.
 - **Not event sourcing:** a run's state is held directly at each commit, and nothing derives state
   from events or from the log. There are no decider patterns, and no special types acting as
   functions. A saved run can be recalculated by calling the same pure functions again
-  ([FND-81](#fnd-81--runs-as-a-tree-of-state-transitions)). The user reworded this in I03-E01-001.
+  ([FND-81](#fnd-81--runs-as-a-tree-of-state-transitions)).
 - **Saving:** a repository maps each persisted record to its application record, and application
   records are never stored directly
-  ([FND-81](#fnd-81--runs-as-a-tree-of-state-transitions)). Until I03-E02-007 builds it, a run's
-  state converts to plain JSON and back exactly.
+  ([FND-81](#fnd-81--runs-as-a-tree-of-state-transitions)). Until the repository is built, a
+  run's state converts to plain JSON and back exactly.
 - **Exceptions:** there is one, `runDigest`, whose benchmark is in
   [Simulation engine](../modules/simulation-engine.md#performance).
 - **Bugs:** a bug inside a run stops it and says where, and the last good state remains.
@@ -2170,14 +2052,11 @@ and status.
   at the edge, behind an abstraction that Application defines.
 - **Views:** what a view shows is computed by a tested pure function.
 
-The user decided these on 2026-11-04. [Code style](../governance/code-style.md) holds the rules
-that follow from them, and
-I02-E07
-applies them.
+[Code style](../governance/code-style.md) holds the rules that follow from them.
 
-On 2026-11-06 the user amended the Modules and Collections rules: "in general domain types shoul
-be clases and not just object or interfaces ... so an order object is allwasy a fully instacne
-of a class with validated invariants and all its supported methods". The user then chose:
+The Modules and Collections rules are amended: Domain types are classes, not plain objects or
+interfaces, so an order is always a full instance of a class, with validated invariants and all
+its supported methods:
 
 - **Every Domain type is a class:** entities and their versions, events, outbox rows, and other
   records, and each module's state too, whose commands become its methods. This replaces "a
@@ -2215,23 +2094,16 @@ of a class with validated invariants and all its supported methods". The user th
   stay plain readonly data. So do the bundles a rule reads or gives back, such as the facts
   eligibility needs or a ranked driver. The generic log entry stays a record joined with its
   place in the log, which Application.Core's typed kinds narrow on.
-- **Core uses Domain types, never extends them:** in the user's words, "core types should not
-  extend domain types, only domain types can extend domain types, core types can only use domain
-  types". Core's log data holds a Domain instance in a field, such as an orders event with the
-  order's status and version beside it.
-- **Where:** a new phase of I03-E02-018, P08, done before its P05 and P06. Its plan, the class
-  list and the order of work, is written into the phase for the user to review first.
+- **Core uses Domain types, never extends them:** only Domain types extend Domain types, and core
+  types only use them. Core's log data holds a Domain instance in a field, such as an orders event
+  with the order's status and version beside it.
 
 ### FND-74 — Driver and restaurant vocabulary
 
-The domain's words are `driver` and `restaurant`, replacing `courier` and `merchant`. The user
-decided this on 2026-11-04, as these are still general names, so
-[FND-23](#fnd-23--safe-to-publish) still holds. The rename covers the code, the design documents,
-the Customers and merchants module's name, and the backlog, including finished items and their file
-names. The scenario format changes too, with no alias for the old field names.
-
-I02-E07-001 applied it on 2026-11-04. In finished items it changed the words only, so their dates
-stay as they were and they have no new history entry.
+The domain's words are `driver` and `restaurant`, replacing `courier` and `merchant`. These are
+still general names, so [FND-23](#fnd-23--safe-to-publish) still holds. The rename covers the code,
+the design documents, and the Customers and merchants module's name. The scenario format changes
+too, with no alias for the old field names.
 
 ### FND-75 — First criteria as judged
 
@@ -2251,8 +2123,7 @@ stay as they were and they have no new history entry.
 - **How to judge "took effect twice":** two events in a module that match the same event in the
   other, or an event recorded twice.
 
-These apply FND-29, FND-30, and FND-49 to the first four criteria, in I02-E04-003. The user
-reviewed and accepted them on 2026-11-05, adding the note on a run with no orders.
+These apply FND-29, FND-30, and FND-49 to the first four criteria.
 
 ### FND-76 — Application shell and components
 
@@ -2280,15 +2151,12 @@ reviewed and accepted them on 2026-11-05, adding the note on a run with no order
 - **Keyboard:** Space starts and pauses, S steps, and 1 to 5 choose the speed presets, unless the
   focus is in a text box. Space leaves a focused button to do its own job.
 
-The user decided these on 2026-11-04, in I02-E05-001.
-
-On 2026-11-07 the user added: "in general all ui component the perform an action sholuld contain
-some kind of tooltip". Every control that does something, such as a button, a tab, a link, a
+Every control that does something, such as a button, a tab, a link, a
 slider, or a divider that resizes, has a tooltip saying what it does. It is the app's own styled
 tooltip, in the theme's colours, shown on hover and on keyboard focus after a short delay, and
 above any panel that scrolls. The code style holds the rule, and review checks it.
 
-On 2026-11-05 the user added these about how controls look:
+How controls look:
 
 - **Groups:** controls that belong together look joined, sharing their borders. These are the
   speed presets, the inspector's view toggles, and the speed box with its Set button.
@@ -2341,8 +2209,6 @@ On 2026-11-05 the user added these about how controls look:
 - **Payload viewer:** the entry's own facts, then its data as indented JSON, exactly as stored,
   with a Copy button. Caused by and Trace are links that select those entries.
 
-The user decided these on 2026-11-04, in I02-E05-002.
-
 ### FND-78 — Outbox and inbox inspector
 
 - **Place:** the first tab of the run workspace's main area. The city map becomes another tab
@@ -2355,8 +2221,6 @@ The user decided these on 2026-11-04, in I02-E05-002.
 - **Clicking:** a row selects its outbox entry, and its read time is a link to the inbox read.
 - **Retry records:** [FND-34](#fnd-34--required-capabilities) also asks for these. They arrive with
   retries, which the skeleton does not have yet.
-
-The user decided these on 2026-11-04, in I02-E05-003.
 
 ### FND-79 — Cross-module event tracing
 
@@ -2379,170 +2243,104 @@ The user decided these on 2026-11-04, in I02-E05-003.
 - **During a run:** new steps appear as they happen. An outbox write not yet read shows `waiting`
   in the inspector's amber, with a dashed arrow that stops short.
 
-The user decided these on 2026-11-05, in I02-E05-004.
+### FND-80 — Full V1.0.0 lifecycle and rules stage
 
-### FND-80 — Planning stage I03
-
-The user chose these on 2026-11-05, in I03-E01-001.
-
-- **Order of work:** the roadmap's epics, with Manual mode built in the first epic, so each path
-  can be tried by hand as it arrives.
+- **Order of work:** the roadmap's work areas, with Manual mode built in the first one, so each
+  path can be tried by hand as it arrives.
 - **Built-in scenarios:** one for each path, about 10 to 15, with every command in at least one.
-- **Retries before faults:** the retry jobs and the Pending command view are built in I03. A
-  scenario can mark one call as failing, so a retry can be seen. I04's fault injection replaces
-  that step.
-- **Saved scenarios:** the Scenario library and Scenario recorder save to IndexedDB in I03, with
-  the schema version and migration of [FND-57](#fnd-57--hosting-and-data). I05 extends that
-  storage to runs and files.
+- **Retries before faults:** the retry jobs and the Pending command view are built in this stage.
+  A scenario can mark one call as failing, so a retry can be seen. The Faults, races, and
+  verification stage's fault injection replaces that step.
+- **Saved scenarios:** the Scenario library and Scenario recorder save to IndexedDB in this stage,
+  with the schema version and migration of [FND-57](#fnd-57--hosting-and-data). The Stored runs
+  and files stage extends that storage to runs and files.
 - **Money:** amounts are whole minor units, held in a branded `Money` type. Rounding happens only
   where a rule divides.
 - **Locations:** each driver in a scenario has an optional send interval, a preset or a value from
-  5 seconds to 5 minutes, and steps can send a specific point or batch. I06 and I07 feed the same
-  setting later.
+  5 seconds to 5 minutes, and steps can send a specific point or batch. The Versions and comparison
+  stage and the City, actors, and scale stage feed the same setting later.
 - **Routing:** a stand-in provider returns the straight-line distance from restaurant to address,
-  behind the interface I07 implements with streets. The simple failure step can make it fail.
+  behind the interface the City, actors, and scale stage implements with streets. The simple failure
+  step can make it fail.
 
 ### FND-81 — Runs as a tree of state transitions
 
-The user stated this on 2026-11-05, in I03-E01-001, and settled the details there and in
-I03-E02-001. The design is in
+The design is in
 [Simulation engine](../modules/simulation-engine.md#how-a-run-is-held) and
-[Run history](../modules/run-history.md). In the user's words:
+[Run history](../modules/run-history.md).
 
-> the runs should be able to play the events similar to what event sourcing would achive, but
-> the aplicaiton architecture should not be built with event patterns, no deciter patters an
-> things like that, we prefer to use pure functions and not spetial types that act like
-> functions. basicly we should be storing all state transitions and be able to replay them, the
-> state should be immutable so that branching and sharing can happen through copy on write
-> mechanisms. a run with all branches should look like a tree. and we should be able to replay
-> and go backward and forwards in the tree. similar to git. the functions/commands should be
-> versioned so we dont have to store them we just need to be able to identify which funtion to
-> call.
+- **Replay without event sourcing:** a run can replay its events as event sourcing would, but the
+  architecture is not built on event patterns: no decider patterns, and no special types acting
+  as functions. Plain pure functions do the work.
+- **Every state transition stored:** every state transition is stored and can be replayed. State
+  is immutable, so branching and sharing work through copy on write. A run with all its branches
+  is a tree that can be replayed backward and forward. Replay moves between existing roots, as
+  moving between commits does in git.
+- **Versioned functions:** functions and commands are versioned, so they are not stored; a run
+  only needs to identify which function to call.
+- **Persistence and function identity:** functions can be renamed. A repository owns
+  persistence: it maps static functions to their stored IDs, holds every mapping ID, and maps
+  every persisted record to its application record. Application records are never stored
+  directly.
+- **State is a DAG:** there is more than one root, so state is a directed acyclic graph. Every
+  change creates a new root that references the changed nodes and reuses every unchanged one, as
+  immutable data structures usually do, with copy on write and shared state, so the whole tree is
+  never copied. Replaying an event navigates the DAG.
+- **Records in two parts:** a record has a part that never changes during its lifetime, and
+  version parts that hold its changing state. For an order, `Order` is the part that never
+  changes and `OrderVersion` the part that does; each change adds a new `OrderVersion`. A
+  reference chooses a part: `OrderVersion` with `Order` when a particular state matters, and
+  `Order` alone when change doesn't matter.
+- **Timelines over the DAG:** the tree is the historical view of the changes, and a node of the
+  tree is essentially one root of the DAG beneath it. Changes on one timeline give a linear
+  sequence of the states the DAG was in. A fork does not update the existing timeline: it starts
+  an alternative one, with independent changes and its own DAG, which still shares nodes with the
+  original, so the forked tree is a bigger DAG made of smaller ones. The time-based tree of
+  timelines is distinct from the immutable copy-on-write DAG beneath it, which holds the state,
+  its transitions, and the persistence of the simulation's states.
 
-On persistence and function identity:
+The rest of this record holds the details designed so far. What it doesn't cover is not designed
+yet.
 
-> we should be able to rename the functions, so any persistence layer should be able to map from
-> static funtions to the stored functiond id, he persistence layer should be responsible for the
-> mapping, similar to a repository layer, the repository should contin all the mapping ids and
-> also all the records that are persisted should be mapped to the correspoinding applicaiton
-> record, we shold not store the applicaiton record directly.
+- **Roots in memory:** every timeline node keeps its root, and the City, actors, and scale stage
+  revisits this when it reaches a full city day. An early estimate put that day at about 1,046 MB
+  with every root, against 108 MB with the latest only. Measured again with real commits on
+  2026-11-07, it held 761 MB with every root and 119 MB with the latest only, as the Simulation
+  engine's performance section records.
+- **The DAG in memory:** both kinds of node: custom nodes for roots, or where a lot of
+  customisation is needed, and Immutable.js for general collections and where performance
+  matters.
+- **The timeline's structure:** every DAG root can be selected in the timeline, but the timeline
+  is hierarchical, and zooms in and out. An order's delivery, for example, can be a collapsed
+  group of nodes that shows only the high-level view; expanding it shows the DAG nodes directly,
+  or further collapsed groups to zoom into, recursively.
+- **What creates a root:** a root is created every time state changes, since only a state change
+  moves the state history on; with no state change, the history stays the same. This is
+  independent of wall time, which always moves on, so the timeline shows simulated time and when
+  each state transition happened, and any large gap between transitions is visible. A state
+  transition is called a state commit, and every state commit creates a new DAG root.
+- **What one commit holds:** a commit matches a commit in the real service: any change that
+  would change the real service's state. A transaction that performs several operations is one
+  commit, because it is one atomic operation, but an event-driven operation is several commits,
+  because the real service would run several transactions and state transitions.
+- **Side-effect commits:** besides state commits there are side-effect commits: an operation that
+  does not necessarily change state but can still affect the system's external state. A
+  background job run is a side-effect commit, because it can affect the system. An API call can
+  have side effects too: a consumer's call to the service is an effect, because different
+  responses can produce different effects. Every framework or library side effect is recorded as
+  well, such as the caching library expiring a cached key. State commits and side-effect commits
+  are distinguishable in the timeline, since they behave differently, and so are input effects,
+  such as a consumer's API call, output effects, such as a call to an external service, and
+  background jobs. All commits made during one background job session are grouped, and the group
+  can be zoomed in and out.
+- **The structure beneath the two kinds of commit:** the main root DAG holds two sub-root DAGs,
+  one for the state commits and one for the effect commits.
+- **Direct and indirect effects:** committed effects are split in two. Direct effects are caused
+  by direct communication with the service, such as an API call. Indirect effects are not, but
+  still affect the service: a customer deciding not to pick up an order makes no call to the
+  service.
 
-On the state structure and records:
-
-> one important fact is that there is not just one root in the tree, so it is more like a
-> dircted acyclic graph, so verytime a change is made, a new root is generated that references
-> the changed nodes and all the unchaged nodes are resused since they are immutable, this is the
-> general that immutalbe datastructures are usually implemented, with a copy on wright mechanism
-> and sharing of state since state is immutable so that we dont have to copy the whole tree. so
-> when we replay the event we just navigate the DAG structure. also the records should be
-> designed in two parts the part that never changes during the lifetime of the record and the
-> version parts that contain changed states of the record, for example an order with have a non
-> changing record that holds all the state of the order that naver changes as we perform cow
-> mutations and every time we want to make a change to the order by createin a new version of
-> the vhanging parts. A naming conention would be Order for the non changing part and
-> OrderVersion for the changing part. when we create references between records we have to
-> consider weather to referance teh non changing part or the changing part. in general when we
-> reference the changing part we also want to reference the non changing part. but if the
-> concete does not care about the change it just needs a reference to the order than we just
-> referance the non changing part.
-
-On timelines and the structure beneath them:
-
-> the tree navigation is the historical view of the chagens, a nood on this tree is esentialy
-> the roots of the DAG underlaying structure that contains the state, so if the change happens
-> only in one timeline thean we just get a linear secentual like of all the states that the DAG
-> sa on at that time, but if we start forking the the changes so basicly we dont update the
-> existing timeline but we start to create alternative timelines with independet changes which
-> means will ahve independet DAG structure but which still share nodes between the, since even
-> the forket dimeline tree is still a biger DAG made by smaller DAGs, so tere is a distinctions
-> between the tree like structure taht shous the time based historical view and diferent
-> timeline paths and the underlying DAG immutable cow strucutre the power the implementation and
-> state transitions and persistence of the simulations states.
-
-The user asked for a design document with diagrams and tradeoffs before deciding the details.
-The rest of this record holds the answers so far. What it doesn't answer is not designed yet.
-
-The user confirmed this reading of the statements above:
-
-- State is a DAG. A change creates a new root that points at the changed nodes and reuses every
-  unchanged one.
-- History is a tree of timeline nodes on top of it, and a node is essentially one root. A fork
-  starts an alternative timeline whose nodes still share with the original.
-- Replay moves between existing roots, as moving between commits does in git.
-- `Order` never changes. `OrderVersion` holds what changes, and each change adds a new one.
-- A reference chooses a part: `Order` when change doesn't matter, and `OrderVersion` with
-  `Order` when a particular state does.
-- Functions are plain and pure, with no decider or event patterns and no special types acting as
-  functions. They are versioned and only need to be identifiable.
-- A repository owns persistence. It maps static functions to stored IDs, so functions can be
-  renamed, and maps every persisted record to its application record. Application records are
-  never stored directly.
-
-Roots in memory: every timeline node keeps its root, and I07 revisits this when it reaches a full
-city day. Measured on today's code, that day holds about 1,046 MB with every root, against 108 MB
-with the latest only. I03-E02-017 measured it again with real commits on 2026-11-07: 761 MB with
-every root and 119 MB with the latest only, as the Simulation engine's performance section
-records.
-
-The DAG in memory, in the user's words:
-
-> of both, use custom nodes for root or when hight customisation is needed, and use immutable js
-> for general collections and when performance is needed.
-
-The timeline's structure, in the user's words:
-
-> every dag root should be selectable in the timeline but the timeline should have an
-> hierarchical structure that acts as zoom in and out. so for exampe an order delivery can be a
-> grup of nodes hat is collapsed to only show the higleve view but we can expand it to zoom in
-> and it migt show the direct dag node or another group of collapsed nodes the we can zoom in to
-> , so a hierarchical recursive structure.
-
-What creates a root, in the user's words:
-
-> a root is crated everytime there is a state change, beacuse only a state chagne progresses the
-> state history, if there are no state changes that the statre history stys the same. this is
-> independent of wall time which is allways progressing, so the timeline needs to show teh wall
-> time and at whet tiem the state transition happend and any larg gap between state transitions
-> should be visible. we shuuld call a state transition a state commit so every time there is a
-> state commit a new dag root is created
-
-What one commit holds, in the user's words:
-
-> a commint should match the real service commit, any change the would cause the real service to
-> chagne state so a transations the performs multiple operations is one commit beacuse only on
-> atomic operation was performed, but an event drien operation is multiple comits because
-> multiple transactions and state transitions would happen in the real service.
-
-Side effect commits, in the user's words:
-
-> besite state commits we also have side effect commits. a side effecto commit is any operation
-> the does not necessary cause a state transition but can still have an effect on the external
-> state of the system. a background job run is recorder as a side effect commit because it can
-> have an effect on the system. an api call also can have side effects, a coll from a consumer
-> to our serice is still an effect beacuse different responses that the consumer gets from our
-> service can produce different effects. any framework or library related sidefect shoul still
-> be recorder. for example the caching library can have an effecto n the chched state by
-> expiring a cached key. the state commits and sideffect commits should be distinguishable in
-> the timeline since those act diferently. also input effects like an api call from the
-> consumer, on output effect such ass an api call to an external service an a background job
-> should be distinguishable. all commits that happern during a backgroudn job session shoul be
-> groupd to galler snd should be able to zoom in and out.
-
-The structure beneath the two kinds of commit, in the user's words:
-
-> the main roog DAG shoul cotian tow sub root DAGs one for the sate commints and one for the
-> effect commitns
-
-Direct and indirect effects, in the user's words:
-
-> we should split the commited effects into two parts the indirect and direct effects, the
-> direct effects are what we have now, that are effects that are coused by a direct comuication
-> with the service like an api call. the indirect effect are effect the are not caused by a
-> direct comunication with the service, like the fact that te customer decidet to not pick up
-> the order, there is not direct call to the service that can cause an effect but still this has
-> an effect on the service.
-
-The user chose these on the same day:
+The details:
 
 - **Main root:** it holds exactly the state and effects sub-roots, with no third part for the
   simulator. The clock, job due times, remaining script, scenario names, and log are worked out
@@ -2563,13 +2361,13 @@ The user chose these on the same day:
 - **Across the sub-roots:** records in the effects and state sub-roots may point at each other, in
   both directions.
 - **API calls:** an input commit groups the commits made while handling it, as a job session does.
-- **Framework and library effects:** the user asked for the real service's code to be analysed to
-  find them, as the docs of `V1.0.0` mention none.
+- **Framework and library effects:** found by analysing the real service's code, as the docs of
+  `V1.0.0` mention none.
 
-The real service's code, read on 2026-11-05 at the user's request, shows the following. The docs of
-`V1.0.0` already covered the job framework, and
-[module communication](../versions/V1.0.0/module-communication.md#framework-and-library-behaviour)
-now holds the rest:
+The real service's code shows the following. The docs of `V1.0.0` already covered the job framework,
+and [module
+communication](../versions/V1.0.0/module-communication.md#framework-and-library-behaviour) now holds
+the rest:
 
 - **Session state cache:** every signed-in call checks its session, in each instance's memory and
   then in a shared table. Valid or invalid lasts 30 seconds in memory and 5 minutes shared. Revoked
@@ -2587,56 +2385,39 @@ now holds the rest:
   inbox record. Sending one notification from a dispatch pass is three: the claim, the enqueue,
   and marking it enqueued.
 
-Library effects get built in two stages. I03 builds the library commit kind, the session cache, and
-the rate limits for one instance. I04 adds the cross-instance delays, skipped job runs, and the
-connection sweep, along with multiple instances. The commits of one action run back to back at one
-simulated time in I03, and letting other work land between them comes with I04.
+Library effects get built in two stages. The Full V1.0.0 lifecycle and rules stage builds the
+library commit kind, the session cache, and the rate limits for one instance. The Faults, races, and
+verification stage adds the cross-instance delays, skipped job runs, and the connection sweep, along
+with multiple instances. The commits of one action run back to back at one simulated time in the
+first of these stages, and letting other work land between them comes with the second.
 
-When a cache change is a commit, in the user's words:
-
-> it should behave like the real chaching library behaves, so if the caching livrary removes and
-> expirte key thatn its is an event, if the user makes a call to the cache and it causes the
-> cache to change state, that is and event. but a ttl that has expired is not an event until
-> something explicitly treagers someting to activate te ttl and cause an expirey record to be
-> removed
-
-Calls between the modules and what counts as an effect, in the user's words:
-
-> a link betwen modules should be shown, also when a module makes a call to the other module it
-> usually create a pending request which should be treated a commit, otherwise if not state or
-> effect is created than no commit. in general effect that are only internal and dont have an
-> effect on the external state or the internal state are not considered as true effects.
-
-Asked whether a job run that changes nothing is a commit, the user answered:
-
-> job runs do have an effect beacuse avery job run is recorder and show in the admin dashboard
-
-So every job run is a commit, because its record is visible outside the job. The dashboard is
-planned, not built yet: the real service's job framework stores each run in its own tables today.
-The user also chose:
-
+- **When a cache change is a commit:** as in the real caching library. The library removing an
+  expired key is an event, and a call to the cache that changes its state is an event. A TTL that
+  has expired is not an event until something explicitly triggers it and the expired record is
+  removed.
+- **Calls between the modules:** a link between the modules is shown. A call from one module to
+  the other usually creates a pending request, which is a commit; a call that creates no state or
+  effect makes no commit. Effects that are only internal, and change neither the external nor the
+  internal state, are not true effects.
+- **Job runs:** every job run is a commit, even one that changes nothing, because its record is
+  visible outside the job, in the real service's admin dashboard. The dashboard is planned, not
+  built yet: the real service's job framework stores each run in its own tables today.
 - **State to effect links:** state holds the effect's ID, and effects may point directly at state,
   so one pointer comparison still shows that two moments have identical state.
 - **Cause links:** a direct effect records which indirect effect led to it, when that is known.
-- **Indirect effects in I03:** I03 builds the commit kind, plus scenario steps and Manual mode that
-  state one by hand. Behaviour profiles add them automatically later.
+- **Indirect effects in the Full V1.0.0 lifecycle and rules stage:** it builds the commit kind, plus
+  scenario steps and Manual mode that state one by hand. Behaviour profiles add them automatically
+  later.
 
 Neighbouring empty job runs collapse into one row you can zoom into, and a filter shows or hides
 each kind of commit. A state commit holds a direct reference to its function, so a rename is
 automatic and only the repository knows stored IDs.
 
-What a saved run holds, in the user's words:
-
-> all of this so that we can choose to keep everything or comprese it to some of hte date or to
-> the minmum and recalculate everything. for example we might chose to save everything at the
-> bingining so we can have fast loockups, but after a while whe might choose to comprase it by
-> some amount to reduce consumed space. ang later wi might choose to sill save everything. so we
-> should be able to move between different compression levels. also this can be usefull for
-> snapshot tasting to test breaking changes fo the stateles run against the statefull run and
-> make sure they all produce the same result
-
-The user then chose:
-
+- **What a saved run holds:** a saved run can keep everything, or be compressed to part of the
+  data or to the minimum, with the rest recalculated. A run might be saved in full at first, for
+  fast lookups, compressed after a while to save space, and later saved in full again, so a run
+  can move between levels. This also serves snapshot testing: a breaking change is tested by
+  checking that the stateless run and the stateful run produce the same result.
 - **Function IDs:** a stored ID is readable and fixed once assigned, such as `orders.pick-up@1`.
   Any behaviour change adds a new version, and the old one stays while a saved run below
   "everything" needs it.
@@ -2645,43 +2426,36 @@ The user then chose:
   breaking change affects.
 - **Choosing a level:** a saved run's level is chosen by hand, and each run shows its level and
   size. Automatic rules can come later.
-- **When levels get built:** I03 saves runs at "everything" and "minimum", moves between them, and
-  runs the snapshot test. Checkpoints come at the city stage.
-
-The user then chose:
+- **When levels get built:** the Full V1.0.0 lifecycle and rules stage saves runs at "everything"
+  and "minimum", moves between them, and runs the snapshot test. Checkpoints come at the city stage.
 
 - **Which records split:** every record that changes splits into an unchanging part and a version
   part. A version's number is today's order version, which the outbox already carries. Events and
   outbox rows never change, so they have no version part.
-- **Forks:** they arrive in I03, with no merging. Going back to any commit and acting by hand,
-  stating an indirect effect, or changing a value starts a new timeline. Timelines can be named,
-  and a run that has ended can be forked. Snapshot and branch moves here from I04.
+- **Forks:** they arrive in the Full V1.0.0 lifecycle and rules stage, with no merging. Going back
+  to any commit and acting by hand, stating an indirect effect, or changing a value starts a new
+  timeline. Timelines can be named, and a run that has ended can be forked. Snapshot and branch
+  moves here from the Faults, races, and verification stage.
 - **References across the modules:** records may hold followable links across the modules, and the
   timeline, views, and verification checks follow them freely. A module's rule functions receive
   only their own module's state and copies, so drift stays visible.
 - **Order replay:** it shows the commits that touched the order, and its version chain.
-- **Early views:** I03 builds Violation summary and Criteria tracker for one run and `V1.0.0`,
-  shaped so later stages extend them to many.
+- **Early views:** the Full V1.0.0 lifecycle and rules stage builds Violation summary and Criteria
+  tracker for one run and `V1.0.0`, shaped so later stages extend them to many.
 
-On where old versions live, the user asked:
+- **Where old versions live:** a linked list. Each root holds the latest version of each record,
+  and each version holds a direct link to its previous one, rather than each root holding every
+  version.
 
-> if we only store the latest version we esentaly have a linked list, whereas the all versions
-> aproach looks like a 2d array, so i dont see the point why isnt the linked list enought
+How the Full V1.0.0 lifecycle and rules stage is organised, which changes the order of work in
+[FND-80](#fnd-80--full-v100-lifecycle-and-rules-stage):
 
-So the user chose the linked list. Each root holds the latest version of each record, and each
-version holds a direct link to its previous one.
+- **Run history first:** it is the stage's first work area, and Paths and commands with Manual mode
+  comes straight after it.
+- **Commands:** the stage covers all of them, including sessions, driver status, devices, and
+  back-office driver accounts and login lockout, with account management kept simple.
 
-The user also settled how I03 is organised, which changes the order of work in
-[FND-80](#fnd-80--planning-stage-i03):
-
-- **Run history first:** it is I03's first epic, and Paths and commands with Manual mode comes
-  straight after it.
-- **Item size:** one item per view or tool, with commands and rules grouped by path, and a built-in
-  scenario proving each path.
-- **Commands:** I03 covers all of them, including sessions, driver status, devices, and back-office
-  driver accounts and login lockout, with account management kept simple.
-
-The user also settled how this fits the existing design, in I03-E02-001:
+How this fits the existing design:
 
 - **Ownership:** the Simulation engine owns commits and the main root, because it makes them. Run
   history owns the timeline, saved levels, and the storage of forks. Verification owns snapshot
@@ -2702,16 +2476,14 @@ The user also settled how this fits the existing design, in I03-E02-001:
   effects sub-root, and the state sub-root stays purely the real service's state.
 - **Naming:** `DomainEffect` is renamed a follow-up, so "effect" means only effect commits.
 
-Timeline time: the timeline shows simulated time, which the user chose when asked which time
-"wall time" meant above. A large gap between commits is visible in both of two displays that the
-user can switch between: a list with a row stating the gap, and an axis with spacing to scale.
+Timeline time: the timeline shows simulated time. A large gap between commits is visible in both of
+two displays that a person can switch between: a list with a row stating the gap, and an axis with
+spacing to scale.
 
 Timeline groups: the timeline has several views over the same roots, and a root can appear in more
-than one. I03 builds three: by order, by simulated time, and by driver. Plain functions work the
-groups out from the timeline for display, so rule functions don't know about them, nothing extra
-is saved, and a new grouping works on old runs.
-
-The user settled these on 2026-11-05, in I03-E02-006:
+than one. The Full V1.0.0 lifecycle and rules stage builds three: by order, by simulated time, and
+by driver. Plain functions work the groups out from the timeline for display, so rule functions
+don't know about them, nothing extra is saved, and a new grouping works on old runs.
 
 - **Lookups for worked-out data:** each job's last run, how many scripted steps have run, and the
   scenario's names for orders sit in the cache beside the timeline, with the log's lookups. The
@@ -2721,32 +2493,20 @@ The user settled these on 2026-11-05, in I03-E02-006:
   the latest commit. That position is not part of a run's data, so a loaded run starts at its
   latest commit's time.
 
-What kind of commit a tuned value makes, in the user's words:
-
-> it depends what is been tuned, if tuning is bout some config value, that it is a config change
-> event, if it is about some service lgorithm implementation changing than it is an implementation
-> change event.
-
-The user then chose:
-
+- **What kind of commit a tuned value makes:** it depends on what is tuned. Tuning a config value
+  is a config change, and changing a service algorithm's implementation is an implementation
+  change.
 - **Config change:** a fifth direct kind, beside input, output, job, and library. Every value
   tunable today, the dispatch and communication values, is a config value, so tuning one makes a
   config change commit. The current values sit in the direct part.
-- **Implementation change:** a planned kind, built once functions have stored IDs and versions in
-  I03-E02-007, because it names the function version to switch to.
+- **Implementation change:** a planned kind, built once functions have stored IDs and versions,
+  because it names the function version to switch to.
 - **Starting values:** the values a run's settings give sit in its start root, as its starting
   drivers do, and make no commit. Only a change during the run makes a config change commit.
 
-On randomness, the user asked whether storing effects was not enough, and suggested scoped
-randomness:
-
-> would it be useful tha have different types of random effects such ass a global random effect
-> that affects everyone, a local randomne effect tha only affects some specific sone lile a
-> restaurnst an all actor that are in that zone, or an acto specific random effect such as a
-> randomnes tha only affects a specific custtomer or driver
-
-After comparing one sequence moving with every root, named streams, and keyed draws, the user chose
-on 2026-11-06:
+Randomness can be scoped: a global random effect affects everyone, a local one affects one zone,
+such as a restaurant and every actor in that zone, and an actor's own affects only one customer or
+driver. One sequence moving with every root, named streams, and keyed draws were compared:
 
 - **Named streams stay:** [FND-66](#fnd-66--seeded-randomness) is unchanged. Stored effects are
   enough to replay a run, but the seed is still needed to make new commits the same way again.
@@ -2761,19 +2521,15 @@ on 2026-11-06:
 - **Random outcomes:** an outcome is an indirect effect, in the indirect part, and records the
   stream it was drawn from.
 
-Once I03-E02-006 was built, the user chose on 2026-11-06:
-
 - **Config changes in the log:** a config change also writes a `ConfigChanged` entry to the Event
   log, from the simulation engine, with the values before and after. That is how
   [FND-54](#fnd-54--tunability)'s tuning event shows in the log.
 - **The old scheduler:** runs work their next work out, so the schedule that held waiting work is
   deleted, along with its tests.
 
-The user chose these the same day, in I03-E02-007:
-
 - **The repository's first job:** it maps a run to persisted records and back, in memory, as
-  plain data, and replaces the generic JSON encoding. I03-E02-008 stores those records in
-  IndexedDB, with the levels and the schema version.
+  plain data, and replaces the generic JSON encoding. Storing those records in IndexedDB, with
+  the levels and the schema version, is planned.
 - **Guarding versions:** each registered function runs on fixed inputs, and a test pins a
   fingerprint of its output. A behaviour change fails that test until a new version is
   registered, or the change is shown to make no difference.
@@ -2783,13 +2539,11 @@ The user chose these the same day, in I03-E02-007:
 - **Naming:** a persisted record's type is its application type with a `Persisted` prefix, such as
   `IPersistedOrder` and `IPersistedCommit`.
 
-The user chose these on 2026-11-08, while reviewing what I03-E02 still needs:
-
-- **Implementation change:** I03-E02-007 gave functions stored IDs but did not build this kind.
-  I03-E02-009 builds it, with the function versions its snapshot tests need.
-- **Saved runs in the browser:** I03-E02-008 builds a Save action that chooses the level, a list
+- **Implementation change:** functions have stored IDs, but this kind is not built yet. It comes
+  with the function versions its snapshot tests need.
+- **Saved runs in the browser:** a Save action that chooses the level, a list
   of saved runs showing each one's level and size, Open, moving a run to the other level, and
-  Delete. `I05`'s Stored run management adds the rest.
+  Delete. The Stored runs and files stage's Stored run management adds the rest.
 - **What "minimum" drops:** each commit's main root and its log entries. Opening the run rebuilds
   both by running each commit again on the root before it.
 - **Size:** the bytes the run takes in browser storage, with how many commits and branches it
@@ -2812,11 +2566,11 @@ The user chose these on 2026-11-08, while reviewing what I03-E02 still needs:
 - **Switching a version:** a scenario step can switch a function's version, and so can a person
   in the run workspace, forking first when an earlier commit is shown, as rule changes do. Each
   switch is an implementation change commit.
-- **Four views:** by simulated time, by number, by order, and by driver. The two ways of lining
-  rows up in [FND-87](#fnd-87--forks-and-named-timelines) become two views, so I03 builds four
-  where this record said three. A switch in the timeline panel picks one. Branches stay columns
-  in every view, the rows group by order or by driver in those views, and the selected commit
-  stays selected when the view changes.
+- **Four views:** by simulated time, by number, by order, and by driver. The two ways of lining rows
+  up in [FND-87](#fnd-87--forks-and-named-timelines) become two views, so the Full V1.0.0 lifecycle
+  and rules stage builds four where this record said three. A switch in the timeline panel picks
+  one. Branches stay columns in every view, the rows group by order or by driver in those views, and
+  the selected commit stays selected when the view changes.
 - **What an order holds:** state commits that changed its records, in Orders or in Deliveries'
   copy of it; API calls and indirect commits that name it; and job runs whose commits changed
   it. A commit can sit under several orders, and one that touches no order is not in this view.
@@ -2826,8 +2580,8 @@ The user chose these on 2026-11-08, while reviewing what I03-E02 still needs:
 - **Groups in those views:** an order or a driver, then each job run or API call, then its
   commits in time order. A job run under an order is shown whole, with its commits for other
   orders too.
-- **Selecting orders and drivers:** I03-E02-015 also highlights a selected order or driver in the
-  timeline views. I03-E07-007 links the other views to it.
+- **Selecting orders and drivers:** a selected order or driver is highlighted in the timeline
+  views, and the other views are linked to it.
 - **Fast enough:** a city day can be followed live in every view, and switching views takes about
   as long as switching the rows' mode does today.
 - **Which gap:** the simulated time between two neighbouring rows as they are shown, after the
@@ -2847,52 +2601,46 @@ The user chose these on 2026-11-08, while reviewing what I03-E02 still needs:
   person watching left them while the app is open, as breakpoints do, and are not saved with the
   run.
 
-Reviewing those answers against the code the same day, the user changed one and added three:
-
 - **Log entries kept:** a state commit's entries come from its call's result and from the cause
   its step gave, so running the stored call again cannot rebuild them. The minimum drops each
   commit's main root only, and keeps its log entries. This replaces "what minimum drops" above.
-- **Removing a branch:** I03-E02-008 lets a person delete a branch, which
+- **Removing a branch:** a person can delete a branch, which
   [FND-87](#fnd-87--forks-and-named-timelines) left for later.
 - **Links across the sub-roots:** effects pointing at the state they saw, and state holding an
-  effect's ID, were approved above but not built or tracked. A new item, I03-E02-021, builds them.
+  effect's ID, were approved above but not built yet; they are planned.
 - **Timeline capabilities:** the view by order is Order timeline and Order replay, and opening an
   order there also shows its version chain. The view by driver starts Driver timelines, whose
-  driver states, such as availability over the day, stay in `I07`. The three move to Run history
-  from Business view and Orders. I03-E06-007 and I03-E06-018 are delegated to I03-E02-015.
+  driver states, such as availability over the day, stay in the City, actors, and scale stage. The
+  three move to Run history from Business view and Orders.
 - **Opening a saved run:** it opens in the run workspace like a live run, paused at its latest
   commit, and can be moved through, forked, and run on.
 - **A saved run's name:** Save asks for one, filled in with the scenario's name and the date.
-  Renaming comes with `I05`'s Run labels.
+  Renaming comes with the Stored runs and files stage's Run labels.
 - **Switching a version in a scenario:** a step with `use` in place of an actor, a command, and an
   order, listing each function and the version to switch to, as a `set` step lists rule changes:
   `{ "at": "h00:m10:s00:ms00", "use": [{ "function": "orders.pick-up", "version": 2 }] }`.
 - **Switching a version by hand:** in the Rules panel, which lists each module's functions and
   their versions beside its rules. A version switched by hand is made again on Repeat, as a
   config change made by hand is.
-- **Order of work:** I03-E02-021 and I03-E02-022 come before I03-E02-008, so saved runs' schema
-  version 1 already holds their links. I03-E02-009 follows 008 with schema version 2 and its
-  migration, for the implementation change commits, which also proves the migration path.
+- **Schema versions:** the links across the sub-roots and the labelled config changes come before
+  saved runs, so saved runs' schema version 1 already holds them. Schema version 2, with its
+  migration, adds the implementation change commits, which also proves the migration path.
 - **Saved runs in the repository:** each is a saved run's persisted records written as a JSON
   file, with its schema version, the same records browser storage holds.
 - **Scenarios shared by saved runs:** a saved run keeps its whole scenario, shared rather than
-  copied, in the user's words "scenarions should follow the same imutablity strucutre so the
-  same scenario can be shared by multiple runs instead of be copied for each run". A scenario
+  copied: scenarios follow the same immutable structure, so one scenario can be shared by many
+  runs instead of being copied for each. A scenario
   splits as a record does: an unchanging `Scenario`, and a `ScenarioVersion` for each edit. A
   saved run points at the exact version, stored once and shared, which stays while any saved run
   uses it, even after the scenario is deleted. This narrows
   [FND-57](#fnd-57--hosting-and-data)'s "kept until the user deletes them" for versions in use. A
-  built-in scenario is stored the same way when a run of it is saved. I03-E02-008 builds this
-  storage, and I03-E03-002's Scenario library builds on it.
-- **Stage gate:** I03-E08-001 also waits for I03-E02-009 and I03-E02-016, where Run history's
-  open work ends.
+  built-in scenario is stored the same way when a run of it is saved. The Scenario library builds
+  on this storage.
 - **Run history uses Scenarios:** a new link in the
   [module graph](../modules/README.md#dependency-graph), for the scenario version a saved run
   ran. Scenarios does not use Run history, so it makes no cycle.
 - **Function versions in the Rules panel:** the Simulation engine exposes the versions it can
   run, and the panel reads them there, as it reads the run's rules, so no new link is needed.
-
-The user answered the last open questions before planning the same day:
 
 - **Which links across the sub-roots:** every effect, whether an API call, a job run, or a config
   change, points at every record version it read, and every record version records the job run
@@ -2909,30 +2657,29 @@ The user answered the last open questions before planning the same day:
 - **The axis's limits:** a gap at the threshold adds no space, and the longest gap shown adds at
   most five rows' height.
 
-Reviewing what implementers still needed, the user chose the same day:
-
 - **What a snapshot test compares at "minimum":** each commit of a run saved at "minimum" keeps a
   short digest of its root, and a rerun with the run's own versions compares digests commit by
   commit.
-- **Fingerprints after I03-E02-021:** making each record version name the work that made it
-  changes every state function's output. Version 1's pins are updated in place this once, as no
-  run has ever been saved, so nothing can need the old behaviour. After that, the rule holds: a
-  behaviour change adds a new version.
+- **Fingerprints after the links across the sub-roots:** making each record version name the work
+  that made it changes every state function's output. Version 1's pins are updated in place this
+  once, as no run has ever been saved, so nothing can need the old behaviour. After that, the rule
+  holds: a behaviour change adds a new version.
 - **Deleting a branch:** only a branch with no forks of its own can be deleted, and never Main.
   If it is the branch being watched, the branch it forked from is watched, at its latest commit.
   It works on a live run and a saved run alike, after a confirmation in the page.
-- **Where the digest comes in:** I03-E02-008 defines "minimum" with the per-commit digest from
-  the start, in schema version 1.
+- **Where the digest comes in:** "minimum" has the per-commit digest from the start, in schema
+  version 1.
 - **Looking up a function by name and version:** the repository owns the mapping. Application.Core
   declares the lookup, as it declares `RunRepository`, because it may not import Infrastructure,
   and the repository implements it from its registry. The engine uses it during a run, to find
   the function a `use` step or a switch in the Rules panel names, and the Rules panel uses it to
   list each function's versions.
-- **Views after the links:** I03-E02-015 depends on I03-E02-021, and finds the orders and drivers
-  a commit touched from 021's links instead of comparing each root with the one before.
+- **Views after the links:** the views by order and by driver come after the links across the
+  sub-roots, and find the orders and drivers a commit touched from those links instead of
+  comparing each root with the one before.
 - **A scenario's identity:** a scenario is identified by its name. Identical content is the same
-  version, and different content under the same name is a new version. I03-E03-002 may give
-  scenarios IDs of their own later.
+  version, and different content under the same name is a new version. The Scenario library may
+  give scenarios IDs of their own later.
 - **Where saving happens:** Save sits in the run controls and opens a small form in the page with
   the name and level, as the indirect effect form does. The saved runs are listed on the Runs and
   scenarios page, below the built-in scenarios.
@@ -2958,21 +2705,9 @@ Reviewing what implementers still needed, the user chose the same day:
 - **Names of the new kinds:** the implementation change is the `ImplementationChange` effect and
   commit kind, as this record names it, and writes a `FunctionVersionSwitched` log entry from the
   Simulation engine, with the function's name and its versions before and after.
-- **Smaller items:** no item of the epic holds more than about three phases. I03-E02-008 splits
-  into I03-E02-023 Versioned scenario storage, I03-E02-008 Saved runs at two levels, which keeps
-  the storage and the levels, and I03-E02-024 Saved-run screens and deleting branches.
-  I03-E02-009 splits into I03-E02-025 Function versions, I03-E02-026 Implementation change and
-  the use step, and I03-E02-009 Snapshot tests. I03-E02-015 and I03-E02-016 stay whole.
-- **Function versions first:** I03-E02-025 comes before I03-E02-008, so schema version 1 already
-  holds which version of each function a run uses. The implementation change, I03-E02-026,
-  follows 008 with schema version 2 and its migration.
-- **Plans recorded now:** each open item's phases are written in as its approved plan, so its
-  implementer starts at P01. Screens are still reviewed from screenshots, and city-day numbers
-  that miss a target still go to the user.
-- **The Scenario library:** I03-E03-002 depends on I03-E02-023, as it builds on that storage.
-
-Planning I03-E02-021 against the code, the user chose:
-
+- **Function versions first:** function versions come before saved runs, so schema version 1
+  already holds which version of each function a run uses. The implementation change follows,
+  with schema version 2 and its migration.
 - **Versions made at a run's start:** a scenario's starting drivers are made before any job run or
   API call, so their first versions name the run's start as their maker, a value of its own, and
   every version still names one.
@@ -2983,24 +2718,14 @@ Planning I03-E02-021 against the code, the user chose:
 
 ### FND-82 — Application core layer
 
-The user stated this on 2026-11-06, in I03-E02-018, while choosing where typed log entries live:
-
-> lets add an Application.Core layer it will have a dependency on the domain but the domain cant
-> depend on it. so it will esentialy wrap the domain. things that can go in the domain might go
-> in the core layer. it will be something between application and domain. all other layers can
-> depend on the core layer, the infrastrucutre layrrs should not depend on the aplicaiton layer
-> only the core layer. the ui layer can depend on the application layer.
-
-So far this settles:
+The layer came from choosing where typed log entries live.
 
 - **A new layer** sits between Application and Domain. It depends on Domain, and Domain cannot
   depend on it.
+- **It wraps Domain:** things that could go in Domain may go in it instead.
 - **Every other layer** may depend on it.
 - **Infrastructure** does not depend on Application.
 - **UI** may depend on Application.
-
-The user then chose:
-
 - **What it holds:** a run's records and the pure steps that move a run on: commits, the main
   root, the timeline, the run's state, effects, config values, the cache, the typed log entry
   kinds, and the step functions. Application keeps the services and use cases, such as the
@@ -3022,9 +2747,7 @@ The user then chose:
 
 ### FND-83 — Types owned by their modules
 
-The user asked on 2026-11-06 that IDs and other types live in their own modules: "ids and other
-types should be on their respective modules and not put together into a shared module". The
-user then chose:
+IDs and other types live in their own modules, not together in a shared module:
 
 - **Scope:** `src/domain/ids.ts` and `src/domain/quantities.ts` are split up. The shared helpers,
   such as `required`, `fields-of`, `version-chain`, `inbox-position`, and `digest-parts`, stay
@@ -3032,39 +2755,28 @@ user then chose:
 - **Layout:** each ID sits beside the class it identifies, such as `OrderId` in `order.ts`.
 - **Outbox IDs:** `OutboxEventId` splits into one ID for each module's outbox, each owned by that
   module.
-- **The business does not know it is simulated:** in the user's words, "order, drivers and other
-  domain types should not depend on simulation types dirctly, but the smulation can depend on
-  business types, the busines types can depend on some abstraction that bothe modules can agree
-  on, for examplte the SimType can be an implementation of an abstract time. in general teh
-  domain types should not know they are been simulated, the should just depend on some world
-  whose implementation is not known." So the business modules use abstractions, such as time,
+- **The business does not know it is simulated:** domain types such as orders and drivers depend
+  on no simulation type, only on abstractions both sides agree on, as on a world whose
+  implementation they don't know. The business modules use abstractions, such as time,
   and the Simulation engine provides them: a simulated time is one implementation of an
   abstract time. The Simulation engine may use the business modules' types, and never the
   reverse.
-- **A System module, by context:** "the term world is just to explain the concept, dont take it
-  too literaly. the abstraction should depend on context, for example types about time, date,
-  randomnes, math, etc should be in a system module". There is no World module: the
+- **A System module, by context:** "world" only explains the concept, and abstractions are grouped
+  by context. There is no World module: the
   abstractions about time, dates, randomness, and math go in a System module.
 - **Time is an interface:** the abstract time is an interface, and the Simulation engine's
   `SimTime` implements it. Business code only uses the interface.
-- **No Business rules module:** "business rules hould not ba a module on its own, the rules
-  should be in their respective module,for example the order module contains the order busines
-  rules, the drivers module the drivers business rules and so on". This replaces
+- **Each module's own rules:** the rules sit in their modules: Orders holds the order rules,
+  Drivers the driver rules, and so on. This replaces
   [FND-56](#fnd-56--module-boundaries)'s single catalog of rules: each module holds its own
   rules.
-- **Business rules as an abstraction:** the user then revised this on 2026-11-07: "actully the
-  business rules module should exist but only as an general abstract module for the purpouse of
-  providing simualted rules, it should not know about specific modules rules. instead the
-  specific modules should build their rules using the busines rules abstractions. for example
-  the orders module should use busines rules types to write its rules. this should be done in a
-  way so that that the rules that te orders module wrote are visible on the ui and can be
-  modified manualy or automaticly by te simulator so we can simulate different scenarios." So
-  Business rules stays, as a generic module of rule abstractions that knows no other module's
-  rules. Each module writes its own rules with those abstractions, and the rules are visible in
-  the UI and can be changed by hand or by the simulator. The user chose that I03-E02-019 moves
-  each rule into its module and leaves Business rules the abstractions that exist today, the
-  tuned values' checks, and that a new item in the Business rules epic designs and builds the
-  rule abstractions, planned first for the user's review. The "Rules and decisions"
+- **Business rules as an abstraction:** Business rules stays, as a generic module of rule
+  abstractions for simulated rules, which knows no other module's rules. Each module writes its
+  own rules with those abstractions, as Orders writes its rules with Business rules types, and
+  the rules are visible in the UI and can be changed by hand or by the simulator, so different
+  scenarios can be simulated. Each rule moved into its module, and Business rules kept the
+  abstractions that already existed, the tuned values' checks; the rule abstractions are
+  designed and built on top of them. The "Rules and decisions"
   capabilities stay with Business rules, since they work on any module's rules through the
   abstractions.
 - **The System module's contents:** in `src/domain/system/`, abstractions only: time, with
@@ -3076,65 +2788,59 @@ user then chose:
   speed of its own to the Simulation engine.
 - **Duration is a value:** an immutable `Duration` class in System, made from milliseconds or
   seconds, since the rules state durations as fixed amounts.
-- **Drivers and Deliveries:** "Deliveries should be a submodule of drivers just like in the real
-  service". Drivers, in `src/domain/drivers/`, holds drivers, their availability and locations,
+- **Drivers and Deliveries:** Deliveries is a submodule of Drivers, as in the real service.
+  Drivers, in `src/domain/drivers/`, holds drivers, their availability and locations,
   and the driver rules: eligibility, ranking, and the notification order. Its submodule
   Deliveries, in `src/domain/drivers/deliveries/`, holds requests, assignments, notifications,
   and its outbox. In the module graph Drivers is one module, its submodule may use it, and other
   modules use Drivers as a whole.
 - **Stored names follow:** log sources, stored function IDs, and the like are renamed to the new
-  modules, so every pinned digest is recalculated once. The user chose on 2026-11-07 that a stored function ID
-  names the module and its submodule, as the folders do: `drivers.deliveries.<name>@1` for the
-  Deliveries submodule and `drivers.<name>@1` for Drivers itself. Delivery events keep the log
-  source Deliveries, and driver events, such as a driver's status, location, or availability,
-  get a new log source, Drivers. No driver function or driver event exists yet, so every
-  stored function becomes `drivers.deliveries.<name>@1`, and every entry keeps the source
-  Deliveries.
-- **Two states:** the user chose on 2026-11-07 that the module's state splits in two: a
+  modules, so every pinned digest is recalculated once. A stored function ID names the module and
+  its submodule, as the folders do: `drivers.deliveries.<name>@1` for the Deliveries submodule and
+  `drivers.<name>@1` for Drivers itself. Delivery events keep the log source Deliveries, and driver
+  events, such as a driver's status, location, or availability, get a new log source, Drivers. No
+  driver function or driver event exists yet, so every stored function becomes
+  `drivers.deliveries.<name>@1`, and every entry keeps the source Deliveries.
+- **Two states:** the module's state splits in two: a
   `DriversState` in Drivers, with the drivers, their versions, and their order counts, and a
   `DeliveriesState` in Deliveries, with the requests, notifications, outbox, and inbox. Both sit
   in the main root. A command that changes both, such as accepting a request, is a Deliveries
   command that takes the drivers' state and gives back both. This changes how a run is
   persisted.
-- **Tracking:** a new item in the Run history epic, after I03-E02-018, planned first for the
-  user's review.
-- **Restaurants and Customers:** "just like in the real service, the rastaurants is its own
-  module with customers as submodule". Restaurants takes the place of Customers and restaurants,
+- **Restaurants and Customers:** as in the real service, Restaurants is its own module, with
+  Customers as its submodule. Restaurants takes the place of Customers and restaurants,
   with Customers as its submodule, and owns `RestaurantId` and a restaurant's place.
 - **Scripted steps:** a scripted step, with its actor and order name, moves to Scenarios, and the
   Simulation engine runs the steps through an interface of its own, so only Scenarios uses the
-  engine. The user chose on 2026-11-07 that the engine defines its own input type, with a
+  engine. The engine defines its own input type, with a
   time, an actor, a command, and an order name of its own, and Scenarios converts each scripted
   step into one when it starts a run. What a run records keeps its shape, so persisted runs and
   digests do not change for it.
-- **Pricing rules:** "they should go in their respective module jus like they do on the real
-  service". Each pricing rule goes to the module that owns it in the real service, decided when
-  it is built.
-- **Time's cost:** if time held as objects makes a city day much slower or larger, the numbers
-  go to the user before the work goes on.
-- **Time, as built:** I03-E02-019-P04 named the interface `IInstant`, as the code style names
-  every interface. Each moment carries how long after its timeline's start it is, as a
+- **Pricing rules:** as in the real service, each pricing rule goes to the module that owns it
+  there, decided when it is built.
+- **Time, as built:** the interface is named `IInstant`, as the code style names every
+  interface. Each moment carries how long after its timeline's start it is, as a
   `Duration`, so two moments compare whichever implementation made them, and it writes itself out
   for a digest as a plain number did, so no digest changed. A module's persisted records are
   loaded with an `InstantAt`, given by the run's own mapping, so Orders and Drivers never name the
   Simulation engine there either. An inbox now asks whether an event is too old to read, instead
   of working out a time to read from, so it never needs a run's start. The city day kept its
   digest, took 44.0 s against 45.4 s before, and peaked at 1,321 MB against 1,245 MB.
-- **Numbers, as built:** I03-E02-019-P05 gave each module a `numbers.ts` with its branded numbers
+- **Numbers, as built:** each module has a `numbers.ts` with its branded numbers
   and their creators, the only place besides IDs and System's math where `as` is allowed:
   `Metres` and `Degrees` in Map and routing, `Score` and `Factor` in Drivers, `LogSequence` in the
   Event log, and `WallTime`, `Seed`, `RandomWord`, and a clock speed's `SpeedMultiple` in the
   Simulation engine. `VersionNumber` sits in `version-chain.ts`. `src/domain/quantities.ts` is
   gone.
-- **IDs in a cycle:** the user chose on 2026-11-07 that where two classes hold each other's IDs,
+- **IDs in a cycle:** where two classes hold each other's IDs,
   so that "beside the class" would make an import cycle, those IDs get a file of their own in
   their module instead: `OrderEventId`, `DeliveryEventId`, `CommitId`, and `SessionId`. Every
   other ID sits beside its class. `AreaId` and `VersionId`, with no class yet, have a file of
   their own in Map and routing and in Versions.
-- **Scenarios uses Orders:** the user chose on 2026-11-07 that Scenarios may use Orders, for the
+- **Scenarios uses Orders:** Scenarios may use Orders, for the
   orders a scenario's run holds, once `OrderId` left the shared file.
 - **Rules for both modules:** Orders and Deliveries each hold their own communication values, for
-  their own inbox, and the final order statuses go to Orders. As built in I03-E02-019-P03, Orders' values are
+  their own inbox, and the final order statuses go to Orders. As built, Orders' values are
   its inbox job interval, its read lag, and its handoff retries, and Deliveries' are its inbox job
   interval and its read lag, with the same `V1.0.0` numbers as before. The config values in use
   hold both sets, so a config change's log entry records both, and its digest changes once.
@@ -3142,8 +2848,7 @@ user then chose:
 ### FND-84 — Rule abstractions
 
 Business rules is a module of rule abstractions, which each module writes its own rules with
-([FND-83](#fnd-83--types-owned-by-their-modules)). The user chose these on 2026-11-07, for
-I03-E04-012:
+([FND-83](#fnd-83--types-owned-by-their-modules)). Its design:
 
 - **A rule:** a named rule with parameters. Each rule is an object with an ID, a name, what it
   says, the decision or rules page it comes from, its typed parameters with their valid ranges,
@@ -3157,9 +2862,9 @@ I03-E04-012:
   times. Each change is a config change commit, so the run stays repeatable
   ([FND-54](#fnd-54--tunability)). Sweeps across many runs wait for Analysis.
 - **The UI:** a Rules panel shows each module's rules, what they say, their source, and their
-  current parameters, and lets a person change a parameter during a run, as a config change
-  commit. The Rule editor capability, in `I06`, adds saving tuned rule sets as presets and
-  versions.
+  current parameters, and lets a person change a parameter during a run, as a config change commit.
+  The Rule editor capability, in the Versions and comparison stage, adds saving tuned rule sets as
+  presets and versions.
 - **Rule IDs:** `<module>.<rule-name>`, such as `drivers.fresh-location`, fixed once stored, as
   stored function IDs are. They carry no version: a change to a rule's logic is a new version of
   the service, which Versions owns.
@@ -3167,45 +2872,41 @@ I03-E04-012:
   scenario reading warn. Only a value a run cannot use is refused.
 - **The panel:** a tab in the run workspace, beside the Inspector and the Trace. It shows each
   rule's definition, source, values, defaults, ranges, and changes; which rule decided what is the
-  Rule evaluation log's and the Decision explainer's (`I03-E04-007`, `I03-E04-008`).
-- **Valid ranges:** no source states them, so for each module's rules the simulator proposes a
-  range for every parameter, and the user reviews it before it goes into the code.
-- **Drivers' rules:** the user accepted the proposed rule IDs, kinds, and ranges on 2026-11-07,
-  as [Drivers](../modules/drivers.md#rules) lists them. The ranking score's proximity scale and
-  load divisor become parameters too, and the dispatch pass is a calculation, of the next pass's
-  time.
-- **Orders' and Deliveries' rules:** the user accepted the proposed rule IDs, kinds, and ranges
-  on 2026-11-07, as [Orders](../modules/orders.md#rules) and [Drivers](../modules/drivers.md#rules)
-  list them. Each inbox job and the handoff retry job is a calculation of its next run's time, and
-  each read lag and the retries per run is a limit. The order lifecycle's allowed transitions are
-  one check per transition, for the statuses it is allowed from; the other guards, such as the
-  assigned driver and readiness, stay in the code.
-- **Module graph:** the user added three edges on 2026-11-07. The Simulation engine tunes rules
+  Rule evaluation log's and the Decision explainer's.
+- **Valid ranges:** no source states them, so every parameter has a range set here, as the module
+  pages list them.
+- **Drivers' rules:** the rule IDs, kinds, and ranges are as [Drivers](../modules/drivers.md#rules)
+  lists them. The ranking score's proximity scale and load divisor become parameters too, and the
+  dispatch pass is a calculation, of the next pass's time.
+- **Orders' and Deliveries' rules:** the rule IDs, kinds, and ranges are as
+  [Orders](../modules/orders.md#rules) and [Drivers](../modules/drivers.md#rules) list them. Each
+  inbox job and the handoff retry job is a calculation of its next run's time, and each read lag and
+  the retries per run is a limit. The order lifecycle's allowed transitions are one check per
+  transition, for the statuses it is allowed from; the other guards, such as the assigned driver and
+  readiness, stay in the code.
+- **Module graph:** three edges are added. The Simulation engine tunes rules
   through Business rules, so a config change takes parameter changes by rule ID and routes each
   to the module that owns the rule; Scenarios sets rules through it, so reading a scenario checks
   rule IDs and values; and Business rules uses the Simulation engine for the run's rules, since
   the Rules panel is Business rules', as a tool that works on any module's rules.
-- **Rules in a scenario file:** the user chose on 2026-11-07 that a top-level `rules` list sets
-  values in the run's start, with no commit, and a step with `set` in place of an actor, a
-  command, and an order changes them at its time, as a config change commit. Each entry names a
-  rule, a parameter, and a value. A duration is written in the format's time notation; other
-  values are plain numbers. Reading a scenario gives its warnings with it, each with its place,
-  for a value outside its valid range; the command line prints them. The browser goes straight to
-  the live run when a scenario opens, so the user chose on 2026-11-07 that the run workspace
+- **Rules in a scenario file:** a top-level `rules` list sets values in the run's start, with no
+  commit, and a step with `set` in place of an actor, a command, and an order changes them at its
+  time, as a config change commit. Each entry names a rule, a parameter, and a value. A duration is
+  written in the format's time notation; other values are plain numbers. Reading a scenario gives
+  its warnings with it, each with its place, for a value outside its valid range; the command line
+  prints them. The browser goes straight to the live run when a scenario opens, so the run workspace
   shows them in a strip right below its run controls, styled like a scenario's problems, until
   another scenario opens.
-- **As built:** in I03-E04-012, on 2026-11-07. A person writes a value in the Rules panel as a
+- **As built (2026-11-07):** a person writes a value in the Rules panel as a
   scenario file writes it, and a change made there is a config change commit at the run's
   current time. Drivers' eligibility calls each check by name, since going through the checks as
   a list made the city day about 12% slower.
 
 ### FND-85 — System submodules
 
-The user asked on 2026-11-07 that the shared helpers at the root of `src/domain` move into the
-System module ([FND-83](#fnd-83--types-owned-by-their-modules)): "helper types like fieldsof,
-unreachable, should [not] be in the domain root, instea they should be in the sustem moduel in
-their respective submodues, for exapmle timer related type should be in the time submodule,
-validation related types in the validations submodule". The user then chose, for I03-E02-020:
+The shared helpers at the root of `src/domain`, such as `FieldsOf` and `unreachable`, move into the
+System module ([FND-83](#fnd-83--types-owned-by-their-modules)), each in its submodule: types
+about time in the time submodule, validation types in the validation submodule, and so on:
 
 - **Submodules:** System holds eight, each a folder in `src/domain/system/`: `time` (`IInstant`,
   `Duration`, the clock, and their test helpers), `randomness` (the random source), `math`
@@ -3220,11 +2921,10 @@ validation related types in the validations submodule". The user then chose, for
   check, which only Infrastructure makes), `records` (how grouped records and counts are
   persisted), `messaging` (a persisted inbox and its position), and `functions` (the stored
   function contract that the modules' functions register with).
-- **Tracking:** a new item, I03-E02-020, planned first. The user approved its plan on 2026-11-07.
 
 ### FND-86 — Time-travel replay
 
-The user chose these on 2026-11-07, for I03-E02-010, building on the moving rules of
+These build on the moving rules of
 [FND-81](#fnd-81--runs-as-a-tree-of-state-transitions):
 
 - **Moving:** Back and Forward buttons beside Step, and a slider over the run's commits, with a
@@ -3234,14 +2934,14 @@ The user chose these on 2026-11-07, for I03-E02-010, building on the moving rule
   API call with the commits made in it.
 - **Running while back:** Start and Step are disabled while an earlier commit is shown, until the
   person goes to the latest. Acting from an earlier commit starts a new timeline, which forks add
-  in I03-E02-012.
+  ([FND-87](#fnd-87--forks-and-named-timelines)).
 - **Repeating:** a Repeat from here action recalculates the run from the commit shown up to the
   latest commit's time, and says whether every commit and log entry came out the same. A city
   day repeated from early on takes about as long as running it, with the page busy meanwhile,
-  which the user accepted for now.
+  which is accepted for now.
 - **Selecting an event:** it opens the event's detail, and moves the run to the commit that
   wrote it, so every view shows the state then.
-- **As built:** in I03-E02-010, on 2026-11-07. The event list and the trace keep showing the
+- **As built (2026-11-07):** the event list and the trace keep showing the
   whole log, with the events after the commit shown dimmed, so a person can still select a later
   event and a trace still follows its action to the end. The Inspector, the status bar, and the
   Rules panel show the run as it stood. Keeping every commit's place costs about 10 MB on a city
@@ -3249,7 +2949,7 @@ The user chose these on 2026-11-07, for I03-E02-010, building on the moving rule
 
 ### FND-87 — Forks and named timelines
 
-The user chose these on 2026-11-07, for I03-E02-012, building on the forking rules of
+These build on the forking rules of
 [FND-81](#fnd-81--runs-as-a-tree-of-state-transitions) and the moving of
 [FND-86](#fnd-86--time-travel-replay):
 
@@ -3263,34 +2963,28 @@ The user chose these on 2026-11-07, for I03-E02-012, building on the forking rul
   the tree. A name is a label; a timeline's ID stays fixed.
 - **Per timeline:** each timeline is judged when it reaches the scenario's end, with its own
   verdict and digest, and the status bar and every view show the timeline being watched.
-- **IDs:** in the user's words, "use the timeline fork id so that the timeline id + commit id are
-  globaly unique". A commit's and a session's numbers count along their own timeline's line of
-  commits, so a fork goes on from its fork point, and a timeline's ID with a commit's ID names
-  that commit across the whole run. Within one line the IDs stay unique, so a repeat still
+- **IDs:** a commit's and a session's numbers count along their own timeline's line of commits,
+  so a fork goes on from its fork point, and a timeline's ID with a commit's ID names that commit
+  uniquely across the whole run. Within one line the IDs stay unique, so a repeat still
   matches commits by their IDs and groups.
-- **Removing timelines:** not in I03-E02-012; it can come later.
-- **The tree, reworked:** the user asked on 2026-11-07 that "the branch selection should be
-  larger not just the text, it makes hard and confusing to knwo where to click to select the
-  branch the fork button shold be in the branch itselfe, so each branch contians a fork icon".
-  The whole row of a timeline selects it, and each row has a fork icon. On the timeline being
+- **Removing timelines:** not built with forks; it can come later.
+- **The tree, reworked:** the whole row of a timeline selects it, not just its text, so it is
+  clear where to click, and each row has its own fork icon. On the timeline being
   watched it forks at the commit shown; on another it forks at that timeline's latest commit.
-  Fork here stays in the run controls, as the user chose, and shows the same fork icon.
-- **Branches made of commits:** the user said on 2026-11-07 that "the timeline branch should show
-  every dag root as a sequence of events", which is the view FND-81 describes: the tree of
+  Fork here stays in the run controls, and shows the same fork icon.
+- **Branches made of commits:** each branch shows every DAG root as a sequence, which is the view
+  FND-81 describes: the tree of
   timelines and the timeline of commits are one view. Each branch shows its own line of commits
   in order, with each fork leaving its parent's line at its fork commit, and every commit
-  selectable within the zoom groups of FND-81. I03-E02-012 built the tree with one summary line
-  per timeline, and I03-E02-014 had planned the commits and groups for one line only, so the plan
-  left this gap. The user chose, on 2026-11-07:
-  - **Layout:** vertical, and in the user's words "everybranch should have its own vertical area
-    column sow there is no overlap between rows so that two events that happen at the same time
-    are shoun at the same horizontal line and not one above the other".
+  selectable within the zoom groups of FND-81. This replaces the first tree, which had one
+  summary line per timeline:
+  - **Layout:** vertical. Every branch has its own column, so rows never overlap, and two events
+    at the same time show on the same horizontal line, not one above the other.
   - **Place:** it replaces the event list at the bottom of the run workspace. The event list
-    stays as FND-77 describes it, as the user chose, moved to an Events tab in the main area
+    stays as FND-77 describes it, moved to an Events tab in the main area
     beside Outbox and inbox, Trace, and Rules, so every entry can still be scanned with its
     number, time, source, kind, order, and cause.
   - **A commit:** expands to the events it holds, so the events stay reachable there.
-  - **Backlog:** I03-E02-014 is rescoped to build it.
   - **Rows:** two modes a person switches between. By time, each simulated time is a band, in
     which each branch lists its commits at that time in order, and the band is as tall as the
     busiest branch. By commit number, row n holds commit n of each branch, whatever its time.
@@ -3300,7 +2994,7 @@ The user chose these on 2026-11-07, for I03-E02-012, building on the forking rul
     Its groups are the job run or API call each commit happened in, nested under spans of
     simulated time: an hour holds its minutes, and a minute holds the job runs and API calls in
     it, and a span with only one thing in it is skipped. Orders overlap in time, so grouping by
-    order comes with the by-order view of I03-E02-015. By commit number, each branch's nth job
+    order comes with the view by order. By commit number, each branch's nth job
     run or API call sits on the same rows, as their numbers count along each branch, and inside
     it the commits line up by their order in it, so groups still open across every column. Hours
     and minutes line up only by time, so by commit number hundreds and then tens of job runs and
@@ -3314,79 +3008,69 @@ The user chose these on 2026-11-07, for I03-E02-012, building on the forking rul
     Main, Fork 1, and the others are now branches, in the UI, the pages, and the code, so a run
     has one timeline whose columns are its branches. A saved run still reads, as only names
     change. Where this record and FND-81 say timeline for a fork, read branch.
-  - **Reading it as a tree:** the user said on 2026-11-07 that "when i hover sometines the
-    contrast is bad, the tree doesn not look like tree its not clear wher the branching happend,
-    somethings are hard to click beacuse the click are is too small or its not clear what is
-    clickable". Each branch's column has its own coloured lane, Main's from the top and a fork's
-    from its fork point, where a line leaves the parent's commit and turns down into the fork's
-    lane, as in a git graph; commits sit on their lane. A group's whole row opens it, a commit's
-    whole label opens its events, rows are taller, everything that can be chosen looks it, and
-    hovering never hides the colours of the commit shown or the event selected.
-  - **Laid out as a tree:** the user asked on 2026-11-07 that "the parent root should stay in the
-    middle and all branches should autoalign themselfe sho tha is starts looking like a tree
-    structure, kind of like a binary tree but ofcourse there might be more the two sub
-    branches". Each branch's column sits between its forks, which alternate sides in the order
-    they were made, the first to the right, so the earliest stay nearest; each fork's own forks
-    are laid out around it the same way. A fork's line leaves its parent towards its side, and
-    each lane runs down the middle of its column.
-  - **Commits, roots, and fork points:** the user chose on 2026-11-07 that each commit is a root
-    of the DAG, as FND-81 has it, and is labelled so; that commits are nodes on their lane and
-    groups are shaded bands with no node; and, in the user's words, "mark the fork point, the
-    fork icon should be shown at the place where the forking happens not at the timeline
-    header". A fork starts between job runs and API calls, so the commit ending each one, or a
-    commit made outside one, is a fork point: its node is ringed, and its fork icon starts a
-    branch there. The headings keep the name and a rename icon, and Fork here stays in the run
-    controls.
-  - **Scrolling sideways:** the user said the vertical scroll bar and the time and group column
-    went out of sight when scrolling sideways. The time and group column stays put, the
+  - **Reading it as a tree:** it must read as a tree, with good contrast on hover, clear branch
+    points, and click areas that are large and obvious. Each branch's column has its own coloured
+    lane, Main's from the top and a fork's from its fork point, where a line leaves the parent's
+    commit and turns down into the fork's lane, as in a git graph; commits sit on their lane. A
+    group's whole row opens it, a commit's whole label opens its events, rows are taller, everything
+    that can be chosen looks it, and hovering never hides the colours of the commit shown or the
+    event selected.
+  - **Laid out as a tree:** the parent stays in the middle and its branches align around it, like a
+    binary tree, though a branch may have more than two forks. Each branch's column sits between its
+    forks, which alternate sides in the order they were made, the first to the right, so the
+    earliest stay nearest; each fork's own forks are laid out around it the same way. A fork's line
+    leaves its parent towards its side, and each lane runs down the middle of its column.
+  - **Commits, roots, and fork points:** each commit is a root of the DAG, as FND-81 has it, and is
+    labelled so; commits are nodes on their lane, and groups are shaded bands with no node; and the
+    fork point is marked, with the fork icon where the forking happens, not on the timeline header.
+    A fork starts between job runs and API calls, so the commit ending each one, or a commit made
+    outside one, is a fork point: its node is ringed, and its fork icon starts a branch there. The
+    headings keep the name and a rename icon, and Fork here stays in the run controls.
+  - **Scrolling sideways:** the time and group column stays put, the
     vertical scroll bar stays at the edge of the panel, and the headings move with the columns.
-  - **Zooming out:** the user said on 2026-11-07 that "wen things are zoomed out, nothing is sow
-    on the timeline, at leas there should be sone kind o compresed symmary node which can be
-    expanded and collapsed, also there should be a mode swicher so i ca switch from haurly,
-    minutly or comitly view". A closed group draws a summary node on each lane it holds commits
+  - **Zooming out:** zoomed out, the timeline still shows compressed summary nodes that expand
+    and collapse, and a switch moves between views by hour, by minute, and by commit. A closed
+    group draws a summary node on each lane it holds commits
     of, with how many, marked when it holds the commit shown; it opens and closes the group. A
     zoom switch, Hours, Minutes, or Commits by time, and Hundreds, Tens, or Commits by number,
     sets which groups start open, starting with Minutes; opening or closing one by hand goes on
     top, until the zoom or the rows' mode changes. Groups no longer open by themselves to the
     commit shown, which following finds as the summary node holding it, unless an event is
     selected, whose commit opens.
-  - **Curves and headings:** the user said on 2026-11-07 that "teh timeline click only works if
-    clck the header text instea of the whole header tab. the tree should use curved lines
-    insetad of hard corners, whic means that where there is a fork that row probably shoud be a
-    bit taller so that the lines dont overlap". A whole heading watches its branch. Below the row
+  - **Curves and headings:** the whole heading tab is clickable, not only its text, and the tree
+    uses curved lines instead of hard corners, with room at a fork so the lines don't overlap. A
+    whole heading watches its branch. Below the row
     a fork leaves its parent at, the fork has a connector row of its own, where its line curves
     off the parent's lane, runs across, and curves down into its lane; rows keep one height, as
     the scrolling needs, and the connector row gives the curves the room a taller row would.
-  - **Calls between modules:** the user chose on 2026-11-08 that each state commit shows a badge
-    for the module it changed, worked out by comparing its root with the one before, and that
-    where the next commit in the same job run or API call changed another module, an arrow on the
-    right of the column links the two, naming the module called. A closed job run or API call
-    shows the modules it went through after its count, such as Orders → Deliveries → Orders, and
-    a closed hour or minute how many calls it holds. Nothing for this is saved.
-  - **Fixes after review:** on 2026-11-08 the user asked to fix what the screenshots showed. A
-    state commit's module badge and a call's arrow sit left of the lane, where nothing else is
-    drawn, so the commit's text keeps the room on the right; the arrow points at the badge of the
-    module called, and the commit's tooltip says which module called it. Changing the zoom or
-    the rows' mode applies as chosen, and the way down to a selected event opens again only when
-    an event is selected. A fork's connector row goes above the row it leaves from when that row
-    also holds some of the fork's own commits, as a closed group does, so its line runs into
-    them. Columns are narrower, so four branches fit a usual window; text that does not fit ends
-    in an ellipsis, with the whole of it in the tooltip.
+  - **Calls between modules:** each state commit shows a badge for the module it changed, worked out
+    by comparing its root with the one before, and where the next commit in the same job run or API
+    call changed another module, an arrow on the right of the column links the two, naming the
+    module called. A closed job run or API call shows the modules it went through after its count,
+    such as Orders → Deliveries → Orders, and a closed hour or minute how many calls it holds.
+    Nothing for this is saved.
+  - **Badges, arrows, and columns:** a state commit's module badge and a call's arrow sit left of
+    the lane, where nothing else is drawn, so the commit's text keeps the room on the right; the
+    arrow points at the badge of the module called, and the commit's tooltip says which module
+    called it. Changing the zoom or the rows' mode applies as chosen, and the way down to a selected
+    event opens again only when an event is selected. A fork's connector row goes above the row it
+    leaves from when that row also holds some of the fork's own commits, as a closed group does, so
+    its line runs into them. Columns are narrower, so four branches fit a usual window; text that
+    does not fit ends in an ellipsis, with the whole of it in the tooltip.
   - **The Timelines tab:** removed. Each column's heading carries its branch's name, where it
     forked, the fork icon, and Rename, so the timeline itself is the tree.
-- **As built:** in I03-E02-012, on 2026-11-07. A job run or API call is one piece of work, so a
+- **As built (2026-11-07):** a job run or API call is one piece of work, so a
   fork starts between them, at the nearest such place at or before the commit shown, as a repeat
   does. A fork goes on paused at its latest commit, and a fork of a fork may start before or
   after that fork's own fork point. A saved run keeps every timeline and every commit once.
 
 ### FND-88 — Step debugger
 
-The user chose these on 2026-11-08, for I03-E02-011, building on the moving of
+These build on the moving of
 [FND-86](#fnd-86--time-travel-replay):
 
-- **Events now, rules later:** breakpoints on events come in I03-E02-011. Breakpoints on rules
-  need a record of each rule's evaluation, which the Rule evaluation log, I03-E04-007, makes, so
-  they come with it.
+- **Events now, rules later:** breakpoints on events come first. Breakpoints on rules need a
+  record of each rule's evaluation, which the Rule evaluation log makes, so they come with it.
 - **What a breakpoint matches:** an event kind, such as OrderPickedUp or CommandRefused,
   narrowed if wanted to one source module or one order. Several can be on at once, and each can
   be switched off without removing it.
@@ -3396,7 +3080,7 @@ The user chose these on 2026-11-08, for I03-E02-011, building on the moving of
 - **On a hit:** a job run or API call runs in one go, so the run pauses after the one that wrote
   the event. It shows the commit that wrote it, as time travel does, selects the event, and says
   which breakpoint it hit. Resume goes on to the next hit.
-- **As built:** in I03-E02-011, on 2026-11-08. While a breakpoint is on, the work checks each
+- **As built (2026-11-08):** while a breakpoint is on, the work checks each
   piece's new entries, at max speed and when catching up on time alike, and the clock halts
   where the work stopped. The commit shown at a hit can be earlier than the latest, so Resume
   and Step stay enabled there and go on from the latest commit. A breakpoint on the kind alone
@@ -3405,13 +3089,14 @@ The user chose these on 2026-11-08, for I03-E02-011, building on the moving of
 
 ### FND-89 — Indirect effects stated by hand
 
-The user chose these on 2026-11-08, for I03-E02-013, building on the direct and indirect effects
+These build on the direct and indirect effects
 of [FND-81](#fnd-81--runs-as-a-tree-of-state-transitions):
 
 - **The first kinds:** three, each a decision the service takes no part in and learns of only
   through what happens next: a driver ignores a delivery request, a restaurant runs late with an
   order, and a customer won't take an order. The last leads to the driver's failed-delivery
-  report, which comes with I03-E03-007; until then it can be stated and leads nowhere.
+  report, which comes with the failed-delivery path; until then it can be stated and leads
+  nowhere.
 - **Stating one by hand:** a scenario step can state one, and the run workspace has a State an
   indirect effect action, which states one at the commit shown, forking first when an earlier
   commit is shown, as FND-87 says. Manual mode builds on the action later.
@@ -3421,41 +3106,29 @@ of [FND-81](#fnd-81--runs-as-a-tree-of-state-transitions):
 - **How long the service was unaware:** on the timeline, a hatched band in the branch's column
   runs from the indirect commit, marked as unseen by the service, to the direct commit it led
   to, with how long that was.
-- **As built, the core (P01):** `IndirectEffect` replaced the empty set with the three kinds,
+- **As built, the core:** `IndirectEffect` replaced the empty set with the three kinds,
   with kebab-case names as the input commands have, so a scenario names them the same way. An
   indirect commit is a commit kind of its own, `Indirect`, outside any session, which changes the
   indirect part only and holds an `IndirectEffectHappened` log entry from the actors. Only an API
   call's effect records what it follows from, as scenario direct steps are API calls; a config
   change is the user's own act. Saved runs keep both.
-- **As built, stating them (P02):** an indirect step is a third kind of script input. Its effect
+- **As built, stating them:** an indirect step is a third kind of script input. Its effect
   says whether a script stated it, as a config change does, so a scripted one counts as a step
   run and a repeat states a hand-made one again. A label maps to its indirect commit in the run's
   cache, the latest when two share one, which a scenario cannot do. A late restaurant's `lateBy`
   is a time like the other durations, and must be more than none.
-- **As built, the browser (P03):** the form offers the scenario's drivers, restaurants, and the
+- **As built, the browser:** the form offers the scenario's drivers, restaurants, and the
   orders its steps create, and a statement made by hand has no label. The band is drawn only when
   the indirect commit and the call are in the same column; a call on a fork that follows from an
   indirect commit before the fork records it, but shows no band.
-- **Reviewed by the user, 2026-11-08:** the band staying in one column, and the effect and its
-  log entry saying whether a script stated it, are confirmed. Two choices change:
+- **Later changes:** the band stays in one column, and the effect and its log entry say whether a
+  script stated it. Two choices change:
   - **Labels by hand:** the form asks for an optional label, so a later step can follow from an
-    effect stated by hand. Only Manual mode's actions (I03-E03-001) can name such a label; the
+    effect stated by hand. Only Manual mode's actions can name such a label; the
     Rules panel offers scripted labels only.
   - **Config changes link back:** a config change can record the indirect commit it follows
     from, as an API call does. A scenario's `set` step takes `after` with a label, and the Rules
     panel offers the labelled indirect effects to pick from.
-  - **Tracking:** a new item, I03-E02-022, makes both changes; I03-E02-013 stays Done as built.
-
-## Superseded when implemented
-
-These stay in force until the item named builds what replaces them. Once it has, the row says when:
-
-| Statement | Replaced by | When |
-| --- | --- | --- |
-| [FND-73](#fnd-73--immutable-architecture): scheduled work and each random stream's position are in a run's state | Worked out, or held in the effects sub-root ([FND-81](#fnd-81--runs-as-a-tree-of-state-transitions)) | I03-E02-006, built 2026-11-06 |
-| [FND-56](#fnd-56--module-boundaries): the Event log holds a run's record | Commits hold it, and the log is worked out from them ([FND-81](#fnd-81--runs-as-a-tree-of-state-transitions)) | I03-E02-006, built 2026-11-06 |
-| [FND-83](#fnd-83--types-owned-by-their-modules): the shared helpers, such as `required` and `fields-of`, stay at the root of `src/domain` | Each sits in a System submodule, and the Domain and Infrastructure roots hold module folders only ([FND-85](#fnd-85--system-submodules)) | I03-E02-020, built 2026-11-07 |
-| [FND-81](#fnd-81--runs-as-a-tree-of-state-transitions): a `ConfigChanged` entry holds the values before and after | It holds each changed value, by rule and parameter ID, before and after; the commit's effect still holds every module's rules before and after ([FND-84](#fnd-84--rule-abstractions)) | I03-E04-012, built 2026-11-07 |
 
 ## Undecided
 
@@ -3464,10 +3137,3 @@ These stay in force until the item named builds what replaces them. Once it has,
 | U12 | How soon after a new version of the real service is designed or built must the simulator support it? | FND-32 measures success by it |
 | U13 | Which module owns the later Report generator? | Decided when it is built (FND-35) |
 | U14 | Where is the project hosted and published, and how is FND-23 checked before it is? | The project must stay safe to publish (FND-23); the check in FND-63 cannot see names, git history, or commit authors |
-
-## Rule for resolving an unknown
-
-Resolve each item through a user-approved decision, then move it into
-[Approved decisions](#approved-decisions) and update
-[open decisions](../governance/open-decisions.md). Do not build on an undecided
-item.

@@ -117,7 +117,7 @@ try {
             simulatedSecondsPerSecond: Math.round(SIMULATED_DAY_SECONDS / day.ran.seconds),
             peakMemoryMb: Math.round(process.resourceUsage().maxRSS / KB_PER_MB),
             // What the heap holds after full garbage collections: before the run, with the run
-            // and every root it keeps, and with only its latest root (FND-81, I03-E02-017).
+            // and every root it keeps, and with only its latest root (FND-81).
             heldBeforeRunMb,
             heldWithEveryRootMb: day.heldWithEveryRootMb,
             heldWithLatestRootMb: hasLatestRoot ? heldWithLatestRootMb : null,

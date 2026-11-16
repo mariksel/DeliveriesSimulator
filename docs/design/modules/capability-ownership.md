@@ -3,8 +3,8 @@
 ## Version and status
 
 - **Design version:** `D0.6.0`.
-- **Status:** Approved by the user on 2026-11-03, group by group, in I01-E03-006
-  ([FND-56](../decisions/project-foundation.md#fnd-56--module-boundaries)), with Deliveries and
+- **Status:** Approved group by group in
+  [FND-56](../decisions/project-foundation.md#fnd-56--module-boundaries), with Deliveries and
   Customers and restaurants renamed to Drivers and Restaurants in
   [FND-83](../decisions/project-foundation.md#fnd-83--types-owned-by-their-modules).
   Order timeline, Order replay, and Driver timelines moved to Run history on 2026-11-08

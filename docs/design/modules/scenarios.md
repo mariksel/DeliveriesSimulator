@@ -31,8 +31,7 @@ switches, and what the run is expected to show, so runs can be repeated and judg
   `ScenarioVersion` for each different content. Saved runs share the version they ran, which
   stays while any saved run uses it, even after its scenario is deleted
   ([FND-81](../decisions/project-foundation.md#fnd-81--runs-as-a-tree-of-state-transitions)).
-  Planned in
-  I03-E02-023.
+  Planned in the Full V1.0.0 lifecycle and rules stage.
 
 ## Dependencies
 

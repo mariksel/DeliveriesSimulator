@@ -37,8 +37,8 @@ and counts as part of the module, as in the real service.
   ([FND-68](../decisions/project-foundation.md#fnd-68--equal-scores-and-open-request-order)).
 - Driver commands, starting with
   [V1.0.0 actors and commands](../versions/V1.0.0/actors-and-commands.md).
-- Rejections, ignores, and when a return may be requested, as the user decided
-  ([FND-39](../decisions/project-foundation.md#fnd-39--source-conflicts-resolved)).
+- Rejections, ignores, and when a return may be requested, as resolved in
+  [FND-39](../decisions/project-foundation.md#fnd-39--source-conflicts-resolved).
 - Driver behaviour profiles and their controls
   ([FND-48](../decisions/project-foundation.md#fnd-48--simulation-model)).
 - Deliveries holds its own communication values, for its own inbox
@@ -49,9 +49,8 @@ and counts as part of the module, as in the real service.
 Drivers writes its `V1.0.0` rules with the [Business rules](business-rules.md) abstractions, in
 the order below, which is the order eligibility checks them and the Rules panel lists them. Each
 value is the one the [V1.0.0 business rules](../versions/V1.0.0/business-rules.md) state. No
-source states the valid ranges, so the simulator proposed them and the user accepted them on
-2026-11-07
-([FND-84](../decisions/project-foundation.md#fnd-84--rule-abstractions)). A run uses a value
+source states the valid ranges, so they are set in
+[FND-84](../decisions/project-foundation.md#fnd-84--rule-abstractions). A run uses a value
 outside its range, and warns.
 
 | Rule ID | Kind | Parameter | Default | Valid range |
@@ -73,8 +72,7 @@ outside its range, and warns.
 | `drivers.notification-delay-limit` | Limit | `max-notification-delay` | 60 s | 0 to 5 min |
 | `drivers.dispatch-pass` | Calculation, of the next pass's time | `interval` | 30 s; a whole number of milliseconds above 0 | 5 s to 5 min |
 
-The ranking score's proximity scale and load divisor were constants in the code until the user
-made them parameters, on 2026-11-07.
+The ranking score's proximity scale and load divisor are parameters, not constants in the code.
 
 Deliveries, a submodule, writes its own communication rules the same way, with the values the
 [module communication](../versions/V1.0.0/module-communication.md) page states and ranges the

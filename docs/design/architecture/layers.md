@@ -63,11 +63,9 @@ methods of it. The simulation engine, in Application, holds the latest state in 
 carries out the follow-ups, so no module calls another. A snapshot is just a reference to a past
 state, which is what replay and branching rest on. It is not event sourcing: state is held
 directly, and nothing derives it from events or from the log. A saved run can be recalculated by
-calling the same pure functions again. This is the approved design, and
-I02-E07
-moved the code to it.
-I03-E02
-adds [how a run is held](../modules/simulation-engine.md#how-a-run-is-held): a line of
+calling the same pure functions again. This is the approved design, and the End-to-end skeleton
+stage moved the code to it. The Full V1.0.0 lifecycle and rules stage adds
+[how a run is held](../modules/simulation-engine.md#how-a-run-is-held): a line of
 commits, each with a main root of two sub-roots.
 
 ## Data and mapping flow

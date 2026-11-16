@@ -1,7 +1,6 @@
 # Integrations
 
-Owns the boundaries with external systems. Each integration has its own page,
-created from the [integration template](_integration-template.md).
+Owns the boundaries with external systems. Each integration has its own page.
 
 ## Version and status
 

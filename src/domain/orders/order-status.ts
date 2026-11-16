@@ -1,4 +1,4 @@
-/** The statuses on the path built so far. I03 adds the others in the V1.0.0 lifecycle. */
+/** The statuses on the path built so far. The others come with the full V1.0.0 lifecycle. */
 export const OrderStatus = {
     Created: 'Created',
     DeliveryRequested: 'DeliveryRequested',

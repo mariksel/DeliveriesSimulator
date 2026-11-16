@@ -5,19 +5,17 @@
 - **Design version:** `D0.6.0`.
 - **Status:** Approved in
   [FND-83](../decisions/project-foundation.md#fnd-83--types-owned-by-their-modules), and built
-  in
-  I03-E02-019.
+  in the Full V1.0.0 lifecycle and rules stage.
   The clock and the random source are interfaces nothing calls yet.
   [FND-85](../decisions/project-foundation.md#fnd-85--system-submodules) split it into eight
-  submodules and moved the shared helpers of the Domain and Infrastructure roots into them;
-  I03-E02-020
-  built that on 2026-11-07.
+  submodules and moved the shared helpers of the Domain and Infrastructure roots into them,
+  as built on 2026-11-07.
 
 ## Current and approved responsibilities
 
 The abstractions about time, randomness, and math that the business modules use, so that they
-never know they are simulated. In the user's words, the business modules "should just depend on
-some world whose implementation is not known"
+never know they are simulated: the business modules depend on a world whose implementation they
+do not know
 ([FND-83](../decisions/project-foundation.md#fnd-83--types-owned-by-their-modules)). It holds
 abstractions only. The [Simulation engine](simulation-engine.md) provides their
 implementations: a simulated time is one implementation of time.

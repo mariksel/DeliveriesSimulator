@@ -4,8 +4,7 @@ import type { IPersistedRun } from '../simulation-engine/persisted-run';
 import { fromPersistedRun, toPersistedRun } from '../simulation-engine/persisted-run';
 
 /**
- * Keeps runs in memory as persisted records, as plain data. Browser storage replaces it in
- * I03-E02-008.
+ * Keeps runs in memory as persisted records, as plain data. Browser storage replaces it later.
  */
 export class MemoryRunRepository extends RunRepository {
     private readonly saved = new Map<string, IPersistedRun>();

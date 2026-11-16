@@ -8,7 +8,7 @@ import { UsableValues } from '../business-rules/usable-values';
 /**
  * Orders' rules of V1.0.0, written with the Business rules abstractions (FND-84): its
  * communication values, and the allowed transitions of the order lifecycle built so far. The
- * values are as the V1.0.0 pages state them, and the user accepted the ranges on 2026-11-07.
+ * values are as the V1.0.0 pages state them.
  */
 
 const COMMUNICATION = 'V1.0.0 module communication';

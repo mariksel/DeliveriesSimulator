@@ -9,7 +9,7 @@
   implemented: the [timeline](#timeline) of branches and commits,
   [moving and forking](#moving-and-forking), and the [repository](#repository), which maps a run
   to persisted records and back, in memory.
-  I03-E02
+  The Full V1.0.0 lifecycle and rules stage
   builds what follows, and the [implementation roadmap](../roadmap/implementation-roadmap.md)
   says which stage builds the rest.
 
@@ -62,13 +62,12 @@ commit can be selected, and the timeline shows simulated time.
     shows its version chain.
   - **Capabilities:** the view by order is Order timeline and Order replay, and the view by
     driver starts Driver timelines, whose driver states, such as availability over the day,
-    come in `I07`. Run history owns all three
+    come in the City, actors, and scale stage. Run history owns all three
     ([capability ownership](capability-ownership.md)).
   - **Selecting:** a selected order or driver is highlighted in every timeline view, and a city
     day can be followed live in each.
-  - **Built so far:** by time and by number, as the rows' two modes in I03-E02-014;
-    I03-E02-015
-    makes them views and adds the other two
+  - **Built so far:** by time and by number, as the rows' two modes; making them views and
+    adding the other two is planned
     ([FND-81](../decisions/project-foundation.md#fnd-81--runs-as-a-tree-of-state-transitions)).
 - **Marks:** state commits and each kind of effect commit are marked differently.
 - **Gaps:** a large gap between state commits is visible in two displays you can switch between: a
@@ -91,7 +90,7 @@ commit can be selected, and the timeline shows simulated time.
   column, or by number, each branch's nth job run or API call on the same rows. A selected commit
   on another branch watches that branch there
   ([FND-87](../decisions/project-foundation.md#fnd-87--forks-and-named-timelines)).
-- **As built:** in I03-E02-014, on 2026-11-07 and 2026-11-08
+- **As built:** on 2026-11-07 and 2026-11-08
   ([FND-87](../decisions/project-foundation.md#fnd-87--forks-and-named-timelines)):
   - **Place:** the timeline replaced the event list at the bottom of the run workspace, and the
     event list moved to an Events tab.
@@ -114,8 +113,8 @@ commit can be selected, and the timeline shows simulated time.
     holding it, in sight.
   - **Cost:** the grid takes in each branch's new commits as the run goes, as a line only
     grows, and sorts and names a group only when it is shown, so a run as long as a city day
-    can be followed live. Grouping by order comes with the views of I03-E02-015.
-- **Indirect effects:** in I03-E02-013, on 2026-11-08
+    can be followed live. Grouping by order comes with the views by order.
+- **Indirect effects:** built on 2026-11-08
   ([FND-89](../decisions/project-foundation.md#fnd-89--indirect-effects-stated-by-hand)), an
   indirect commit's node is hollow, with a dashed edge, named by its kind, and its tooltip says
   the service did not see it. From it to the API call that followed from it, in the same column,
@@ -140,7 +139,7 @@ commit can be selected, and the timeline shows simulated time.
   nearest such place at or before it, runs on to the latest commit, and is compared with the
   original commit by commit. A config change or an indirect effect made by hand is made again at
   its commit, as no script holds it, and so will a function version switched by hand, which
-  I03-E02-026 builds.
+  is planned.
 - **Forking:** going back to any commit and acting by hand, stating an indirect effect, or
   changing a value starts a new branch, which shares everything before the fork. There is no
   merging. Branches can be named, and a run that has ended can be forked.
@@ -165,24 +164,23 @@ recalculates what it dropped.
 
 | Level | Holds | Built |
 | --- | --- | --- |
-| Everything | Every DAG node, and every commit | `I03` |
+| Everything | Every DAG node, and every commit | The Full V1.0.0 lifecycle and rules stage |
 | Checkpoints | A main root every so many commits, and every commit | The city stage |
-| Minimum | The start state, and every commit | `I03` |
+| Minimum | The start state, and every commit | The Full V1.0.0 lifecycle and rules stage |
 
 - **Every level keeps what can't be recalculated:** each commit's function and arguments, what came
   from outside, such as requests and external outcomes, and indirect effects.
 - **Choosing:** a run's level is chosen by hand, and each run shows its level and size. Automatic
   rules can come later.
-- **Screens in `I03`:** a Save action that chooses the level, a list of saved runs with each
-  one's level and size, Open, moving a run to the other level, Delete, and deleting a branch.
-  `I05`'s Stored run management adds the rest
+- **Screens in the Full V1.0.0 lifecycle and rules stage:** a Save action that chooses the level, a
+  list of saved runs with each one's level and size, Open, moving a run to the other level, Delete,
+  and deleting a branch. The Stored runs and files stage's Stored run management adds the rest
   ([FND-81](../decisions/project-foundation.md#fnd-81--runs-as-a-tree-of-state-transitions)).
 - **Saving and opening:** Save asks for a name, filled in with the scenario's name and the date. A
   saved run opens like a live run, paused at its latest commit, and can be moved through, forked,
   and run on. Save sits in the run controls, opening a small form in the page, and pauses the
   run, saves, and resumes it. The saved runs are listed on the Runs and scenarios page. Opening
-  one replaces the run being watched, with a warning first if that run is not saved
-  (I03-E02-024).
+  one replaces the run being watched, with a warning first if that run is not saved.
 - **Deleting a branch:** only a branch with no forks of its own, never Main, after a confirmation
   in the page, on a live or a saved run; deleting the branch being watched watches its parent.
 - **Minimum:** drops each commit's main root, which opening the run rebuilds by running each
@@ -222,12 +220,10 @@ either:
   version number, and the highest number is the newest. An old version stays in the code as its
   own copy of the function. The repository owns the mapping from a name and a version to a
   function; Application.Core declares the lookup, which the engine uses during a run and the
-  Rules panel to list versions
-  (I03-E02-025).
-- **Storage:** the repository maps a run to persisted records and back as plain data.
-  I03-E02-008
-  stores them in browser storage. Until then, each commit is persisted with its whole root, and a
-  run is saved only between job runs and API calls.
+  Rules panel to list versions.
+- **Storage:** the repository maps a run to persisted records and back as plain data. Storing them
+  in browser storage is planned. Until then, each commit is persisted with its whole root, and a run
+  is saved only between job runs and API calls.
 - **Which functions have IDs:** only those that can make a commit. A function that changes no state
   of its own, such as a job that only asks for follow-ups or a driver command that only calls
   orders, makes no commit, so it has no ID. A commit holding a function with no ID fails to save.

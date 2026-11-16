@@ -7,9 +7,7 @@
 - **State described:** the real service's working tree on 2026-11-03, including uncommitted
   changes and the module copies, which are built and awaiting the real service's review
   ([FND-45](../../decisions/project-foundation.md#fnd-45--version-folder-layout)).
-- **Status:** Observed in the real service's code, and confirmed by the user on 2026-11-03.
-  I01-E02-001
-  recorded the confirmation.
+- **Status:** Observed in the real service's code.
 
 ## What this version is
 
@@ -33,11 +31,11 @@ The batch fallback holds at most 100 points, so its size is decided.
 
 ## Pages
 
-| Page | Covers | Item |
-| --- | --- | --- |
-| [Lifecycle](lifecycle.md) | Order states, transitions, and pending requests | I01-E02-001 |
-| [Actors and commands](actors-and-commands.md) | Who acts, through which commands, and which module decides | I01-E02-001 |
-| [Events](events.md) | Every event kind and outbox kind in both modules | I01-E02-001 |
-| [Business rules](business-rules.md) | Eligibility, ranking, the notification sequence, acceptance, status and location, orders and prices | I01-E02-002 |
-| [Module communication](module-communication.md) | Outboxes, inboxes, retries, idempotency, handoff, push, jobs | I01-E02-003 |
-| [Failures](failures.md) | Races, give-ups, duplicates, timing, outside failures, data problems | I01-E02-004 |
+| Page | Covers |
+| --- | --- |
+| [Lifecycle](lifecycle.md) | Order states, transitions, and pending requests |
+| [Actors and commands](actors-and-commands.md) | Who acts, through which commands, and which module decides |
+| [Events](events.md) | Every event kind and outbox kind in both modules |
+| [Business rules](business-rules.md) | Eligibility, ranking, the notification sequence, acceptance, status and location, orders and prices |
+| [Module communication](module-communication.md) | Outboxes, inboxes, retries, idempotency, handoff, push, jobs |
+| [Failures](failures.md) | Races, give-ups, duplicates, timing, outside failures, data problems |

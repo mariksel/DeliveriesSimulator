@@ -15,9 +15,6 @@ subject.
 | `V` | A simulated version of the real service's delivery logic ([FND-41](../decisions/project-foundation.md#fnd-41--version-numbers)) | `V1.0.0` |
 | `X` | The conformance exchange format ([FND-52](../decisions/project-foundation.md#fnd-52--conformance-exchange)) | `X1.0.0` |
 
-Add a row for any other subject the project versions independently, such as an
-external contract, a data schema, or a product scope label.
-
 Versions are written with a type prefix even if context might otherwise
 disambiguate. `1.0.0` denotes the initial documented baseline only when
 qualified as, for example, `A1.0.0`.

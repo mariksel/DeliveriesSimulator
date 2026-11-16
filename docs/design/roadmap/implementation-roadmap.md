@@ -4,55 +4,54 @@
 
 - **Design version:** `D0.6.0`.
 - **Scope:** Approved stages from
-  [FND-60](../decisions/project-foundation.md#fnd-60--implementation-stages), decided by the
-  user on 2026-11-03, stage by stage, in I01-E06-002. Only `I02` and part of `I03` have source
-  so far.
-- **Rule:** Do not infer any roadmap beyond this scope. See
-  [open decisions](../governance/open-decisions.md).
+  [FND-60](../decisions/project-foundation.md#fnd-60--implementation-stages). Only the End-to-end
+  skeleton and part of the Full V1.0.0 lifecycle and rules stage have source so far. Open
+  questions are in [open decisions](../governance/open-decisions.md).
 
-Work lifecycle is tracked in the
-backlog; this roadmap remains
-authoritative for approved scope, phase dependencies, and status evidence.
+## Stage status snapshot
 
-## Phase status snapshot
-
-| Phase | Scope | Approved-plan status | Current evidence |
+| Stage | Scope | Status | Current evidence |
 |---|---|---|---|
-| `I02` | End-to-end skeleton: 11 capabilities | Approved, complete | The workspace, layers, test tools, simulation core, one order through both modules, the scenario format, the runner, the checks, and the basic technical view exist. The user approved the stage on 2026-11-05 |
-| `I03` | Full V1.0.0 lifecycle and rules: 40 capabilities | Approved, in progress | Run history is mostly built: records split into unchanging and version parts, a main root with state and effects sub-roots, one state commit per transaction, effect commits grouped by job run or API call, indirect commits, and a zoomable timeline whose columns are the branches. Time-travel replay, Step debugger, and Snapshot and branch are built; the stage gate confirms them |
-| `I04` | Faults, races, and verification: 26 capabilities | Approved, not started | No source |
-| `I05` | Stored runs and files: 10 capabilities | Approved, not started | No source |
-| `I06` | Versions and comparison: 27 capabilities | Approved, not started | No source |
-| `I07` | City, actors, and scale: 30 capabilities | Approved, not started | No source |
-| `I08` | Analysis and offline dispatch: 12 capabilities | Approved, not started | No source |
-| `I09` | Conformance exchange: 1 capability | Approved, not started | No source |
-| `I10` | Remaining views and checks: 35 capabilities | Approved, not started | No source |
-| `I11` | Later capabilities: 5 capabilities | Approved, not started | No source |
-
-Each stage ends at the stage gate of
-[FND-60](../decisions/project-foundation.md#fnd-60--implementation-stages) before the next one
-starts.
+| End-to-end skeleton | 11 capabilities | Complete | The workspace, layers, test tools, simulation core, one order through both modules, the scenario format, the runner, the checks, and the basic technical view exist |
+| Full V1.0.0 lifecycle and rules | 40 capabilities | In progress | Run history is mostly built: records split into unchanging and version parts, a main root with state and effects sub-roots, one state commit per transaction, effect commits grouped by job run or API call, indirect commits, and a zoomable timeline whose columns are the branches. Time-travel replay, Step debugger, and Snapshot and branch are built |
+| Faults, races, and verification | 26 capabilities | Not started | No source |
+| Stored runs and files | 10 capabilities | Not started | No source |
+| Versions and comparison | 27 capabilities | Not started | No source |
+| City, actors, and scale | 30 capabilities | Not started | No source |
+| Analysis and offline dispatch | 12 capabilities | Not started | No source |
+| Conformance exchange | 1 capability | Not started | No source |
+| Remaining views and checks | 35 capabilities | Not started | No source |
+| Later capabilities | 5 capabilities | Not started | No source |
 
 ## Dependency graph
 
 ```text
-I02 ──> I03 ──> I04 ──> I05 ──> I06 ──> I07 ──> I08 ──> I09 ──> I10 ──> I11
+End-to-end skeleton
+  ──> Full V1.0.0 lifecycle and rules
+  ──> Faults, races, and verification
+  ──> Stored runs and files
+  ──> Versions and comparison
+  ──> City, actors, and scale
+  ──> Analysis and offline dispatch
+  ──> Conformance exchange
+  ──> Remaining views and checks
+  ──> Later capabilities
 ```
 
 ## Capabilities by stage
 
 Each of the 192 capabilities of
-[FND-34](../decisions/project-foundation.md#fnd-34--required-capabilities) is built in exactly
-one stage, and the five of
-[FND-35](../decisions/project-foundation.md#fnd-35--later-capabilities) in `I11`. Each is listed
-under the module that owns it, as in [capability ownership](../modules/capability-ownership.md).
+[FND-34](../decisions/project-foundation.md#fnd-34--required-capabilities) is built in exactly one
+stage, and the five of [FND-35](../decisions/project-foundation.md#fnd-35--later-capabilities) in
+the Later capabilities stage. Each is listed under the module that owns it, as in [capability
+ownership](../modules/capability-ownership.md).
 
-### I02 — End-to-end skeleton
+### End-to-end skeleton
 
 One V1.0.0 order end to end, without faults, with a passing or failing scenario.
 
-**Epics:** Project foundation; Simulation core; V1.0.0 happy path; Scenarios and checks; Basic
-technical view; Stage gate.
+**Work areas:** Project foundation; Simulation core; V1.0.0 happy path; Scenarios and checks;
+Basic technical view.
 
 - **[Simulation engine](../modules/simulation-engine.md):** Clock control, Determinism check.
 - **[Scenarios](../modules/scenarios.md):** Scenario runner, Readable scenario format, Scenario
@@ -62,15 +61,16 @@ technical view; Stage gate.
   event tracing, Payload viewer.
 - **[UI section](../ui/README.md):** Run status bar.
 
-### I03 — Full V1.0.0 lifecycle and rules
+### Full V1.0.0 lifecycle and rules
 
 Every path, command, and rule of V1.0.0, with the views that explain them.
 
-**Epics, intended:** Run history; Paths and commands; Business rules; Push, devices, and jobs;
-Explaining views; Run tools and workspace; Stage gate. Run history comes first
+**Work areas:** Run history; Paths and commands; Business rules; Push, devices, and jobs; Explaining
+views; Run tools and workspace. Run history comes first
 ([FND-81](../decisions/project-foundation.md#fnd-81--runs-as-a-tree-of-state-transitions)), Manual
-mode comes with Paths and commands, and saved scenarios bring browser storage forward from `I05`
-([FND-80](../decisions/project-foundation.md#fnd-80--planning-stage-i03)).
+mode comes with Paths and commands, and saved scenarios bring browser storage forward from the
+Stored runs and files stage
+([FND-80](../decisions/project-foundation.md#fnd-80--full-v100-lifecycle-and-rules-stage)).
 
 - **[Simulation engine](../modules/simulation-engine.md):** Manual mode, Step debugger,
   Time-travel replay, Snapshot and branch.
@@ -90,12 +90,12 @@ mode comes with Paths and commands, and saved scenarios bring browser storage fo
 - **[Orders](../modules/orders.md):** Request generation view, Order criteria check.
 - **[UI section](../ui/README.md):** Detail level switch, Linked selection, Glossary.
 
-### I04 — Faults, races, and verification
+### Faults, races, and verification
 
 Break every step, explore the known races and give-ups, and report drift.
 
-**Epics, intended:** Fault injection; Races and ordering; Instances and leases; Drift and
-verification; Failure views; Stage gate.
+**Work areas:** Fault injection; Races and ordering; Instances and leases; Drift and
+verification; Failure views.
 
 - **[Fault injection](../modules/fault-injection.md):** Fault injection, Fault presets, Random
   fault schedules, Race and ordering explorer, Manual reordering, Fuzzing with shrinking,
@@ -109,11 +109,11 @@ verification; Failure views; Stage gate.
 - **[Verification](../modules/verification.md):** Drift detector, Counterexample traces,
   Criteria editor, Invariant editor.
 
-### I05 — Stored runs and files
+### Stored runs and files
 
 Keep runs, run batches and suites, and share scenarios and runs as files.
 
-**Epics, intended:** Stored runs and IndexedDB; Batches and suites; Files; Stage gate.
+**Work areas:** Stored runs and IndexedDB; Batches and suites; Files.
 
 - **[Run history](../modules/run-history.md):** Stored run management, Run labels, Recent items,
   Batch completion alerts.
@@ -121,12 +121,12 @@ Keep runs, run batches and suites, and share scenarios and runs as files.
 - **[Scenarios](../modules/scenarios.md):** Batch runs, Regression suites, Golden runs.
 - **[Simulation engine](../modules/simulation-engine.md):** Run queue.
 
-### I06 — Versions and comparison
+### Versions and comparison
 
 V1.1.0-planned-dispatch, option switches, editing versions, and comparing them.
 
-**Epics, intended:** Version model and V1.1.0; Version management; Comparison; What-if, rollout,
-and assumptions; Stage gate.
+**Work areas:** Version model and V1.1.0; Version management; Comparison; What-if, rollout,
+and assumptions.
 
 - **[Versions](../modules/versions.md):** Version editor, Version branching, Version validation,
   Version lock, Version provenance, Version import and export, Version timeline, Version
@@ -138,12 +138,11 @@ and assumptions; Stage gate.
   Undecided dependency view.
 - **[Orders](../modules/orders.md):** Order what-if.
 
-### I07 — City, actors, and scale
+### City, actors, and scale
 
 The synthetic city, behaviour profiles, city-scale runs, and the business view.
 
-**Epics, intended:** City and map; Profiles and load; Scale; Business metrics and views; Stage
-gate.
+**Work areas:** City and map; Profiles and load; Scale; Business metrics and views.
 
 - **[Map and routing](../modules/map-and-routing.md):** Map view.
 - **[Drivers](../modules/drivers.md) and [Restaurants](../modules/restaurants.md):** Actor
@@ -159,33 +158,33 @@ gate.
   view, Driver earnings view, Restaurant cash reconciliation, Critical path view, Wait-time
   breakdown.
 - **[Run history](../modules/run-history.md):** Driver timelines, whose view by driver comes in
-  `I03`.
+  the Full V1.0.0 lifecycle and rules stage.
 
-### I08 — Analysis and offline dispatch
+### Analysis and offline dispatch
 
 Work across many runs, and the fast dispatch-only model.
 
-**Epics, intended:** Offline dispatch; Multi-run analysis; Charts and drill-down; Stage gate.
+**Work areas:** Offline dispatch; Multi-run analysis; Charts and drill-down.
 
 - **[Analysis](../modules/analysis.md):** Parameter sweeps, Statistics across seeds, Sensitivity
   analysis, Value optimiser, Metric drill-down, Outlier finder, Failure probability, Hotspot
   ranking, Time series charts, Offline dispatch model.
 - **[Business rules](../modules/business-rules.md):** Decision distribution, Rule usage counts.
 
-### I09 — Conformance exchange
+### Conformance exchange
 
 Export standard tests for the real service, and analyse its results.
 
-**Epics, intended:** X format; Export and import; Results analysis; Stage gate.
+**Work areas:** X format; Export and import; Results analysis.
 
 - **[Versions](../modules/versions.md):** Real service conformance check.
 
-### I10 — Remaining views and checks
+### Remaining views and checks
 
 Proofs, coverage, the remaining technical metrics, and workspace polish.
 
-**Epics, intended:** Proofs; Coverage; Scenario authoring; Rule analysis and debugging;
-Technical metrics; Workspace; Stage gate.
+**Work areas:** Proofs; Coverage; Scenario authoring; Rule analysis and debugging;
+Technical metrics; Workspace.
 
 - **[Verification](../modules/verification.md):** Model checker, State space browser, Proof
   report, Coverage map, Scenario coverage report, Coverage goals.
@@ -201,12 +200,11 @@ Technical metrics; Workspace; Stage gate.
   freshness view, Status change view.
 - **[UI section](../ui/README.md):** Search everywhere, Saved views, Help pages, Undo and redo.
 
-### I11 — Later capabilities
+### Later capabilities
 
 All five FND-35 capabilities together; U13 is decided when it starts.
 
-**Epics, intended:** Report generator; Version merge; Bulk editing; Dashboards and bookmarks;
-Stage gate.
+**Work areas:** Report generator; Version merge; Bulk editing; Dashboards and bookmarks.
 
 - **Undecided (U13):** Report generator.
 - **[Versions](../modules/versions.md):** Version merge.

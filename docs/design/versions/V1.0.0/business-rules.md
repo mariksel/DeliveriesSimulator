@@ -6,9 +6,7 @@
   ([FND-40](../../decisions/project-foundation.md#fnd-40--kinds-of-version)).
 - **State described:** the real service's working tree on 2026-11-03
   ([FND-45](../../decisions/project-foundation.md#fnd-45--version-folder-layout)).
-- **Status:** Observed in the real service's code, and confirmed by the user on 2026-11-03.
-  I01-E02-002
-  recorded the confirmation.
+- **Status:** Observed in the real service's code.
 
 Every value and rule on this page is tunable
 ([FND-25](../../decisions/project-foundation.md#fnd-25--simulatable-visible-and-tunable)), and
@@ -105,7 +103,7 @@ A reason is trimmed, must not be blank, and is at most 500 characters.
 | Rule | Value |
 | --- | --- |
 | Quantity of each product line | 1 to 999 |
-| Preparation time | 0 to 120 minutes; the unit was confirmed by the user on 2026-11-03 |
+| Preparation time | 0 to 120 minutes |
 | Product line positions | Exactly 1 to the number of lines |
 | Expected prices | Must match the current prices, or the order is refused |
 | Restaurant price | The sum of each line's restaurant price × quantity |

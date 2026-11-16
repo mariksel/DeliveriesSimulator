@@ -7,9 +7,6 @@
   [`V1.0.0`](../V1.0.0/README.md).
 - **Sources:** the real service's approved requirements for dispatch notifications and for
   driver reads, and its dispatch design records. None of these changes is built yet.
-- **Status:** confirmed by the user on 2026-11-03.
-  I01-E02-001
-  recorded the confirmation.
 
 ## Changes from V1.0.0
 

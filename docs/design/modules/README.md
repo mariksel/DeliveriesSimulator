@@ -1,7 +1,7 @@
 # Capability and Module Map
 
 Owns the list of capabilities and how they depend on each other. Each capability
-has its own page, created from the [module template](_module-template.md).
+has its own page.
 
 ## Version and status
 
@@ -55,8 +55,8 @@ Which module owns each capability is in [capability ownership](capability-owners
 
 ## Dependency graph
 
-Each module, what it uses, and why. The user confirmed this graph on 2026-11-03, in I01-E03-006
-([FND-56](../decisions/project-foundation.md#fnd-56--module-boundaries)), and added the run
+Each module, what it uses, and why. The graph is set in
+[FND-56](../decisions/project-foundation.md#fnd-56--module-boundaries), with the run
 files dependency in
 [FND-58](../decisions/project-foundation.md#fnd-58--stored-records-and-shared-files), and the
 commits and saved runs dependencies in
@@ -168,6 +168,6 @@ The graph describes known conceptual dependencies; exact runtime calls are in th
 linked source. Cross-cutting designs: [architecture layers](../architecture/layers.md),
 [UI](../ui/README.md), [data](../data/persistence.md),
 [integrations](../integrations/README.md). Any dependency not shown here does not exist; add
-it here, with the user's approval, before code relies on it. The architecture check reads this
+it here before code relies on it. The architecture check reads this
 graph, and fails on an import it does not show
 ([FND-69](../decisions/project-foundation.md#fnd-69--module-jobs-and-the-module-graph-check)).

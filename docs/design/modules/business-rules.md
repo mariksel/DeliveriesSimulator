@@ -5,18 +5,15 @@
 - **Design version:** `D0.6.0`.
 - **Status:** Approved as a capability in
   [FND-8](../decisions/project-foundation.md#fnd-8--capability-list), and made a module of rule
-  abstractions in
-  [FND-83](../decisions/project-foundation.md#fnd-83--types-owned-by-their-modules).
-  I03-E04-012
-  builds the abstractions. Drivers, Deliveries, and Orders write their rules with them, each in
-  its own folder. The
-  [implementation roadmap](../roadmap/implementation-roadmap.md) says which stage builds the rest.
+  abstractions in [FND-83](../decisions/project-foundation.md#fnd-83--types-owned-by-their-modules).
+  Its abstractions are built in the Full V1.0.0 lifecycle and rules stage. Drivers, Deliveries, and
+  Orders write their rules with them, each in its own folder. The [implementation
+  roadmap](../roadmap/implementation-roadmap.md) says which stage builds the rest.
 
 ## Current and approved responsibilities
 
-The abstractions every module writes its own rules with. It knows no other module's rules: in
-the user's words, "the specific modules should build their rules using the busines rules
-abstractions"
+The abstractions every module writes its own rules with. It knows no other module's rules: each
+module builds its own rules with the Business rules abstractions
 ([FND-83](../decisions/project-foundation.md#fnd-83--types-owned-by-their-modules)). A rule
 written this way is visible in the UI, and can be changed by hand or by the simulator, so that
 runs can simulate different scenarios
@@ -65,12 +62,11 @@ writes it: a duration as a time like `h00:m00:s30:ms00`, anything else as a numb
 run can use, even outside its range, becomes a config change commit at the run's current time,
 and its `ConfigChanged` entry shows in the log; one it cannot use is refused beside the
 parameter, with the reason. Which rule decided what is the Rule evaluation log's and the
-Decision explainer's, in `I03-E04-007` and `I03-E04-008`.
+Decision explainer's, planned in the Full V1.0.0 lifecycle and rules stage.
 
-Planned in Run history's items: a change can name a scenario's labelled indirect effect it
-follows from, picked from a list, in `I03-E02-022`; and the panel lists each module's functions
-and their versions beside its rules, read through the Simulation engine, and switches one, in
-`I03-E02-026`
+Planned in the Run history work: a change can name a scenario's labelled indirect effect it
+follows from, picked from a list; and the panel lists each module's functions and their versions
+beside its rules, read through the Simulation engine, and switches one
 ([FND-81](../decisions/project-foundation.md#fnd-81--runs-as-a-tree-of-state-transitions),
 [FND-89](../decisions/project-foundation.md#fnd-89--indirect-effects-stated-by-hand)).
 
@@ -109,9 +105,7 @@ From the confirmed [dependency graph](README.md#dependency-graph)
 - Rules come from the real service's documentation, code, and people who know it
   ([FND-9](../decisions/project-foundation.md#fnd-9--sources-of-business-rules)). Its name and
   location are not recorded
-  ([FND-2](../decisions/project-foundation.md#fnd-2--real-service-not-named)); the user states
-  the rules and reviews the simulation
-  ([FND-52](../decisions/project-foundation.md#fnd-52--conformance-exchange)).
+  ([FND-2](../decisions/project-foundation.md#fnd-2--real-service-not-named)).
 
 ## Code map
 

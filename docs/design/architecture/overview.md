@@ -13,7 +13,7 @@ are in [layers](layers.md).
 
 ## Style and dependency direction
 
-The application is written in TypeScript 6.0 with Angular 22 and Vite 8, on Node 26 or later
+The application is written in TypeScript 6.0 with Angular 22 and Vite 8, on Node 22.12 or later
 ([FND-61](../decisions/project-foundation.md#fnd-61--node-and-typescript-versions)).
 It follows clean architecture style and principles, with a framework-free core
 ([FND-11](../decisions/project-foundation.md#fnd-11--clean-architecture-with-a-framework-free-core)).
