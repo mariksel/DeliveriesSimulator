@@ -7,7 +7,7 @@ tree of commits, so a run can be stepped back and forth through time, forked, an
 
 ## Requirements
 
-- Node.js 26 or later (see `.nvmrc`)
+- Node.js 22.12 or later (`.nvmrc` selects 26 for local development)
 
 ## Getting started
 
