@@ -7,8 +7,8 @@ import { createServer } from 'vite';
 
 import { cityScenario } from './city-scenario.mjs';
 
-const DEFAULT_DRIVERS = 500;
-const DEFAULT_ORDERS = 5000;
+const DEFAULT_DRIVERS = 200;
+const DEFAULT_ORDERS = 2000;
 const MS_PER_SECOND = 1000;
 const KB_PER_MB = 1024;
 const SIMULATED_DAY_SECONDS = 86_400;
@@ -59,6 +59,36 @@ try {
     );
     const { SimulationRun } = await load('/src/application/simulation-engine/simulation-run.ts');
     const { runDigest } = await load('/src/application-core/simulation-engine/run-digest.ts');
+    const { REGISTERED_FUNCTIONS } = await load(
+        '/src/infrastructure/simulation-engine/function-registry.ts',
+    );
+    const { toPersistedRun, fromPersistedRun, atMinimum } = await load(
+        '/src/infrastructure/simulation-engine/persisted-run.ts',
+    );
+    const { savedBytes } = await load('/src/infrastructure/run-history/saved-run-size.ts');
+
+    /**
+     * Saves a run at a level as plain data and loads it back, as the repository does without
+     * browser storage: how big it is, how long each way takes, and whether the run came back the
+     * same, by its log's digest (FND-81).
+     */
+    async function savedAndLoaded(run, digest, isMinimum) {
+        const saved = await timed(() => {
+            const everything = toPersistedRun(run);
+            return isMinimum
+                ? { ...everything, branches: atMinimum(everything.branches) }
+                : everything;
+        });
+        const bytes = savedBytes(saved.value);
+        const loaded = await timed(() => fromPersistedRun(saved.value, REGISTERED_FUNCTIONS));
+        const loadedDigest = runDigest(loaded.value.cache.log.entries);
+        return {
+            mb: Math.round(bytes / KB_PER_MB / KB_PER_MB),
+            secondsToSave: saved.seconds,
+            secondsToLoad: loaded.seconds,
+            isSameRun: loadedDigest === digest,
+        };
+    }
 
     const read = await timed(() => {
         const secondCityScenario = cityScenario(drivers, orders);
@@ -76,12 +106,15 @@ try {
      * run, so once it returns the run can be collected, and only its latest root is kept.
      */
     async function runTheDay() {
-        const created = createRun({ seed: scenario.seed });
+        const created = createRun({ seed: scenario.seed, functions: REGISTERED_FUNCTIONS });
         const start = scheduleScenario(created, scenario.start, scenario.steps);
         const run = new SimulationRun(start);
         const ran = await timed(() => run.advanceTo(scenario.runUntil));
         const entries = run.state.cache.log.entries;
         const digest = await timed(() => runDigest(entries));
+        const heldWithEveryRootMb = heldMb();
+        const everything = await savedAndLoaded(run.state, digest.value, false);
+        const minimum = await savedAndLoaded(run.state, digest.value, true);
         return {
             failure: run.failure,
             entries: entries.size,
@@ -92,7 +125,8 @@ try {
             commits: run.state.line.commits.size,
             digest,
             ran,
-            heldWithEveryRootMb: heldMb(),
+            heldWithEveryRootMb,
+            saved: { everything, minimum },
             latestRoot: run.state.root,
         };
     }
@@ -117,10 +151,13 @@ try {
             simulatedSecondsPerSecond: Math.round(SIMULATED_DAY_SECONDS / day.ran.seconds),
             peakMemoryMb: Math.round(process.resourceUsage().maxRSS / KB_PER_MB),
             // What the heap holds after full garbage collections: before the run, with the run
-            // and every root it keeps, and with only its latest root (FND-81).
+            // and every root it keeps, and with only its latest root (FND-81, I03-E02-017).
             heldBeforeRunMb,
             heldWithEveryRootMb: day.heldWithEveryRootMb,
             heldWithLatestRootMb: hasLatestRoot ? heldWithLatestRootMb : null,
+            // A saved run at each level, as plain data: its size, and how long it took to save
+            // and to load, where "minimum" works every root out again (FND-81, I03-E02-008).
+            saved: day.saved,
             node: process.version,
         },
         null,

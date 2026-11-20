@@ -1,3 +1,4 @@
+import { TESTING_FUNCTIONS } from '../../application-core/simulation-engine/function-lookup.testing';
 import { describe, expect, it } from 'vitest';
 
 import { List } from 'immutable';
@@ -35,7 +36,7 @@ const problemsOf = (result: ScenarioCheckResult): unknown[] =>
 const read = (scenario: IScenario): ScenarioResult => ({ isOk: true, scenario });
 
 function ran(scenario: IScenario): IScenarioRun {
-    const result = runScenario(scenario);
+    const result = runScenario(scenario, TESTING_FUNCTIONS);
     if (!result.isOk) {
         throw new Error(`The scenario did not run: ${result.problems.size} problems.`);
     }
@@ -88,7 +89,7 @@ describe('checking real runs', () => {
     ])('counts the orders it judged: %s', (_name, steps, judged) => {
         const scenario = withSteps(steps);
         const scenarioRead = read(scenario);
-        const result = checkScenario(scenarioRead);
+        const result = checkScenario(scenarioRead, TESTING_FUNCTIONS);
 
         expect(result.isOk && result.checked.check.ordersJudged).toBe(judged);
     });
@@ -99,7 +100,8 @@ describe('checking real runs', () => {
     });
 
     it('fails a run that stops while events are still flowing', () => {
-        const lastStep = { ...STEPS.last()!, at: JUST_AFTER_INBOX_JOBS };
+        // At its time, not waiting for the driver to arrive, so the delivery lands mid-flight.
+        const lastStep = { ...STEPS.last()!, at: JUST_AFTER_INBOX_JOBS, isAtItsTime: true };
         const steps = STEPS.butLast().push(lastStep);
         const shorter = { ...withSteps(steps), runUntil: BEFORE_INBOX_JOBS_AGAIN };
 
@@ -124,20 +126,20 @@ describe('checking a scenario', () => {
     const library = new BuiltInsForTest();
 
     it('runs and judges a built-in scenario', () => {
-        const result = checkBuiltInScenario(library, ONE_ORDER_BUILT_IN);
+        const result = checkBuiltInScenario(library, ONE_ORDER_BUILT_IN, TESTING_FUNCTIONS);
         const isResultPassed = isPassed(result);
         expect(isResultPassed).toBe(true);
     });
 
     it('says so when there is no such built-in scenario', () => {
-        const result = checkBuiltInScenario(library, NO_SUCH_BUILT_IN);
+        const result = checkBuiltInScenario(library, NO_SUCH_BUILT_IN, TESTING_FUNCTIONS);
         const problems = problemsOf(result);
         expect(problems).toEqual([{ path: '', message: 'there is no built-in scenario "nope"' }]);
     });
 
     it('fails a run that breaks a criterion', () => {
         const scenarioRead = read(UNDELIVERED);
-        const result = checkScenario(scenarioRead);
+        const result = checkScenario(scenarioRead, TESTING_FUNCTIONS);
         const isResultPassed = isPassed(result);
         expect(isResultPassed).toBe(false);
     });
@@ -156,17 +158,20 @@ describe('checking a scenario', () => {
     });
 
     it('passes on what is wrong with a scenario that could not be read', () => {
-        const result = checkScenario({
-            isOk: false,
-            problems: List.of({ path: 'seed', message: 'is missing' }),
-        });
+        const result = checkScenario(
+            {
+                isOk: false,
+                problems: List.of({ path: 'seed', message: 'is missing' }),
+            },
+            TESTING_FUNCTIONS,
+        );
         const problems = problemsOf(result);
         expect(problems).toEqual([{ path: 'seed', message: 'is missing' }]);
     });
 
     it('runs a chosen file', async () => {
         const files = new FilesForTest();
-        const result = await checkScenarioFile(files, { name: ONE_ORDER_FILE });
+        const result = await checkScenarioFile(files, { name: ONE_ORDER_FILE }, TESTING_FUNCTIONS);
 
         const isResultPassed = isPassed(result);
         expect(isResultPassed).toBe(true);
@@ -174,7 +179,7 @@ describe('checking a scenario', () => {
 
     it("passes on what is wrong with a chosen file's scenario", async () => {
         const files = new FilesForTest();
-        const result = await checkScenarioFile(files, { name: INVALID_FILE });
+        const result = await checkScenarioFile(files, { name: INVALID_FILE }, TESTING_FUNCTIONS);
 
         const problems = problemsOf(result);
         expect(problems).toEqual([{ path: '', message: NOT_JSON }]);

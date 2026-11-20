@@ -2,16 +2,21 @@ import { List, OrderedMap } from 'immutable';
 
 import type { RunLogEntry } from './run-log-entry';
 import type { OrderId } from '../../domain/orders/order';
-import type { IndirectLabel, InputOrderName } from './run-input';
+import type { IndirectLabel, InputActor, InputOrderName } from './run-input';
 import type { IndirectEffect } from './indirect-effect';
 import type { ICommit } from './commit';
 import type { CommitId } from './commit-id';
-import type { DirectEffect } from './direct-effect';
-import { EffectKind } from './direct-effect';
+import { required } from '../../domain/system/validation/required';
+import type { DirectEffect, ILocationSentEffect, ILocationsSentEffect } from './direct-effect';
+import { EffectKind, isAppSends, isLocationsSent } from './direct-effect';
+import type { IDriverActsOnArrival, IRide } from './ride';
+import { RideKind } from './ride';
 import type { IRunLog } from './run-log';
 import { emptyRunLog, withWrittenEntry } from './run-log';
 import type { RunJob } from './run-work';
 import type { ICommitLine } from './commit-line';
+import type { IRunIndex } from './run-index';
+import { EMPTY_RUN_INDEX, indexOfLine } from './run-index';
 import type { Count, Position } from '../../domain/system/math/math';
 import type { SimTime } from '../../domain/simulation-engine/sim-time';
 import { NO_COUNT, plusOne, toCount, toPosition } from '../../domain/system/math/math';
@@ -32,6 +37,12 @@ export interface IRunCache {
     /** How many of the log's entries the commits hold. */
     readonly committedEntries: Count;
     readonly lastJobRuns: OrderedMap<RunJob, IJobRun>;
+    /** Each driver's app's latest location send, by the driver's name (FND-90). */
+    readonly lastLocationSends: OrderedMap<InputActor, IJobRun>;
+    /** Each riding driver's latest ride, by the driver's name (FND-90). */
+    readonly rides: OrderedMap<InputActor, IRide>;
+    /** The scripted pick-ups and deliveries waiting for their drivers, by their commit. */
+    readonly waitingOnArrival: OrderedMap<CommitId, IDriverActsOnArrival>;
     /**
      * How many scripted steps have run: the input commits, and the config change and indirect
      * commits a step made.
@@ -45,6 +56,23 @@ export interface IRunCache {
     readonly commitIds: List<CommitId>;
     /** How many log entries the commits hold up to and including each one, in the same order. */
     readonly entriesUpTo: List<Count>;
+    /** What each job run or API call made, and the commits that made each record's versions. */
+    readonly index: IRunIndex;
+}
+
+/**
+ * The indirect commit a label names, for a step or change that follows from it, or null when it
+ * names none. A label no indirect commit holds is a bug: a scenario checks its labels when read.
+ */
+export function labelledCommit(
+    cache: IRunCache,
+    label: IndirectLabel | undefined,
+): CommitId | null {
+    if (label === undefined) {
+        return null;
+    }
+    const commit = cache.indirectLabels.get(label);
+    return required(commit, `the indirect commit labelled "${label}"`);
 }
 
 /** A cache for a run with no commits yet, for a given empty log. */
@@ -52,11 +80,15 @@ export const emptyRunCache = (entries: List<RunLogEntry>): IRunCache => ({
     log: emptyRunLog(entries),
     committedEntries: NO_COUNT,
     lastJobRuns: OrderedMap(),
+    lastLocationSends: OrderedMap(),
+    rides: OrderedMap(),
+    waitingOnArrival: OrderedMap(),
     stepsRun: NO_COUNT,
     indirectLabels: OrderedMap(),
     orderIds: OrderedMap(),
     commitIds: List(),
     entriesUpTo: List(),
+    index: EMPTY_RUN_INDEX,
 });
 
 /** The cache with a new commit's place noted, after its entries are taken. */
@@ -88,13 +120,43 @@ export function takePendingEntries(cache: IRunCache): IPendingEntries {
     };
 }
 
-function noteInput(cache: IRunCache, effect: DirectEffect): IRunCache {
-    if (effect.kind === EffectKind.ConfigChange && effect.isScripted) {
+/** The cache after apps' sends: one alone, as before batching, or every app due at a moment. */
+function noteSends(
+    cache: IRunCache,
+    effect: ILocationSentEffect | ILocationsSentEffect,
+    position: Position,
+): IRunCache {
+    const send: IJobRun = { at: effect.at, position };
+    const actors = isLocationsSent(effect)
+        ? effect.sends.map((each) => each.actor)
+        : List.of(effect.actor);
+    const lastLocationSends = actors.reduce(
+        (sends, actor) => sends.set(actor, send),
+        cache.lastLocationSends,
+    );
+    return { ...cache, lastLocationSends };
+}
+
+function noteInput(cache: IRunCache, effect: DirectEffect, position: Position): IRunCache {
+    const isScriptedChange =
+        (effect.kind === EffectKind.ConfigChange ||
+            effect.kind === EffectKind.ImplementationChange) &&
+        effect.isScripted;
+    if (isScriptedChange) {
         const stepsRun = plusOne(cache.stepsRun);
         return { ...cache, stepsRun };
     }
+    if (isAppSends(effect)) {
+        return noteSends(cache, effect, position);
+    }
     if (effect.kind !== EffectKind.Input) {
         return cache;
+    }
+    if (effect.isOnArrival) {
+        const followed = effect.followsFrom;
+        const waitingOnArrival =
+            followed === null ? cache.waitingOnArrival : cache.waitingOnArrival.delete(followed);
+        return { ...cache, waitingOnArrival };
     }
     const { response } = effect;
     const orderIds =
@@ -115,7 +177,7 @@ export function noteEffectCommit(
         const run: IJobRun = { at: effect.at, position };
         return { ...cache, lastJobRuns: cache.lastJobRuns.set(effect.job, run) };
     }
-    return noteInput(cache, effect);
+    return noteInput(cache, effect, position);
 }
 
 /** The cache after an indirect commit: a step run if a script stated it, and its label noted. */
@@ -128,7 +190,15 @@ export function noteIndirectCommit(
     const { label } = indirect;
     const indirectLabels =
         label === null ? cache.indirectLabels : cache.indirectLabels.set(label, id);
-    return { ...cache, stepsRun, indirectLabels };
+    const counted = { ...cache, stepsRun, indirectLabels };
+    if (indirect.kind === RideKind.SetsOff || indirect.kind === RideKind.GoesToWait) {
+        const ride: IRide = { at: indirect.at, leg: indirect };
+        return { ...counted, rides: counted.rides.set(indirect.actor, ride) };
+    }
+    if (indirect.kind === RideKind.ActsOnArrival) {
+        return { ...counted, waitingOnArrival: counted.waitingOnArrival.set(id, indirect) };
+    }
+    return counted;
 }
 
 function noteCommit(cache: IRunCache, commit: ICommit, position: Position): IRunCache {
@@ -145,8 +215,10 @@ function noteCommit(cache: IRunCache, commit: ICommit, position: Position): IRun
 /** Works the cache out again from a line's commits. */
 export function rebuildRunCache(line: ICommitLine, entries: List<RunLogEntry>): IRunCache {
     const empty = emptyRunCache(entries);
-    return line.commits.valueSeq().reduce<IRunCache>((cache, commit, index) => {
+    const rebuilt = line.commits.valueSeq().reduce<IRunCache>((cache, commit, index) => {
         const position = toPosition(index + 1);
         return noteCommit(cache, commit, position);
     }, empty);
+    const index = indexOfLine(line);
+    return { ...rebuilt, index };
 }

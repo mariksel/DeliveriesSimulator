@@ -1,4 +1,5 @@
 import { List } from 'immutable';
+import { setOff } from './riding';
 
 import type { ParameterChange } from '../../domain/business-rules/parameter-change';
 
@@ -7,7 +8,10 @@ import { LogSource, TechnicalLogKind } from '../../domain/event-log/log-vocabula
 import type { OrderId } from '../../domain/orders/order';
 import { toDriverId } from '../../domain/drivers/driver';
 import { toRestaurantId } from '../../domain/restaurants/restaurant-place';
-import { OrdersState } from '../../domain/orders/orders-state';
+import type { RestaurantPlace } from '../../domain/restaurants/restaurant-place';
+import type { DeliveryAddress } from '../../domain/restaurants/customers/delivery-address';
+import type { Customer } from '../../domain/restaurants/customers/customer';
+import type { IRider } from './rider';
 import { unreachable } from '../../domain/system/validation/unreachable';
 import type { CommandRefusal } from './command-outcome';
 import { ScriptRefusal } from './command-outcome';
@@ -30,15 +34,29 @@ import { commitEffect, finishSession, startingFrom, startSession, withLog } from
 import type { InputResponse } from './direct-effect';
 import { EffectKind } from './direct-effect';
 import { InputCommand } from './input-command';
+import type { OrderCommand } from './input-command';
 import type { IRunStart, IRunInput, ScriptInput } from './run-input';
 import type { CommitId } from './commit-id';
-import { required } from '../../domain/system/validation/required';
+import { labelledCommit } from './run-cache';
 import { callState } from './state-call';
+import { functionInUse } from './function-lookup';
+import { FunctionName } from './function-name';
+import { sessionMaker } from './session-maker';
+import { readsOfWork } from './effect-reads';
+import type { RecordRef } from './record-ref';
+import { RecordKind } from './record-ref';
+import { Maker } from '../../domain/system/records/maker';
 import type { LogSequence } from '../../domain/event-log/numbers';
 
 const ACTORS = LogSource.Actors;
 
 const NO_RULE_CHANGES = List<ParameterChange>();
+
+const NO_CUSTOMERS = List<Customer>();
+
+const NO_ADDRESSES = List<DeliveryAddress>();
+
+const NO_RIDERS = List<IRider>();
 
 /** A scripted step's command done, and the order it created, if it was a create order call. */
 interface IInputDone extends ICommandDone {
@@ -70,7 +88,11 @@ export function scheduleInputs(
     steps: List<ScriptInput>,
 ): IRunState {
     steps.forEach(assertCanSchedule);
-    const drivers = start.drivers.reduce(DriversState.addDriver, run.root.state.drivers);
+    const runStart = Maker.runStart();
+    const drivers = start.drivers.reduce(
+        (added, driver) => DriversState.addDriver(added, driver, runStart),
+        run.root.state.drivers,
+    );
     const withStartDrivers = withDrivers(run.root, drivers);
     const rules = start.rules ?? NO_RULE_CHANGES;
     const { values } = changedValues(withStartDrivers.effects.direct.values, rules);
@@ -79,9 +101,22 @@ export function scheduleInputs(
     return {
         ...startingFrom(run, root),
         script: {
+            city: start.city ?? run.script.city,
             restaurants: start.restaurants.reduce(
                 (restaurants, restaurant) => restaurants.set(restaurant.id, restaurant),
                 run.script.restaurants,
+            ),
+            customers: (start.customers ?? NO_CUSTOMERS).reduce(
+                (customers, customer) => customers.set(customer.id, customer),
+                run.script.customers,
+            ),
+            riders: (start.riders ?? NO_RIDERS).reduce(
+                (riders, rider) => riders.set(rider.driverId, rider),
+                run.script.riders,
+            ),
+            addresses: (start.addresses ?? NO_ADDRESSES).reduce(
+                (addresses, address) => addresses.set(address.id, address),
+                run.script.addresses,
             ),
             steps: scripted.sortBy((step) => step.at.milliseconds),
         },
@@ -89,12 +124,26 @@ export function scheduleInputs(
 }
 
 /** The indirect commit a call follows from, by its label, or null when it names none. */
-function followsFrom(run: IRunState, step: IRunInput): CommitId | null {
-    if (step.after === undefined) {
-        return null;
-    }
-    const commit = run.cache.indirectLabels.get(step.after);
-    return required(commit, `the indirect commit labelled "${step.after}"`);
+const followsFrom = (run: IRunState, step: IRunInput): CommitId | null =>
+    labelledCommit(run.cache, step.after);
+
+/**
+ * The stored address a create order step names, when it is the step's customer's, and the
+ * customer is the restaurant's: the script holds only addresses whose customers it read with
+ * their restaurants, so the address's customer must be the step's (FND-90).
+ */
+function addressOf(
+    run: IRunState,
+    step: IRunInput,
+    restaurant: RestaurantPlace,
+): DeliveryAddress | undefined {
+    const address =
+        step.address === undefined ? undefined : run.script.addresses.get(step.address);
+    const isTheirs =
+        address !== undefined &&
+        address.customerId === step.customer &&
+        run.script.customers.get(address.customerId)?.restaurantId === restaurant.id;
+    return isTheirs ? address : undefined;
 }
 
 function createScriptedOrder(run: IRunState, step: IRunInput, cause: ICause): IInputDone {
@@ -106,7 +155,20 @@ function createScriptedOrder(run: IRunState, step: IRunInput, cause: ICause): II
     if (run.cache.orderIds.has(step.order)) {
         return refused(run, ScriptRefusal.OrderAlreadyCreated);
     }
-    const created = callState(OrdersState.createOrder, run.root.state.orders, step.at, restaurant);
+    const address = addressOf(run, step, restaurant);
+    if (address === undefined) {
+        return refused(run, ScriptRefusal.UnknownAddress);
+    }
+    const madeBy = sessionMaker(run.line);
+    const createOrderFunction = functionInUse(run, FunctionName.OrdersCreateOrder);
+    const created = callState(
+        createOrderFunction,
+        run.root.state.orders,
+        step.at,
+        restaurant,
+        address,
+        madeBy,
+    );
     const applied = applyOrdersStep(run, created, cause);
     return { run: applied, outcome: { isOk: true }, orderId: created.result.order.id };
 }
@@ -114,7 +176,7 @@ function createScriptedOrder(run: IRunState, step: IRunInput, cause: ICause): II
 function performOnOrder(
     run: IRunState,
     step: IRunInput,
-    command: Exclude<InputCommand, typeof InputCommand.CreateOrder>,
+    command: Exclude<OrderCommand, typeof InputCommand.CreateOrder>,
     orderId: OrderId,
     cause: ICause,
 ): ICommandDone {
@@ -168,6 +230,24 @@ function withRefusal(
     return withLog(run, log);
 }
 
+const DRIVER_COMMANDS: readonly InputCommand[] = [
+    InputCommand.Accept,
+    InputCommand.PickUp,
+    InputCommand.Deliver,
+];
+
+/** The records an API call names: its order, once it exists, and the driver who calls. */
+function namedRecords(run: IRunState, step: IRunInput): RecordRef[] {
+    const orderId = run.cache.orderIds.get(step.order);
+    const order: RecordRef[] =
+        orderId === undefined ? [] : [{ kind: RecordKind.Order, id: orderId }];
+    if (!DRIVER_COMMANDS.includes(step.command)) {
+        return order;
+    }
+    const driverId = toDriverId(step.actor);
+    return [...order, { kind: RecordKind.Driver, id: driverId }];
+}
+
 const responseOf = (done: IInputDone): InputResponse =>
     done.outcome.isOk ? { isOk: true, orderId: done.orderId } : done.outcome;
 
@@ -175,7 +255,7 @@ const responseOf = (done: IInputDone): InputResponse =>
  * Logs a step's command, then performs it, so everything it causes traces back to it. A refusal is
  * logged too. The call ends in its input commit, whose response says what came of it.
  */
-export function performInput(run: IRunState, step: IRunInput): IRunState {
+export function performInput(run: IRunState, step: IRunInput, waited?: CommitId): IRunState {
     const at = step.at;
     const started = startSession(run, at);
     const record: RunLogRecord = {
@@ -193,6 +273,8 @@ export function performInput(run: IRunState, step: IRunInput): IRunState {
     const logged = done.outcome.isOk
         ? done.run
         : withRefusal(done.run, step, done.outcome.refusal, sequence);
+    const named = namedRecords(started, step);
+    const reads = readsOfWork(logged, started, named);
     const runState = commitEffect(logged, {
         kind: EffectKind.Input,
         at,
@@ -200,7 +282,13 @@ export function performInput(run: IRunState, step: IRunInput): IRunState {
         command: step.command,
         order: step.order,
         response: responseOf(done),
-        followsFrom: followsFrom(run, step),
+        followsFrom: waited ?? followsFrom(run, step),
+        isOnArrival: waited !== undefined,
+        reads,
     });
-    return finishSession(runState);
+    const finished = finishSession(runState);
+    const isDriverDone = done.outcome.isOk && DRIVER_COMMANDS.includes(step.command);
+    // A driver who accepted, picked up, or delivered sets off for their next stop (FND-90).
+    const driverId = toDriverId(step.actor);
+    return isDriverDone ? setOff(finished, driverId, at) : finished;
 }

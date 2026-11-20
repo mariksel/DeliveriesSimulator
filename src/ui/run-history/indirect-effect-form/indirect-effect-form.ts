@@ -18,6 +18,7 @@ import {
     INDIRECT_CHOICES,
     indirectStatementOf,
 } from './indirect-statement';
+import type { IIndirectFields } from './indirect-statement';
 
 /**
  * A short form to state an indirect effect at the commit shown: a decision or change outside the
@@ -45,6 +46,8 @@ export class IndirectEffectForm {
     });
     protected readonly isLate = computed(() => this.kind() === IndirectKind.RestaurantRunsLate);
     readonly names = input.required<IIndirectNames>();
+    /** Every label the run uses, scripted or by hand, which a new one may not repeat (FND-89). */
+    readonly usedLabels = input<readonly string[]>([]);
     readonly stated = output<IndirectStatement>();
     readonly closed = output();
 
@@ -54,10 +57,14 @@ export class IndirectEffectForm {
         this.problem.set(null);
     }
 
-    protected state(event: SubmitEvent, actor: string, order: string, lateBy: string): void {
+    protected state(
+        event: SubmitEvent,
+        fields: Pick<IIndirectFields, 'actor' | 'order' | 'lateBy' | 'label'>,
+    ): void {
         event.preventDefault();
         const kind = this.kind();
-        const result = indirectStatementOf({ kind, actor, order, lateBy });
+        const used = this.usedLabels();
+        const result = indirectStatementOf({ kind, ...fields }, used);
         if (!result.isOk) {
             this.problem.set(result.problem);
             return;

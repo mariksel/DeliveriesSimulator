@@ -8,6 +8,7 @@ import type { DirectEffect } from './direct-effect';
 import type { IndirectEffect } from './indirect-effect';
 import { EffectKind } from './direct-effect';
 import type { IRunValues } from './run-values';
+import type { FunctionVersions } from './function-lookup';
 
 /**
  * The real service's state: this exists in the real service, and changes only in a transaction.
@@ -22,6 +23,8 @@ export interface IStateRoot {
 export interface IDirectEffects {
     readonly records: List<DirectEffect>;
     readonly values: IRunValues;
+    /** The version of each state function in use, newest at the start (FND-81). */
+    readonly functionVersions: FunctionVersions;
 }
 
 /** What happened outside the service, which it took no part in. */
@@ -54,10 +57,11 @@ export const createMainRoot = (
     state: IStateRoot,
     values: IRunValues,
     randomness: SeededRandom,
+    functionVersions: FunctionVersions,
 ): IMainRoot => ({
     state,
     effects: {
-        direct: { records: List(), values },
+        direct: { records: List(), values, functionVersions },
         indirect: { records: List() },
         randomness,
     },
@@ -87,14 +91,18 @@ export function withStartValues(root: IMainRoot, values: IRunValues): IMainRoot 
 
 /**
  * A root with one more direct effect, sharing the state, the indirect part, and the randomness
- * with the root before it. A config change also puts its values in use.
+ * with the root before it. A config change also puts its values in use, and an implementation
+ * change its function versions (FND-81).
  */
 export function withDirectEffect(root: IMainRoot, record: DirectEffect): IMainRoot {
     const { direct } = root.effects;
     const values = record.kind === EffectKind.ConfigChange ? record.after : direct.values;
+    const functionVersions =
+        record.kind === EffectKind.ImplementationChange ? record.after : direct.functionVersions;
+    const records = direct.records.push(record);
     return {
         ...root,
-        effects: { ...root.effects, direct: { records: direct.records.push(record), values } },
+        effects: { ...root.effects, direct: { ...direct, records, values, functionVersions } },
     };
 }
 

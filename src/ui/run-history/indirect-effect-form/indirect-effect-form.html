@@ -2,7 +2,14 @@
     class="indirect-form"
     data-testid="indirect-form"
     aria-label="State an indirect effect"
-    (submit)="state($event, actor.value, order.value, lateBy.value)"
+    (submit)="
+        state($event, {
+            actor: actor.value,
+            order: order.value,
+            lateBy: lateBy.value,
+            label: label.value
+        })
+    "
 >
     <span class="unseen">Unseen by the service</span>
     <label>
@@ -44,6 +51,16 @@
             data-testid="indirect-late-by"
             appTooltip="How much later the restaurant expects the order ready"
             placeholder="h00:m01:s30:ms00"
+        />
+    </label>
+    <label>
+        Label
+        <input
+            #label
+            type="text"
+            data-testid="indirect-label"
+            appTooltip="Optional: a name a later step can follow from, not one the run already uses"
+            placeholder="none"
         />
     </label>
     <button

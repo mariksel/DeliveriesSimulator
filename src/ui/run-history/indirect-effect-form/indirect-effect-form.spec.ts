@@ -92,4 +92,24 @@ describe('the indirect effect form', () => {
         expect(closings).toBe(1);
         expect(stated).toEqual([]);
     });
+
+    it('states it with a label typed, and refuses one the run already uses', async () => {
+        const { fixture, host, stated } = await form();
+        fixture.componentRef.setInput('usedLabels', ['ignored']);
+        await fixture.whenStable();
+        const label = byTestId(host, 'indirect-label', HTMLInputElement);
+        const state = byTestId(host, 'indirect-state', HTMLButtonElement);
+
+        label.value = 'ignored';
+        state.click();
+        await fixture.whenStable();
+        const problem = byTestId(host, 'indirect-problem', HTMLElement).textContent.trim();
+        label.value = 'again';
+        state.click();
+
+        expect(problem).toBe('The label "ignored" is already used in this run.');
+        expect(stated).toEqual([
+            { kind: 'driver-ignores-request', order: 'A', label: 'again', actor: 'driver-1' },
+        ]);
+    });
 });

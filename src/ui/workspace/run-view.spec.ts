@@ -1,7 +1,11 @@
 import type { ClockSpeed } from '../../application/scenarios/live-scenario-run';
-import { List } from 'immutable';
+import { List, Map as ImmutableMap, OrderedMap } from 'immutable';
+import { OrdersState } from '../../domain/orders/orders-state';
+import { DriversState } from '../../domain/drivers/drivers-state';
+import { DeliveriesState } from '../../domain/drivers/deliveries/deliveries-state';
 import { MAIN_BRANCH } from '../../application-core/simulation-engine/branch-id';
 import { describe, expect, it } from 'vitest';
+import { RUN_START } from '../../domain/simulation-engine/sim-time';
 
 import { LiveRunState } from '../../application/scenarios/live-run-state';
 import type { IWatchedRunStatus } from '../../application/verification/watched-run';
@@ -30,6 +34,8 @@ const STATUS: IWatchedRunStatus = {
     failureMessage: null,
     failureAt: null,
     verdict: null,
+    functionVersions: ImmutableMap(),
+    versionsOfFunction: () => [],
     rules: {
         drivers: V1_DRIVERS_RULES,
         orders: V1_ORDERS_RULES,
@@ -45,6 +51,25 @@ const STATUS: IWatchedRunStatus = {
     breakpoints: [],
     lastHit: null,
     currentBranch: MAIN_BRANCH,
+    followableLabels: [],
+    usedLabels: [],
+    world: {
+        script: {
+            city: null,
+            restaurants: OrderedMap(),
+            customers: OrderedMap(),
+            riders: OrderedMap(),
+            addresses: OrderedMap(),
+            steps: List(),
+        },
+        state: {
+            orders: OrdersState.createNew(),
+            drivers: DriversState.createNew(),
+            deliveries: DeliveriesState.createNew(),
+        },
+        at: RUN_START,
+        rides: ImmutableMap(),
+    },
     names: { drivers: [], restaurants: [], orders: [] },
 };
 

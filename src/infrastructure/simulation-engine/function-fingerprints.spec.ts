@@ -1,10 +1,15 @@
+import type { List } from 'immutable';
 import { describe, expect, it } from 'vitest';
 
 import type { IRunState } from '../../application-core/simulation-engine/run-state';
 import { SimTime } from '../../domain/simulation-engine/sim-time';
 import { Duration } from '../../domain/system/time/duration';
+import { rootOfCall } from '../../application-core/simulation-engine/rebuild-root';
+import { DeliveriesState } from '../../domain/drivers/deliveries/deliveries-state';
+import type { ISentLocation } from '../../domain/drivers/deliveries/sent-location';
+import { REGISTERED_FUNCTIONS } from './function-registry';
 import { STATE_FUNCTIONS, registeredFunctionOf } from './persisted-call';
-import { oneOrderRun, variedRun } from './sample-runs.testing';
+import { oneOrderRun, ridingRun, variedRun } from './sample-runs.testing';
 
 const FNV_OFFSET = 0x811c9dc5;
 const FNV_PRIME = 0x01000193;
@@ -54,42 +59,85 @@ function recalculate(run: IRunState): IRecalculated[] {
             state,
             ...commit.call.args,
         ]);
-        const recalculated = (result as { state: unknown; drivers?: unknown }).state;
-        const drivers = (result as { drivers?: unknown }).drivers;
-        const isSameState = textOf(recalculated) === textOf(commit.root.state[registered.module]);
-        // A Deliveries function that changes the drivers gives their state back too.
-        const isSameDrivers =
-            drivers === undefined || textOf(drivers) === textOf(commit.root.state.drivers);
-        const isExact = isSameState && isSameDrivers;
+        // The engine's own rebuild, as opening a run saved at "minimum" uses it.
+        const rebuilt = rootOfCall(parent, commit.call, REGISTERED_FUNCTIONS);
+        const isExact = textOf(rebuilt.state) === textOf(commit.root.state);
         return [{ functionId: registered.id, text: textOf(result), isExact }];
+    });
+}
+
+const SINGLE_SEND = 'drivers.deliveries.receive-location@1';
+
+/**
+ * The single-send version, still registered for runs saved before sends were batched, called
+ * again for each one-driver batch of a run with the same arguments it was given before (FND-90).
+ */
+function recalculateSingleSends(run: IRunState): IRecalculated[] {
+    const commits = run.line.commits.valueSeq().toArray();
+    return commits.flatMap((commit, index) => {
+        if (commit.call?.fn !== DeliveriesState.receiveLocations) {
+            return [];
+        }
+        const parent = index === 0 ? run.line.start : commits[index - 1]!.root;
+        const [drivers, at, sends, madeBy] = commit.call.args as [
+            unknown,
+            unknown,
+            List<ISentLocation>,
+            unknown,
+        ];
+        if (sends.size !== 1) {
+            return [];
+        }
+        const send = sends.first()!;
+        const { deliveries } = parent.state;
+        const args = [deliveries, drivers, at, send.driverId, send.coordinates, madeBy];
+        const result: unknown = Reflect.apply(DeliveriesState.receiveLocation, undefined, args);
+        return [{ functionId: SINGLE_SEND, text: textOf(result), isExact: true }];
     });
 }
 
 /**
  * What each function gave across the sample runs, pinned. A behaviour change fails here: register
  * the changed function under a new version, keeping the old one, and pin the new version. Only a
- * change shown to give the same results may update a pin in place.
+ * change shown to give the same results may update a pin in place. Every pin was updated in place
+ * once, when each version came to name its maker and each result the versions it made, as no
+ * run had been saved yet (FND-81). The user had them updated in place again when orders came to
+ * hold their address, which changed the shape of the state: every saved run that made an order
+ * is refused, so none replays differently (FND-90). They had them updated in place a third time
+ * when a driver's status and location came to have versions of their own: every saved run with
+ * drivers kept as before is refused (FND-81, FND-90). And a fourth when an order's status came to
+ * be read from its events: every saved run with orders kept as before is refused (FND-73). And a
+ * fifth when Deliveries' copy of an order came to have versions of its own: every saved run with
+ * deliveries kept as before is refused (FND-81).
  */
 const PINNED: readonly [string, string][] = [
-    ['orders.create-order@1', 'dab267b1'],
-    ['orders.request-delivery@1', 'ba9dd85b'],
-    ['orders.mark-ready@1', '7ea1b84d'],
-    ['orders.pick-up@1', 'b8f4ce7b'],
-    ['orders.deliver@1', '9f1c55bd'],
-    ['orders.complete-handoff@1', 'd040602d'],
-    ['orders.read-deliveries-event@1', '471d09ad'],
-    ['orders.record-deliveries-event-read@1', '753ba88d'],
-    ['drivers.deliveries.receive-delivery-request@1', '1de198d5'],
-    ['drivers.deliveries.answer-from-orders@1', '2876218b'],
-    ['drivers.deliveries.accept-request@1', '50dc008e'],
-    ['drivers.deliveries.notify-next-driver@1', '11264571'],
-    ['drivers.deliveries.read-orders-event@1', '00347cb1'],
-    ['drivers.deliveries.record-orders-event-read@1', '30fbec3b'],
+    ['orders.create-order@1', 'dd7ff581'],
+    ['orders.request-delivery@1', '596440d9'],
+    ['orders.mark-ready@1', 'ffab93b7'],
+    ['orders.pick-up@1', 'f524b3c7'],
+    ['orders.deliver@1', '22abc4d8'],
+    ['orders.complete-handoff@1', 'e8733523'],
+    ['orders.read-deliveries-event@1', '4df210d5'],
+    ['orders.record-deliveries-event-read@1', 'f04d9e3e'],
+    ['drivers.deliveries.receive-delivery-request@1', '2a4a7721'],
+    ['drivers.deliveries.answer-from-orders@1', 'd750fa94'],
+    ['drivers.deliveries.accept-request@1', '2b58d679'],
+    ['drivers.deliveries.notify-next-driver@1', '200b12e1'],
+    ['drivers.deliveries.read-orders-event@1', 'e3c555a2'],
+    ['drivers.deliveries.record-orders-event-read@1', '8cd493d0'],
+    ['drivers.deliveries.receive-location@1', 'af7de969'],
+    ['drivers.deliveries.receive-locations@1', 'af7de969'],
 ];
 
 const ONE_ORDER = oneOrderRun();
 const VARIED = variedRun();
-const RECALCULATED = [...recalculate(ONE_ORDER), ...recalculate(VARIED)];
+const RIDING = ridingRun();
+const RECALCULATED = [
+    ...recalculate(ONE_ORDER),
+    ...recalculate(VARIED),
+    ...recalculate(RIDING),
+    ...recalculateSingleSends(RIDING),
+];
 const IDS = STATE_FUNCTIONS.map((registered) => registered.id).toArray();
 
 /** One fingerprint for each function, of everything it gave across the sample runs. */

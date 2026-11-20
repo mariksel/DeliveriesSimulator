@@ -1,0 +1,261 @@
+# Initiative I03 — Full V1.0.0 lifecycle and rules
+
+| Field | Value |
+| --- | --- |
+| ID | `I03` |
+| Status | Ready |
+| Priority | High |
+| Created | 2026-11-03 |
+| Last updated | 2026-11-10 |
+| Completed | Not completed |
+
+Stage 2 of the [implementation roadmap](../../../design/roadmap/implementation-roadmap.md):
+every path, command, and rule of `V1.0.0`, built on the run history that
+[FND-81](../../../design/decisions/project-foundation/run-history.md#fnd-81--runs-as-a-tree-of-state-transitions)
+describes.
+
+Linked design and decision documents remain authoritative for product rules and
+architecture; the backlog is canonical for work lifecycle.
+
+## Initiative summary
+
+- **Non-archived**
+  - [I03-E03 — Paths and commands](I03-E03-paths-and-commands/I03-E03-paths-and-commands-backlog.md) — Ready — Last updated: 2026-11-11 — Priority: High
+    - [I03-E03-007 — Failed delivery path](I03-E03-paths-and-commands/High/I03-E03-007-failed-delivery-path.md) — Proposed — Last updated: 2026-11-11 — Priority: High
+    - [I03-E03-012 — Driver status and location](I03-E03-paths-and-commands/High/I03-E03-012-driver-status-and-location.md) — Proposed — Last updated: 2026-11-11 — Priority: High
+    - [I03-E03-002 — Scenario library](I03-E03-paths-and-commands/High/I03-E03-002-scenario-library.md) — Ready — Last updated: 2026-11-09 — Priority: High
+    - [I03-E03-001 — Manual mode](I03-E03-paths-and-commands/High/I03-E03-001-manual-mode.md) — Ready — Last updated: 2026-11-08 — Priority: High
+    - [I03-E03-015 — Back-office driver accounts and lockout](I03-E03-paths-and-commands/High/I03-E03-015-back-office-driver-accounts-and-lockout.md) — Proposed — Last updated: 2026-11-07 — Priority: High
+    - [I03-E03-003 — Idempotency keys and replayed answers](I03-E03-paths-and-commands/High/I03-E03-003-idempotency-keys-and-replayed-answers.md) — Proposed — Last updated: 2026-11-05 — Priority: High
+    - [I03-E03-004 — Reject, ignore, and cancel acceptance](I03-E03-paths-and-commands/High/I03-E03-004-reject-ignore-and-cancel-acceptance.md) — Proposed — Last updated: 2026-11-05 — Priority: High
+    - [I03-E03-005 — Pending command requests](I03-E03-paths-and-commands/High/I03-E03-005-pending-command-requests.md) — Proposed — Last updated: 2026-11-05 — Priority: High
+    - [I03-E03-006 — Restaurant cancel of a request, and order cancel](I03-E03-paths-and-commands/High/I03-E03-006-restaurant-cancel-of-a-request-and-order-cancel.md) — Proposed — Last updated: 2026-11-05 — Priority: High
+    - [I03-E03-008 — Cash confirmation path](I03-E03-paths-and-commands/High/I03-E03-008-cash-confirmation-path.md) — Proposed — Last updated: 2026-11-05 — Priority: High
+    - [I03-E03-009 — Reassignment path](I03-E03-paths-and-commands/High/I03-E03-009-reassignment-path.md) — Proposed — Last updated: 2026-11-05 — Priority: High
+    - [I03-E03-010 — Return path](I03-E03-paths-and-commands/High/I03-E03-010-return-path.md) — Proposed — Last updated: 2026-11-05 — Priority: High
+    - [I03-E03-011 — Payment return path](I03-E03-paths-and-commands/High/I03-E03-011-payment-return-path.md) — Proposed — Last updated: 2026-11-05 — Priority: High
+    - [I03-E03-013 — Devices and push registration](I03-E03-paths-and-commands/High/I03-E03-013-devices-and-push-registration.md) — Proposed — Last updated: 2026-11-05 — Priority: High
+    - [I03-E03-014 — Sessions, session cache, and rate limits](I03-E03-paths-and-commands/High/I03-E03-014-sessions-session-cache-and-rate-limits.md) — Proposed — Last updated: 2026-11-05 — Priority: High
+  - [I03-E04 — Business rules](I03-E04-business-rules/I03-E04-business-rules-backlog.md) — Ready — Last updated: 2026-11-11 — Priority: High
+    - [I03-E04-005 — Routing interface and stand-in](I03-E04-business-rules/High/I03-E04-005-routing-interface-and-stand-in.md) — Proposed — Last updated: 2026-11-11 — Priority: High
+    - [I03-E04-001 — Money, prices, and commission](I03-E04-business-rules/High/I03-E04-001-money-prices-and-commission.md) — Ready — Last updated: 2026-11-08 — Priority: High
+    - [I03-E04-007 — Rule evaluation log](I03-E04-business-rules/High/I03-E04-007-rule-evaluation-log.md) — Proposed — Last updated: 2026-11-08 — Priority: High
+    - [I03-E04-003 — Eligibility rules in full](I03-E04-business-rules/High/I03-E04-003-eligibility-rules-in-full.md) — Proposed — Last updated: 2026-11-07 — Priority: High
+    - [I03-E04-004 — Ranking and the dispatch sequence](I03-E04-business-rules/High/I03-E04-004-ranking-and-the-dispatch-sequence.md) — Proposed — Last updated: 2026-11-07 — Priority: High
+    - [I03-E04-002 — Order creation validation](I03-E04-business-rules/High/I03-E04-002-order-creation-validation.md) — Proposed — Last updated: 2026-11-05 — Priority: High
+    - [I03-E04-006 — Rule traceability](I03-E04-business-rules/High/I03-E04-006-rule-traceability.md) — Proposed — Last updated: 2026-11-05 — Priority: High
+    - [I03-E04-008 — Decision explainer](I03-E04-business-rules/High/I03-E04-008-decision-explainer.md) — Proposed — Last updated: 2026-11-05 — Priority: High
+    - [I03-E04-009 — Eligibility inspector](I03-E04-business-rules/High/I03-E04-009-eligibility-inspector.md) — Proposed — Last updated: 2026-11-05 — Priority: High
+    - [I03-E04-010 — Score breakdown](I03-E04-business-rules/High/I03-E04-010-score-breakdown.md) — Proposed — Last updated: 2026-11-05 — Priority: High
+    - [I03-E04-011 — Eligibility funnel](I03-E04-business-rules/High/I03-E04-011-eligibility-funnel.md) — Proposed — Last updated: 2026-11-05 — Priority: High
+  - [I03-E06 — Explaining views](I03-E06-explaining-views/I03-E06-explaining-views-backlog.md) — Ready — Last updated: 2026-11-08 — Priority: High
+    - [I03-E06-012 — Data model view](I03-E06-explaining-views/High/I03-E06-012-data-model-view.md) — Ready — Last updated: 2026-11-08 — Priority: High
+    - [I03-E06-014 — Copy consistency check](I03-E06-explaining-views/High/I03-E06-014-copy-consistency-check.md) — Ready — Last updated: 2026-11-08 — Priority: High
+    - [I03-E06-008 — Event search](I03-E06-explaining-views/High/I03-E06-008-event-search.md) — Ready — Last updated: 2026-11-06 — Priority: High
+    - [I03-E06-001 — Lifecycle state diagram](I03-E06-explaining-views/High/I03-E06-001-lifecycle-state-diagram.md) — Proposed — Last updated: 2026-11-05 — Priority: High
+    - [I03-E06-002 — Allowed actions panel](I03-E06-explaining-views/High/I03-E06-002-allowed-actions-panel.md) — Proposed — Last updated: 2026-11-05 — Priority: High
+    - [I03-E06-003 — Custody view](I03-E06-explaining-views/High/I03-E06-003-custody-view.md) — Proposed — Last updated: 2026-11-05 — Priority: High
+    - [I03-E06-004 — Custody chain](I03-E06-explaining-views/High/I03-E06-004-custody-chain.md) — Proposed — Last updated: 2026-11-05 — Priority: High
+    - [I03-E06-005 — Cash ledger](I03-E06-explaining-views/High/I03-E06-005-cash-ledger.md) — Proposed — Last updated: 2026-11-05 — Priority: High
+    - [I03-E06-006 — Order cash chain](I03-E06-explaining-views/High/I03-E06-006-order-cash-chain.md) — Proposed — Last updated: 2026-11-05 — Priority: High
+    - [I03-E06-009 — Event kind catalogue](I03-E06-explaining-views/High/I03-E06-009-event-kind-catalogue.md) — Proposed — Last updated: 2026-11-05 — Priority: High
+    - [I03-E06-010 — Command journal](I03-E06-explaining-views/High/I03-E06-010-command-journal.md) — Proposed — Last updated: 2026-11-05 — Priority: High
+    - [I03-E06-011 — Pending command view](I03-E06-explaining-views/High/I03-E06-011-pending-command-view.md) — Proposed — Last updated: 2026-11-05 — Priority: High
+    - [I03-E06-013 — Idempotency record view](I03-E06-explaining-views/High/I03-E06-013-idempotency-record-view.md) — Proposed — Last updated: 2026-11-05 — Priority: High
+    - [I03-E06-015 — Session and device view](I03-E06-explaining-views/High/I03-E06-015-session-and-device-view.md) — Proposed — Last updated: 2026-11-05 — Priority: High
+    - [I03-E06-016 — Location track view](I03-E06-explaining-views/High/I03-E06-016-location-track-view.md) — Proposed — Last updated: 2026-11-05 — Priority: High
+    - [I03-E06-017 — Request generation view](I03-E06-explaining-views/High/I03-E06-017-request-generation-view.md) — Proposed — Last updated: 2026-11-05 — Priority: High
+    - [I03-E06-019 — Order criteria check](I03-E06-explaining-views/High/I03-E06-019-order-criteria-check.md) — Proposed — Last updated: 2026-11-05 — Priority: High
+  - [I03-E07 — Run tools and workspace](I03-E07-run-tools-and-workspace/I03-E07-run-tools-and-workspace-backlog.md) — Proposed — Last updated: 2026-11-08 — Priority: High
+    - [I03-E07-007 — Linked selection](I03-E07-run-tools-and-workspace/High/I03-E07-007-linked-selection.md) — Proposed — Last updated: 2026-11-08 — Priority: High
+    - [I03-E07-001 — Scenario recorder](I03-E07-run-tools-and-workspace/High/I03-E07-001-scenario-recorder.md) — Proposed — Last updated: 2026-11-05 — Priority: High
+    - [I03-E07-002 — Checks from a run](I03-E07-run-tools-and-workspace/High/I03-E07-002-checks-from-a-run.md) — Proposed — Last updated: 2026-11-05 — Priority: High
+    - [I03-E07-003 — Criteria tracker](I03-E07-run-tools-and-workspace/High/I03-E07-003-criteria-tracker.md) — Proposed — Last updated: 2026-11-05 — Priority: High
+    - [I03-E07-004 — Violation summary](I03-E07-run-tools-and-workspace/High/I03-E07-004-violation-summary.md) — Proposed — Last updated: 2026-11-05 — Priority: High
+    - [I03-E07-005 — Stuck-order detection](I03-E07-run-tools-and-workspace/High/I03-E07-005-stuck-order-detection.md) — Proposed — Last updated: 2026-11-05 — Priority: High
+    - [I03-E07-006 — Detail level switch](I03-E07-run-tools-and-workspace/High/I03-E07-006-detail-level-switch.md) — Proposed — Last updated: 2026-11-05 — Priority: High
+    - [I03-E07-008 — Glossary](I03-E07-run-tools-and-workspace/High/I03-E07-008-glossary.md) — Proposed — Last updated: 2026-11-05 — Priority: High
+  - [I03-E08 — Stage gate](I03-E08-stage-gate/I03-E08-stage-gate-backlog.md) — Proposed — Last updated: 2026-11-08 — Priority: High
+    - [I03-E08-001 — I03 stage gate](I03-E08-stage-gate/High/I03-E08-001-i03-stage-gate.md) — Proposed — Last updated: 2026-11-08 — Priority: High
+  - [I03-E05 — Push, devices, and jobs](I03-E05-push-devices-and-jobs/I03-E05-push-devices-and-jobs-backlog.md) — Proposed — Last updated: 2026-11-07 — Priority: High
+    - [I03-E05-005 — Notification sequence view](I03-E05-push-devices-and-jobs/High/I03-E05-005-notification-sequence-view.md) — Proposed — Last updated: 2026-11-07 — Priority: High
+    - [I03-E05-001 — Push pipeline](I03-E05-push-devices-and-jobs/High/I03-E05-001-push-pipeline.md) — Proposed — Last updated: 2026-11-05 — Priority: High
+    - [I03-E05-002 — Device model](I03-E05-push-devices-and-jobs/High/I03-E05-002-device-model.md) — Proposed — Last updated: 2026-11-05 — Priority: High
+    - [I03-E05-003 — Restaurant notifications job](I03-E05-push-devices-and-jobs/High/I03-E05-003-restaurant-notifications-job.md) — Proposed — Last updated: 2026-11-05 — Priority: High
+    - [I03-E05-004 — Cleanup jobs and retention](I03-E05-push-devices-and-jobs/High/I03-E05-004-cleanup-jobs-and-retention.md) — Proposed — Last updated: 2026-11-05 — Priority: High
+    - [I03-E05-006 — Job schedule view](I03-E05-push-devices-and-jobs/High/I03-E05-006-job-schedule-view.md) — Proposed — Last updated: 2026-11-05 — Priority: High
+- **Archived**
+  - [I03-E09 — City and map](Archive/Done/I03-E09-city-and-map/I03-E09-city-and-map-backlog.md) — Archived — Done — Last updated: 2026-11-12 — Priority: High
+    - [I03-E09-010 — Records split by change rate](Archive/Done/I03-E09-city-and-map/Archive/Done/High/I03-E09-010-records-split-by-change-rate.md) — Archived — Done — Last updated: 2026-11-12 — Priority: High
+      - Phases:
+        - `I03-E09-010-P01` — An order's status from its events — Done — Last updated: 2026-11-12
+        - `I03-E09-010-P02` — Deliveries' copy of the order — Done — Last updated: 2026-11-12
+    - [I03-E09-008 — Location sends at city scale](Archive/Done/I03-E09-city-and-map/Archive/Done/Normal/I03-E09-008-location-sends-at-city-scale.md) — Archived — Done — Last updated: 2026-11-12 — Priority: Normal
+      - Phases:
+        - `I03-E09-008-P01` — Batched sends — Done — Last updated: 2026-11-12
+        - `I03-E09-008-P02` — The driver in four parts — Done — Last updated: 2026-11-12
+        - `I03-E09-008-P03` — City scale — Done — Last updated: 2026-11-12
+    - [I03-E09-002 — Delivery addresses](Archive/Done/I03-E09-city-and-map/Archive/Done/High/I03-E09-002-delivery-addresses.md) — Archived — Done — Last updated: 2026-11-11 — Priority: High
+      - Phases:
+        - `I03-E09-002-P01` — Customers and addresses — Done — Last updated: 2026-11-11
+        - `I03-E09-002-P02` — Orders carry them — Done — Last updated: 2026-11-11
+        - `I03-E09-002-P03` — Addresses on the map — Done — Last updated: 2026-11-11
+    - [I03-E09-003 — Map view](Archive/Done/I03-E09-city-and-map/Archive/Done/High/I03-E09-003-map-view.md) — Archived — Done — Last updated: 2026-11-11 — Priority: High
+      - Phases:
+        - `I03-E09-003-P01` — What the map shows, worked out in the UI — Done — Last updated: 2026-11-11
+        - `I03-E09-003-P02` — The Map tab — Done — Last updated: 2026-11-11
+        - `I03-E09-003-P03` — Zoom, pan, and Fit — Done — Last updated: 2026-11-11
+    - [I03-E09-004 — Map legibility](Archive/Done/I03-E09-city-and-map/Archive/Done/High/I03-E09-004-map-legibility.md) — Archived — Done — Last updated: 2026-11-11 — Priority: High
+      - Phases:
+        - `I03-E09-004-P01` — Icons, sizes, zoom growth, and selection — Done — Last updated: 2026-11-11
+    - [I03-E09-005 — Streets and routing](Archive/Done/I03-E09-city-and-map/Archive/Done/High/I03-E09-005-streets-and-routing.md) — Archived — Done — Last updated: 2026-11-11 — Priority: High
+      - Phases:
+        - `I03-E09-005-P01` — The street grid — Done — Last updated: 2026-11-11
+        - `I03-E09-005-P02` — Routes — Done — Last updated: 2026-11-11
+        - `I03-E09-005-P03` — Streets on the map — Done — Last updated: 2026-11-11
+    - [I03-E09-006 — Drivers on the move](Archive/Done/I03-E09-city-and-map/Archive/Done/High/I03-E09-006-drivers-on-the-move.md) — Archived — Done — Last updated: 2026-11-11 — Priority: High
+      - Phases:
+        - `I03-E09-006-P01` — Location sending — Done — Last updated: 2026-11-11
+        - `I03-E09-006-P02` — Riding — Done — Last updated: 2026-11-11
+        - `I03-E09-006-P03` — The map and the demonstration — Done — Last updated: 2026-11-11
+    - [I03-E09-007 — Demonstration scenario](Archive/Done/I03-E09-city-and-map/Archive/Done/High/I03-E09-007-demonstration-scenario.md) — Archived — Done — Last updated: 2026-11-11 — Priority: High
+    - [I03-E09-009 — Drivers wait at their area's waiting point](Archive/Done/I03-E09-city-and-map/Archive/Done/High/I03-E09-009-drivers-wait-at-area-waiting-point.md) — Archived — Done — Last updated: 2026-11-11 — Priority: High
+      - Phases:
+        - `I03-E09-009-P01` — Waiting points — Done — Last updated: 2026-11-11
+        - `I03-E09-009-P02` — Riding to wait — Done — Last updated: 2026-11-11
+        - `I03-E09-009-P03` — The map and the demonstration — Done — Last updated: 2026-11-11
+    - [I03-E09-001 — Simple city](Archive/Done/I03-E09-city-and-map/Archive/Done/High/I03-E09-001-simple-city.md) — Archived — Done — Last updated: 2026-11-10 — Priority: High
+      - Phases:
+        - `I03-E09-001-P01` — The city in Map and routing — Done — Last updated: 2026-11-10
+        - `I03-E09-001-P02` — The city in scenarios — Done — Last updated: 2026-11-10
+        - `I03-E09-001-P03` — Stored scenarios and saved runs — Done — Last updated: 2026-11-10
+  - [I03-E02 — Run history](Archive/Done/I03-E02-run-history/I03-E02-run-history-backlog.md) — Archived — Done — Last updated: 2026-11-10 — Priority: High
+    - [I03-E02-009 — Snapshot tests](Archive/Done/I03-E02-run-history/Archive/Done/High/I03-E02-009-snapshot-tests.md) — Archived — Done — Last updated: 2026-11-10 — Priority: High
+      - Phases:
+        - `I03-E02-009-P01` — Rerunning with own and newest versions, in the core — Done — Last updated: 2026-11-10
+        - `I03-E02-009-P02` — The repository's saved runs, in `npm run check` — Done — Last updated: 2026-11-10
+        - `I03-E02-009-P03` — The Snapshot test action — Done — Last updated: 2026-11-10
+    - [I03-E02-026 — Implementation change and the use step](Archive/Done/I03-E02-run-history/Archive/Done/High/I03-E02-026-implementation-change-and-the-use-step.md) — Archived — Done — Last updated: 2026-11-10 — Priority: High
+      - Phases:
+        - `I03-E02-026-P01` — The implementation change commit, and schema version 2 — Done — Last updated: 2026-11-10
+        - `I03-E02-026-P02` — The `use` step — Done — Last updated: 2026-11-10
+        - `I03-E02-026-P03` — Switching in the Rules panel, forks, and Repeat — Done — Last updated: 2026-11-10
+    - [I03-E02-024 — Saved-run screens and deleting branches](Archive/Done/I03-E02-run-history/Archive/Done/High/I03-E02-024-saved-run-screens-and-deleting-branches.md) — Archived — Done — Last updated: 2026-11-10 — Priority: High
+      - Phases:
+        - `I03-E02-024-P01` — Save, from the run controls — Done — Last updated: 2026-11-10
+        - `I03-E02-024-P02` — The list of saved runs, and opening one — Done — Last updated: 2026-11-10
+        - `I03-E02-024-P03` — Deleting a branch — Done — Last updated: 2026-11-10
+    - [I03-E02-008 — Saved runs at two levels](Archive/Done/I03-E02-run-history/Archive/Done/High/I03-E02-008-saved-runs-at-two-levels.md) — Archived — Done — Last updated: 2026-11-09 — Priority: High
+      - Phases:
+        - `I03-E02-008-P01` — Asynchronous storage in IndexedDB, with a schema version — Done — Last updated: 2026-11-09
+        - `I03-E02-008-P02` — "Minimum", rebuilt from calls with progress — Done — Last updated: 2026-11-09
+        - `I03-E02-008-P03` — Moving between levels, measured on a city day — Done — Last updated: 2026-11-09
+        - `I03-E02-008-P04` — The shared form at "everything" — Done — Last updated: 2026-11-09
+    - [I03-E02-015 — Timeline views](Archive/Done/I03-E02-run-history/Archive/Done/High/I03-E02-015-timeline-views.md) — Archived — Done — Last updated: 2026-11-09 — Priority: High
+      - Phases:
+        - `I03-E02-015-P01` — The orders and drivers each commit touched — Cancelled — Last updated: 2026-11-09
+        - `I03-E02-015-P02` — The views by order and by driver — Done — Last updated: 2026-11-09
+        - `I03-E02-015-P03` — The switch, the highlight, and an order's versions — Done — Last updated: 2026-11-09
+        - `I03-E02-015-P04` — A city day followed live, and the pages — Done — Last updated: 2026-11-09
+    - [I03-E02-016 — Gaps, filter, and collapsed runs](Archive/Done/I03-E02-run-history/Archive/Done/High/I03-E02-016-gaps-filter-and-collapsed-runs.md) — Archived — Done — Last updated: 2026-11-09 — Priority: High
+      - Phases:
+        - `I03-E02-016-P01` — The filter, and collapsed empty job runs — Done — Last updated: 2026-11-09
+        - `I03-E02-016-P02` — Gap rows and the threshold — Done — Last updated: 2026-11-09
+        - `I03-E02-016-P03` — The axis, with rows of varying height — Done — Last updated: 2026-11-09
+    - [I03-E02-021 — Links across the sub-roots](Archive/Done/I03-E02-run-history/Archive/Done/High/I03-E02-021-links-across-the-sub-roots.md) — Archived — Done — Last updated: 2026-11-09 — Priority: High
+      - Phases:
+        - `I03-E02-021-P01` — Versions that name the work that made them — Done — Last updated: 2026-11-09
+        - `I03-E02-021-P02` — Effects that list the versions they read — Done — Last updated: 2026-11-09
+        - `I03-E02-021-P03` — The maker survives saving — Done — Last updated: 2026-11-09
+        - `I03-E02-021-P04` — One query module — Done — Last updated: 2026-11-09
+        - `I03-E02-021-P05` — An index for city scale — Done — Last updated: 2026-11-09
+    - [I03-E02-022 — Indirect effect labels and config change links](Archive/Done/I03-E02-run-history/Archive/Done/High/I03-E02-022-indirect-effect-labels-and-config-change-links.md) — Archived — Done — Last updated: 2026-11-09 — Priority: High
+      - Phases:
+        - `I03-E02-022-P01` — A config change that follows from an indirect commit — Done — Last updated: 2026-11-09
+        - `I03-E02-022-P02` — Labels in the form, and picking one in the Rules panel — Done — Last updated: 2026-11-09
+    - [I03-E02-023 — Versioned scenario storage](Archive/Done/I03-E02-run-history/Archive/Done/High/I03-E02-023-versioned-scenario-storage.md) — Archived — Done — Last updated: 2026-11-09 — Priority: High
+      - Phases:
+        - `I03-E02-023-P01` — Scenario versions, in the core — Done — Last updated: 2026-11-09
+        - `I03-E02-023-P02` — Their storage in IndexedDB — Done — Last updated: 2026-11-09
+    - [I03-E02-025 — Function versions](Archive/Done/I03-E02-run-history/Archive/Done/High/I03-E02-025-function-versions.md) — Archived — Done — Last updated: 2026-11-09 — Priority: High
+      - Phases:
+        - `I03-E02-025-P01` — The registry by name and version, and the lookup — Done — Last updated: 2026-11-09
+        - `I03-E02-025-P02` — Calling through the versions a run holds — Done — Last updated: 2026-11-09
+    - [I03-E02-011 — Step debugger](Archive/Done/I03-E02-run-history/Archive/Done/High/I03-E02-011-step-debugger.md) — Archived — Done — Last updated: 2026-11-08 — Priority: High
+      - Phases:
+        - `I03-E02-011-P01` — Breakpoints and what they match, in the core — Done — Last updated: 2026-11-08
+        - `I03-E02-011-P02` — The run pauses at a hit, and goes on — Done — Last updated: 2026-11-08
+        - `I03-E02-011-P03` — The Breakpoints tab, and setting one from an event — Done — Last updated: 2026-11-08
+    - [I03-E02-013 — Indirect effects stated by hand](Archive/Done/I03-E02-run-history/Archive/Done/High/I03-E02-013-indirect-effects-stated-by-hand.md) — Archived — Done — Last updated: 2026-11-08 — Priority: High
+      - Phases:
+        - `I03-E02-013-P01` — The indirect commit, in the core — Done — Last updated: 2026-11-08
+        - `I03-E02-013-P02` — Stating one in a scenario and in a live run — Done — Last updated: 2026-11-08
+        - `I03-E02-013-P03` — The action, and the unaware span on the timeline — Done — Last updated: 2026-11-08
+    - [I03-E02-014 — Zoomable timeline](Archive/Done/I03-E02-run-history/Archive/Done/High/I03-E02-014-zoomable-timeline.md) — Archived — Done — Last updated: 2026-11-08 — Priority: High
+      - Phases:
+        - `I03-E02-014-P05` — Forks renamed branches — Done — Last updated: 2026-11-07
+        - `I03-E02-014-P01` — The grid of branches and commits, worked out — Done — Last updated: 2026-11-07
+        - `I03-E02-014-P02` — The watched run shows any commit of any branch — Done — Last updated: 2026-11-07
+        - `I03-E02-014-P03` — The timeline panel in place of the event list — Done — Last updated: 2026-11-07
+        - `I03-E02-014-P04` — Links between modules, and the pages — Done — Last updated: 2026-11-08
+    - [I03-E02-002 — Records split with version chains](Archive/Done/I03-E02-run-history/Archive/Done/High/I03-E02-002-records-split-with-version-chains.md) — Archived — Done — Last updated: 2026-11-07 — Priority: High
+    - [I03-E02-010 — Time-travel replay](Archive/Done/I03-E02-run-history/Archive/Done/High/I03-E02-010-time-travel-replay.md) — Archived — Done — Last updated: 2026-11-07 — Priority: High
+      - Phases:
+        - `I03-E02-010-P01` — Moving between commits, and repeating from one, in the core — Done — Last updated: 2026-11-07
+        - `I03-E02-010-P02` — The watched run moves, and repeats from where it is — Done — Last updated: 2026-11-07
+        - `I03-E02-010-P03` — Back, Forward, the slider, and Repeat from here — Done — Last updated: 2026-11-07
+    - [I03-E02-012 — Forks and named timelines](Archive/Done/I03-E02-run-history/Archive/Done/High/I03-E02-012-forks-and-named-timelines.md) — Archived — Done — Last updated: 2026-11-07 — Priority: High
+      - Phases:
+        - `I03-E02-012-P01` — A run as a tree of timelines, in the core — Done — Last updated: 2026-11-07
+        - `I03-E02-012-P02` — Saved runs and verdicts for every timeline — Done — Last updated: 2026-11-07
+        - `I03-E02-012-P03` — The watched run forks, switches, and renames — Done — Last updated: 2026-11-07
+        - `I03-E02-012-P04` — The Timelines tab and Fork here — Done — Last updated: 2026-11-07
+    - [I03-E02-017 — Measure a city day with commits](Archive/Done/I03-E02-run-history/Archive/Done/High/I03-E02-017-measure-a-city-day-with-commits.md) — Archived — Done — Last updated: 2026-11-07 — Priority: High
+    - [I03-E02-019 — Types owned by their modules](Archive/Done/I03-E02-run-history/Archive/Done/High/I03-E02-019-types-owned-by-their-modules.md) — Archived — Done — Last updated: 2026-11-07 — Priority: High
+      - Phases:
+        - `I03-E02-019-P01` — Module map and pages — Done — Last updated: 2026-11-07
+        - `I03-E02-019-P02` — Modules moved into place — Done — Last updated: 2026-11-07
+        - `I03-E02-019-P03` — Rules into their modules — Done — Last updated: 2026-11-07
+        - `I03-E02-019-P04` — The System module and time as an interface — Done — Last updated: 2026-11-07
+        - `I03-E02-019-P05` — Branded numbers to their owners — Done — Last updated: 2026-11-07
+        - `I03-E02-019-P06` — IDs beside their classes — Done — Last updated: 2026-11-07
+    - [I03-E02-020 — System submodules](Archive/Done/I03-E02-run-history/Archive/Done/High/I03-E02-020-system-submodules.md) — Archived — Done — Last updated: 2026-11-07 — Priority: High
+      - Phases:
+        - `I03-E02-020-P01` — System's own files into time, randomness, and math — Done — Last updated: 2026-11-07
+        - `I03-E02-020-P02` — The helpers into validation, classes, and digests — Done — Last updated: 2026-11-07
+        - `I03-E02-020-P03` — The version chain and the inbox position into records and messaging — Done — Last updated: 2026-11-07
+        - `I03-E02-020-P04` — Infrastructure's shared files into its System submodules — Done — Last updated: 2026-11-07
+    - [I03-E02-006 — Simulator data worked out](Archive/Done/I03-E02-run-history/Archive/Done/High/I03-E02-006-simulator-data-worked-out.md) — Archived — Done — Last updated: 2026-11-06 — Priority: High
+    - [I03-E02-007 — Function identity and the repository](Archive/Done/I03-E02-run-history/Archive/Done/High/I03-E02-007-function-identity-and-the-repository.md) — Archived — Done — Last updated: 2026-11-06 — Priority: High
+    - [I03-E02-018 — Typed core](Archive/Done/I03-E02-run-history/Archive/Done/High/I03-E02-018-typed-core.md) — Archived — Done — Last updated: 2026-11-06 — Priority: High
+      - Phases:
+        - `I03-E02-018-P01` — Typed log entries — Done — Last updated: 2026-11-06
+        - `I03-E02-018-P07` — Application.Core layer — Done — Last updated: 2026-11-06
+        - `I03-E02-018-P02` — Typed refusals and effect data — Done — Last updated: 2026-11-06
+        - `I03-E02-018-P03` — Scenario files read in Infrastructure — Done — Last updated: 2026-11-06
+        - `I03-E02-018-P04` — Digest and comparison over typed entries — Done — Last updated: 2026-11-06
+        - `I03-E02-018-P08` — Domain types as immutable classes — Done — Last updated: 2026-11-06
+        - `I03-E02-018-P05` — Typed fixed sets and identities — Done — Last updated: 2026-11-06
+        - `I03-E02-018-P06` — Branded times, durations, counts, and amounts — Done — Last updated: 2026-11-06
+    - [I03-E02-001 — Run history design page](Archive/Done/I03-E02-run-history/Archive/Done/High/I03-E02-001-run-history-design-page.md) — Archived — Done — Last updated: 2026-11-05 — Priority: High
+    - [I03-E02-003 — Commits and the main root](Archive/Done/I03-E02-run-history/Archive/Done/High/I03-E02-003-commits-and-the-main-root.md) — Archived — Done — Last updated: 2026-11-05 — Priority: High
+    - [I03-E02-004 — Work split into transactions](Archive/Done/I03-E02-run-history/Archive/Done/High/I03-E02-004-work-split-into-transactions.md) — Archived — Done — Last updated: 2026-11-05 — Priority: High
+    - [I03-E02-005 — Direct effect commits and their groups](Archive/Done/I03-E02-run-history/Archive/Done/High/I03-E02-005-direct-effect-commits-and-their-groups.md) — Archived — Done — Last updated: 2026-11-05 — Priority: High
+  - [I03-E06 — Explaining views](I03-E06-explaining-views/I03-E06-explaining-views-backlog.md) — Active context — not archived — Ready — Last updated: 2026-11-08 — Priority: High
+    - [I03-E06-007 — Order timeline](I03-E06-explaining-views/Archive/Delegated/High/I03-E06-007-order-timeline.md) — Archived — Delegated — Last updated: 2026-11-08 — Priority: High
+    - [I03-E06-018 — Order replay](I03-E06-explaining-views/Archive/Delegated/High/I03-E06-018-order-replay.md) — Archived — Delegated — Last updated: 2026-11-08 — Priority: High
+  - [I03-E04 — Business rules](I03-E04-business-rules/I03-E04-business-rules-backlog.md) — Active context — not archived — Ready — Last updated: 2026-11-07 — Priority: High
+    - [I03-E04-012 — Rule abstractions](I03-E04-business-rules/Archive/Done/High/I03-E04-012-rule-abstractions.md) — Archived — Done — Last updated: 2026-11-07 — Priority: High
+      - Phases:
+        - `I03-E04-012-P01` — The rule abstractions — Done — Last updated: 2026-11-07
+        - `I03-E04-012-P02` — Drivers' rules — Done — Last updated: 2026-11-07
+        - `I03-E04-012-P03` — Orders' and Deliveries' rules — Done — Last updated: 2026-11-07
+        - `I03-E04-012-P04` — Rules as the run's config values — Done — Last updated: 2026-11-07
+        - `I03-E04-012-P05` — Scenario steps that set rules — Done — Last updated: 2026-11-07
+        - `I03-E04-012-P06` — The Rules panel — Done — Last updated: 2026-11-07
+  - [I03-E01 — Stage planning](Archive/Done/I03-E01-stage-planning/I03-E01-stage-planning-backlog.md) — Archived — Done — Last updated: 2026-11-05 — Priority: Normal
+    - [I03-E01-001 — Plan this stage](Archive/Done/I03-E01-stage-planning/Archive/Done/Normal/I03-E01-001-plan-this-stage.md) — Archived — Done — Last updated: 2026-11-05 — Priority: Normal
+
+## Archive
+
+- [Epic archive](Archive/I03-full-v1-0-0-lifecycle-and-rules-archive-index.md)

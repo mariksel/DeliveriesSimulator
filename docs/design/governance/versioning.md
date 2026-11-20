@@ -1,6 +1,8 @@
 # Versioning
 
-How design and architecture versions are labeled and changed.
+How design and architecture versions are labeled and changed. How documents are
+written and maintained is described in
+[document governance](document-governance.md).
 
 ## Version types are independent
 
@@ -12,8 +14,11 @@ subject.
 |---|---|---|
 | `D` | Design-document set and its decision/detail content | `D1.0.0` |
 | `A` | Software architecture baseline | `A1.0.0` |
-| `V` | A simulated version of the real service's delivery logic ([FND-41](../decisions/project-foundation.md#fnd-41--version-numbers)) | `V1.0.0` |
-| `X` | The conformance exchange format ([FND-52](../decisions/project-foundation.md#fnd-52--conformance-exchange)) | `X1.0.0` |
+| `V` | A simulated version of the real service's delivery logic ([FND-41](../decisions/project-foundation/versions.md#fnd-41--version-numbers)) | `V1.0.0` |
+| `X` | The conformance exchange format ([FND-52](../decisions/project-foundation/simulation-model.md#fnd-52--conformance-exchange)) | `X1.0.0` |
+
+Add a row for any other subject the project versions independently, such as an
+external contract, a data schema, or a product scope label.
 
 Versions are written with a type prefix even if context might otherwise
 disambiguate. `1.0.0` denotes the initial documented baseline only when

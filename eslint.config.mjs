@@ -332,6 +332,7 @@ export default defineConfig(
         // (FND-83). An ID's creator sits in the file of its class.
         files: [
             'src/domain/system/records/version-chain.ts',
+            'src/domain/system/records/maker.ts',
             'src/domain/**/numbers.ts',
             'src/domain/system/math/math.ts',
             'src/domain/map-and-routing/area-id.ts',
@@ -342,6 +343,8 @@ export default defineConfig(
             'src/domain/orders/order-event-id.ts',
             'src/domain/orders/orders-outbox-event.ts',
             'src/domain/restaurants/restaurant-place.ts',
+            'src/domain/restaurants/customers/customer.ts',
+            'src/domain/restaurants/customers/delivery-address.ts',
             'src/domain/drivers/driver.ts',
             'src/domain/drivers/deliveries/order-delivery.ts',
             'src/domain/drivers/deliveries/delivery-event-id.ts',
@@ -350,9 +353,12 @@ export default defineConfig(
             'src/application-core/simulation-engine/commit-id.ts',
             'src/application-core/simulation-engine/session-id.ts',
             'src/application-core/simulation-engine/branch-id.ts',
+            'src/application-core/simulation-engine/record-ref.ts',
             'src/application-core/simulation-engine/input-names.ts',
             'src/application-core/scenarios/scripted-step.ts',
             'src/application-core/scenarios/built-in-scenarios.ts',
+            'src/application-core/scenarios/scenario-version.ts',
+            'src/application-core/run-history/saved-run.ts',
         ],
         rules: {
             // Only here: a branded ID or number has to be created somewhere.

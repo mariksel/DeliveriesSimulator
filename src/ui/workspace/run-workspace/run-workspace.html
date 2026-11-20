@@ -119,6 +119,19 @@
             >
                 Indirect effect
             </button>
+            <button
+                type="button"
+                data-testid="save-open"
+                appTooltip="Save the run in this browser, to open again later"
+                [class.is-selected]="saveFormName() !== null"
+                [attr.aria-expanded]="saveFormName() !== null"
+                (click)="toggleSaveForm()"
+            >
+                Save
+            </button>
+            @if (savedAs(); as name) {
+            <span class="saved" data-testid="saved-as" role="status">Saved as “{{ name }}”</span>
+            }
         </div>
         @if (run.repeat; as repeat) {
         <span
@@ -176,10 +189,20 @@
         >
         }
     </div>
-    @if (isStatingIndirect()) {
+    @if (saveFormName(); as name) {
+    <app-save-run-form
+        class="indirect"
+        [defaultName]="name"
+        [problem]="saveProblem()"
+        [isSaving]="isSaving()"
+        (saved)="saveRun($event)"
+        (closed)="saveFormName.set(null)"
+    />
+    } @if (isStatingIndirect()) {
     <app-indirect-effect-form
         class="indirect"
         [names]="names()"
+        [usedLabels]="usedLabels()"
         (stated)="stateIndirect($event)"
         (closed)="isStatingIndirect.set(false)"
     />
@@ -192,6 +215,17 @@
     }
     <section class="main" aria-label="Main area">
         <div class="tabs" role="tablist">
+            <button
+                type="button"
+                role="tab"
+                data-testid="map-tab"
+                appTooltip="Show the city, its restaurants and drivers, and each order's views"
+                [attr.aria-selected]="mainTab() === mainTabs.Map"
+                [class.is-selected]="mainTab() === mainTabs.Map"
+                (click)="showMainTab(mainTabs.Map)"
+            >
+                Map
+            </button>
             <button
                 type="button"
                 role="tab"
@@ -246,7 +280,26 @@
                 Breakpoints
             </button>
         </div>
-        @if (mainTab() === mainTabs.Inspector) {
+        @if (mainTab() === mainTabs.Map) {
+        <app-map-panel
+            class="main-tab"
+            [scene]="mapScene()"
+            [layers]="mapLayers()"
+            [selectedKey]="selectedKey()"
+            (choose)="chooseSubject($event)"
+            (toggleLayer)="toggleMapLayer($event)"
+        />
+        } @else if (mainTab() === mainTabs.Inspector) { @if (selectedSubject(); as subject) { @if
+        (orderVersions().length > 0) {
+        <app-record-versions
+            class="versions"
+            data-testid="order-versions"
+            [title]="'Order ' + subject.subject"
+            [views]="orderVersions()"
+            (choosePlace)="showVersionCommit($event)"
+            (clear)="clearSubject()"
+        />
+        } }
         <app-outbox-inbox-inspector
             class="main-tab"
             [entries]="entries()"
@@ -279,8 +332,10 @@
         <app-rules-panel
             class="main-tab"
             [modules]="rules()"
+            [labels]="followableLabels()"
             [problem]="ruleProblem()"
             (edit)="changeRule($event)"
+            (use)="useVersion($event)"
         />
         } @else {
         <app-trace-diagram
@@ -408,16 +463,24 @@
         <app-timeline-panel
             [headings]="timelineHeadings()"
             [rows]="timelineRows()"
-            [rowMode]="rowMode()"
+            [view]="timelineView()"
             [zoom]="zoom()"
             [heightPx]="timelineSize()"
             (openOrClose)="toggleNode($event)"
             (choose)="chooseOnTimeline($event)"
-            (mode)="chooseRowMode($event)"
+            (viewTo)="chooseView($event)"
+            (selectSubject)="chooseSubject($event)"
             (zoomTo)="chooseZoom($event)"
+            [hiddenKinds]="hiddenKinds()"
+            [gapThresholdMs]="gapThresholdMs()"
+            (thresholdTo)="chooseGapThreshold($event)"
+            [gapDisplay]="gapDisplay()"
+            (displayTo)="chooseGapDisplay($event)"
+            (toggleKind)="toggleKind($event)"
             (watch)="watchBranch($event)"
             (forkAt)="forkAtCommit($event)"
             (rename)="renameBranch($event)"
+            (deleteBranch)="deleteBranch($event)"
             [kindsPausedAt]="kindsPausedAt()"
             (pauseOnKind)="toggleKindBreakpoint($event)"
         />

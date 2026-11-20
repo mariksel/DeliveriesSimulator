@@ -28,18 +28,21 @@ describe('the indirect effect form', () => {
             actor: 'driver-1',
             order: 'A',
             lateBy: '',
+            label: '',
         });
         const late = indirectStatementOf({
             kind: IndirectKind.RestaurantRunsLate,
             actor: 'restaurant-1',
             order: 'A',
             lateBy: ' h00:m01:s30:ms00 ',
+            label: '',
         });
         const wont = indirectStatementOf({
             kind: IndirectKind.CustomerWontTakeOrder,
             actor: 'driver-1',
             order: 'A',
             lateBy: '',
+            label: '',
         });
 
         expect(ignored).toEqual({
@@ -79,8 +82,38 @@ describe('the indirect effect form', () => {
             'How much later is a time above none, such as h00:m01:s30:ms00.',
         ],
     ])('says what is wrong with %s', (_name, kind, actor, order, lateBy, problem) => {
-        const result = indirectStatementOf({ kind, actor, order, lateBy });
+        const result = indirectStatementOf({ kind, actor, order, lateBy, label: '' });
 
         expect(result).toEqual({ isOk: false, problem });
+    });
+});
+
+describe('a label given by hand', () => {
+    const fields = {
+        kind: IndirectKind.DriverIgnoresRequest,
+        actor: 'driver-1',
+        order: 'A',
+        lateBy: '',
+    };
+
+    it('goes with the statement, trimmed, for a later step to follow from', () => {
+        const result = indirectStatementOf({ ...fields, label: '  ignored-again ' }, ['ignored']);
+
+        expect(result).toMatchObject({ isOk: true, statement: { label: 'ignored-again' } });
+    });
+
+    it('is left out when blank', () => {
+        const result = indirectStatementOf({ ...fields, label: '   ' }, ['ignored']);
+
+        expect(result).toMatchObject({ isOk: true, statement: { label: null } });
+    });
+
+    it('is refused when the run already uses it, scripted or by hand', () => {
+        const result = indirectStatementOf({ ...fields, label: 'ignored' }, ['ignored']);
+
+        expect(result).toEqual({
+            isOk: false,
+            problem: 'The label "ignored" is already used in this run.',
+        });
     });
 });

@@ -1,3 +1,4 @@
+import { TESTING_FUNCTIONS } from '../../application-core/simulation-engine/function-lookup.testing';
 import { List } from 'immutable';
 import { describe, expect, it } from 'vitest';
 
@@ -21,7 +22,7 @@ import { SimulationRun } from '../../application/simulation-engine/simulation-ru
 import { toSeed } from '../../domain/simulation-engine/numbers';
 import { toSimTime } from '../../domain/simulation-engine/sim-time';
 import { toPosition } from '../../domain/system/math/math';
-import { lineThrough, RowMode, timelineGrid, timelineRows } from './timeline-grid';
+import { lineThrough, TimelineView, timelineGrid, timelineRows } from './timeline-grid';
 import type { ITimelineCell, ITimelineRowView } from './timeline-view';
 import { timelineRowViews } from './timeline-view';
 
@@ -39,7 +40,7 @@ function runWithAnUnawareSpan(): SimulationRun {
         after: toIndirectLabel('ignored'),
     };
     const steps = List<ScriptInput>([...HAPPY_PATH, ignored, followed]);
-    const created = createRun({ seed: toSeed(1) });
+    const created = createRun({ functions: TESTING_FUNCTIONS, seed: toSeed(1) });
     const start = scheduleInputs(created, START, steps);
     const run = new SimulationRun(start);
     const end = toSimTime(300_000);
@@ -49,7 +50,7 @@ function runWithAnUnawareSpan(): SimulationRun {
 
 const RUN = runWithAnUnawareSpan().state;
 const LINES = branchLinesOf(RUN).toArray();
-const GRID = timelineGrid(LINES, RowMode.ByTime);
+const GRID = timelineGrid(LINES, TimelineView.ByTime);
 
 /** The rows drawn with every group open, or every group closed. */
 function drawn(isOpen: boolean): readonly ITimelineRowView[] {

@@ -1,3 +1,8 @@
+import { Map as ImmutableMap } from 'immutable';
+import type { FunctionVersions } from '../../application-core/simulation-engine/function-lookup';
+import type { FunctionName } from '../../application-core/simulation-engine/function-name';
+import { FUNCTION_NAMES } from '../../application-core/simulation-engine/function-name';
+import type { VersionNumber } from '../../domain/system/records/version-chain';
 import type { IRunValues } from '../../application-core/simulation-engine/run-values';
 import { toParameterValue } from '../../domain/business-rules/numbers';
 import type { ParameterValue } from '../../domain/business-rules/numbers';
@@ -41,6 +46,8 @@ export interface IRuleView {
 export interface IModuleRulesView {
     readonly name: string;
     readonly rules: readonly IRuleView[];
+    /** The module's state functions, each with the version in use and the others (FND-81). */
+    readonly functions: readonly IFunctionView[];
 }
 
 /** A person's new value for a parameter, as they typed it. */
@@ -48,6 +55,8 @@ export interface IRuleEdit {
     readonly ruleId: RuleId;
     readonly parameterId: ParameterId;
     readonly text: string;
+    /** The label of the scenario's indirect effect the change follows from, if one is picked. */
+    readonly after?: string;
 }
 
 /** Why a person's new value was not used, shown beside the parameter they changed. */
@@ -105,7 +114,7 @@ function parameterView(entry: RuleValue): IParameterView {
     };
 }
 
-function moduleView(name: string, set: RuleSet): IModuleRulesView {
+function moduleView(name: string, set: RuleSet): Omit<IModuleRulesView, 'functions'> {
     const entries = set.entries();
     const rules = set.rules
         .map((rule): IRuleView => ({
@@ -123,12 +132,71 @@ function moduleView(name: string, set: RuleSet): IModuleRulesView {
     return { name, rules };
 }
 
-/** Every module's rules with the values in use, as the Rules panel lists them. */
-export function rulesPanelView(values: IRunValues): readonly IModuleRulesView[] {
+/** One state function as the Rules panel lists it: its name, and its versions (FND-81). */
+export interface IFunctionView {
+    readonly name: FunctionName;
+    /** Its name in words, such as "Pick up". */
+    readonly label: string;
+    readonly inUse: VersionNumber;
+    /** Every version the run's lookup holds, oldest first. */
+    readonly versions: readonly VersionNumber[];
+}
+
+/** A person's choice of a version for a function in the Rules panel (FND-81). */
+export interface IFunctionChoice {
+    readonly function: FunctionName;
+    readonly version: VersionNumber;
+    /** The indirect effect's label the switch follows from, if any (FND-89). */
+    readonly after?: string;
+}
+
+/** What the Rules panel needs to list the functions: the versions in use, and every version. */
+export interface IFunctionsInUse {
+    readonly functionVersions: FunctionVersions;
+    readonly versionsOfFunction: (name: FunctionName) => readonly VersionNumber[];
+}
+
+/** Which module's section a function sits in, by its name. */
+const moduleOfFunction = (name: FunctionName): string =>
+    name.startsWith('orders.') ? 'Orders' : 'Deliveries';
+
+/** A function's name in words, from its last part: "orders.pick-up" is "Pick up". */
+function functionLabel(name: FunctionName): string {
+    const last = name.split('.').at(-1) ?? name;
+    const words = last.replaceAll('-', ' ');
+    return `${words.charAt(0).toUpperCase()}${words.slice(1)}`;
+}
+
+/** The functions of one module, each with its versions, in the order the names list them. */
+function functionsOf(module: string, functions: IFunctionsInUse): readonly IFunctionView[] {
+    return FUNCTION_NAMES.filter((name) => moduleOfFunction(name) === module).flatMap((name) => {
+        const inUse = functions.functionVersions.get(name);
+        const versions = functions.versionsOfFunction(name);
+        const label = functionLabel(name);
+        return inUse === undefined ? [] : [{ name, label, inUse, versions }];
+    });
+}
+
+const NO_FUNCTIONS: IFunctionsInUse = {
+    functionVersions: ImmutableMap(),
+    versionsOfFunction: () => [],
+};
+
+/**
+ * Every module's rules with the values in use, and its state functions with their versions, as
+ * the Rules panel lists them.
+ */
+export function rulesPanelView(
+    values: IRunValues,
+    functions: IFunctionsInUse = NO_FUNCTIONS,
+): readonly IModuleRulesView[] {
     const orders = moduleView('Orders', values.orders.set);
     const drivers = moduleView('Drivers', values.drivers.set);
     const deliveries = moduleView('Deliveries', values.deliveries.set);
-    return [orders, drivers, deliveries];
+    return [orders, drivers, deliveries].map((module) => ({
+        ...module,
+        functions: functionsOf(module.name, functions),
+    }));
 }
 
 function parameterOf(values: IRunValues, edit: IRuleEdit): Parameter | undefined {

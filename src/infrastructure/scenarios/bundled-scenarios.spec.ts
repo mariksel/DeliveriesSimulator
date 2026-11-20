@@ -11,10 +11,13 @@ const NO_SUCH_BUILT_IN = toBuiltInScenarioId('nope');
 describe('the bundled built-in scenarios', () => {
     const library = new BundledScenarios();
 
-    it('lists the happy path of one order', () => {
+    it('lists the demonstration first, then the happy path of one order', () => {
         const list = library.list().toArray();
 
-        expect(list).toEqual([{ id: 'one-order', name: 'One order, happy path' }]);
+        expect(list).toEqual([
+            { id: 'demonstration', name: 'Demonstration: a busy lunch' },
+            { id: 'one-order', name: 'One order, happy path' },
+        ]);
     });
 
     it('reads every file in the library without a problem', () => {

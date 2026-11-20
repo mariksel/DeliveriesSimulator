@@ -1,3 +1,6 @@
+import type { FunctionVersions } from '../../application-core/simulation-engine/function-lookup';
+import type { IFunctionUse } from '../../application-core/simulation-engine/run-input';
+import type { FunctionLookup } from '../../application-core/simulation-engine/function-lookup';
 import type { List } from 'immutable';
 
 import type { IndirectStatement } from '../../application-core/simulation-engine/indirect-effect';
@@ -14,6 +17,8 @@ import { SimulationRun } from '../simulation-engine/simulation-run';
 import { WallClock } from '../../application-core/simulation-engine/wall-clock';
 import { LiveRunState } from './live-run-state';
 import type { IScenario } from '../../application-core/scenarios/scenario';
+import { isIndirectStep } from '../../application-core/scenarios/scripted-step';
+import type { IndirectLabel } from '../../application-core/simulation-engine/run-input';
 import type { IRunValues } from '../../application-core/simulation-engine/run-values';
 import type { IMainRoot } from '../../application-core/simulation-engine/main-root';
 import type { StepSize } from '../../application-core/simulation-engine/run-places';
@@ -35,6 +40,7 @@ import type {
 } from '../../application-core/simulation-engine/run-branches';
 import {
     forkAt,
+    deleteBranch,
     rename,
     switchTo,
     branchesOf,
@@ -119,9 +125,9 @@ class WorkUpToTheEnd extends ClockedWork {
     }
 }
 
-/** The state a scenario's run starts from. */
-function startOf(scenario: IScenario): IRunState {
-    const run = createRun({ seed: scenario.seed });
+/** The state a scenario's run starts from, calling its functions through a lookup. */
+function startOf(scenario: IScenario, functions: FunctionLookup): IRunState {
+    const run = createRun({ seed: scenario.seed, functions });
     return scheduleScenario(run, scenario.start, scenario.steps);
 }
 
@@ -180,6 +186,11 @@ export class LiveScenarioRun {
         return this.lines.kept.lines;
     }
 
+    /** The run as it stands, which Run history's queries read (FND-81). */
+    get runState(): IRunState {
+        return this.run.state;
+    }
+
     /** The branch being watched. */
     get currentBranch(): BranchId {
         return this.run.state.history.current;
@@ -220,6 +231,11 @@ export class LiveScenarioRun {
     }
 
     /** Each module's rules, with the values in use at the place shown. */
+    /** The version of each state function in use at the commit shown (FND-81). */
+    get functionVersions(): FunctionVersions {
+        return this.shownRoot.effects.direct.functionVersions;
+    }
+
     get rules(): IRunValues {
         return this.shownRoot.effects.direct.values;
     }
@@ -261,7 +277,8 @@ export class LiveScenarioRun {
     constructor(
         readonly scenario: IScenario,
         wallClock: WallClock,
-        start: IRunState = startOf(scenario),
+        functions: FunctionLookup,
+        start: IRunState = startOf(scenario, functions),
     ) {
         this.run = new SimulationRun(start);
         this.work = new WorkUpToTheEnd(this.run, scenario.runUntil);
@@ -274,6 +291,19 @@ export class LiveScenarioRun {
             this.clock.start();
             this.current = LiveRunState.Running;
         }
+    }
+
+    /**
+     * Goes on from a run given at its start, as a saved run opens (FND-81): paused at its latest
+     * commit, or ended if it had reached the scenario's end. A run with no commits stays ready.
+     */
+    resumeAtLatest(): void {
+        if (this.run.state.line.commits.size === 0) {
+            return;
+        }
+        this.clock.syncToWork();
+        this.current = LiveRunState.Paused;
+        this.settle();
     }
 
     /** Adds a breakpoint, on, and gives its ID. */
@@ -313,11 +343,51 @@ export class LiveScenarioRun {
      * Changes rule parameters now, by rule ID, as a config change commit, whether the run is
      * paused or running (FND-84).
      */
-    changeRules(changes: List<ParameterChange>): void {
+    changeRules(changes: List<ParameterChange>, after?: IndirectLabel): void {
         if (!this.isShowingLatest) {
             this.forkHere();
         }
-        this.run.changeConfig(changes);
+        this.run.changeConfig(changes, after);
+    }
+
+    /**
+     * Switches state functions to other versions by hand, as an implementation change commit,
+     * forking first when an earlier commit is shown, as a rule change does (FND-81).
+     */
+    switchVersions(uses: List<IFunctionUse>, after?: IndirectLabel): void {
+        if (!this.isShowingLatest) {
+            this.forkHere();
+        }
+        this.run.switchVersions(uses, after);
+    }
+
+    /**
+     * The labels of the scenario's indirect steps whose indirect commit is made by the place
+     * shown, which a config change made there can follow from (FND-89). Labels given by hand are
+     * left out: only Manual mode's actions name those.
+     */
+    followableLabels(): readonly IndirectLabel[] {
+        const { cache } = this.run.state;
+        const place = this.place;
+        return this.scenario.steps
+            .filter(isIndirectStep)
+            .flatMap((step) => {
+                const { label } = step.indirect;
+                const commit = label === null ? undefined : cache.indirectLabels.get(label);
+                const madeAt = commit === undefined ? -1 : cache.commitIds.indexOf(commit) + 1;
+                return label !== null && madeAt > 0 && madeAt <= place ? [label] : [];
+            })
+            .toArray();
+    }
+
+    /** Every label the run uses: its scenario's, and any given by hand, which none may repeat. */
+    usedLabels(): readonly IndirectLabel[] {
+        const scripted = this.scenario.steps
+            .filter(isIndirectStep)
+            .flatMap((step) => (step.indirect.label === null ? [] : [step.indirect.label]));
+        const byHand = this.run.state.cache.indirectLabels.keySeq();
+        const all = new Set([...scripted, ...byHand]);
+        return [...all];
     }
 
     /**
@@ -355,6 +425,20 @@ export class LiveScenarioRun {
             this.switchBranch(id);
         }
         this.showPlace(place);
+    }
+
+    /**
+     * Deletes a branch with no forks of its own, never Main. Deleting the branch being watched
+     * watches the one it forked from, paused at its latest commit (FND-81).
+     */
+    deleteBranch(id: BranchId): void {
+        const isWatched = id === this.currentBranch;
+        const deleted = deleteBranch(this.run.state, id);
+        if (isWatched) {
+            this.goOnFrom(deleted);
+        } else {
+            this.run.continueFrom(deleted);
+        }
     }
 
     /** Gives a branch another name. */

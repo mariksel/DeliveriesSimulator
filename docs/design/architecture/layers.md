@@ -15,7 +15,7 @@ in the [architecture overview](overview.md).
 There are five layers. Domain, Application.Core, and Application form the framework-free core:
 they do not import Angular or call browser APIs. There is no frameworks layer and no interface
 adapters layer. Application.Core sits between Application and Domain and wraps Domain
-([FND-82](../decisions/project-foundation.md#fnd-82--application-core-layer)).
+([FND-82](../decisions/project-foundation/architecture-and-code.md#fnd-82--application-core-layer)).
 
 | Layer | Folder | Responsibility | May depend on |
 |---|---|---|---|
@@ -38,7 +38,7 @@ the only code that may see every layer.
 
 Application.Core defines these abstractions as abstract classes, and Angular uses each class as
 its injection token
-([FND-62](../decisions/project-foundation.md#fnd-62--dependency-injection-and-architecture-check)).
+([FND-62](../decisions/project-foundation/architecture-and-code.md#fnd-62--dependency-injection-and-architecture-check)).
 The binding is in `src/composition/app.config.ts`.
 
 ## Checking the rules
@@ -46,7 +46,7 @@ The binding is in `src/composition/app.config.ts`.
 `npm run check:architecture` fails when a dependency points the wrong way, or when the core
 imports Angular or uses a browser API, or when one module imports another without the
 [module map](../modules/README.md#dependency-graph) showing that dependency
-([FND-69](../decisions/project-foundation.md#fnd-69--module-jobs-and-the-module-graph-check)).
+([FND-69](../decisions/project-foundation/architecture-and-code.md#fnd-69--module-jobs-and-the-module-graph-check)).
 `.dependency-cruiser.cjs` holds the rules, and `tsconfig.core.json` compiles the core without
 browser types.
 
@@ -56,16 +56,19 @@ Domain and Application.Core are strictly immutable and pure; Application.Core's 
 its abstractions. Application does the orchestration and coordination, and
 may hold mutable services to do it, while its data stays immutable except where that would be a
 considerable performance problem, proven by a benchmark
-([FND-73](../decisions/project-foundation.md#fnd-73--immutable-architecture)). A run's whole
-state is one value, and each step returns a new one, with its events and the follow-ups to carry
+([FND-73](../decisions/project-foundation/architecture-and-code.md#fnd-73--immutable-architecture)).
+A run's whole state is one value, and each step returns a new one, with its events and the
+follow-ups to carry
 out. Each module's state is an immutable class in Domain, and its commands are pure static
 methods of it. The simulation engine, in Application, holds the latest state in a service and
 carries out the follow-ups, so no module calls another. A snapshot is just a reference to a past
 state, which is what replay and branching rest on. It is not event sourcing: state is held
 directly, and nothing derives it from events or from the log. A saved run can be recalculated by
-calling the same pure functions again. This is the approved design, and the End-to-end skeleton
-stage moved the code to it. The Full V1.0.0 lifecycle and rules stage adds
-[how a run is held](../modules/simulation-engine.md#how-a-run-is-held): a line of
+calling the same pure functions again. This is the approved design, and
+[I02-E07](../../backlogs/Initiatives/Archive/Done/I02-end-to-end-skeleton/Archive/Done/I02-E07-style-and-immutable-rework/I02-E07-style-and-immutable-rework-backlog.md)
+moved the code to it.
+[I03-E02](../../backlogs/Initiatives/I03-full-v1-0-0-lifecycle-and-rules/Archive/Done/I03-E02-run-history/I03-E02-run-history-backlog.md)
+adds [how a run is held](../modules/simulation-engine.md#how-a-run-is-held): a line of
 commits, each with a main root of two sub-roots.
 
 ## Data and mapping flow

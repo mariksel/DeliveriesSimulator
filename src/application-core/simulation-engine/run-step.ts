@@ -11,10 +11,17 @@ import type { RunJob } from './run-work';
 import { RunJob as RunJobs, WorkKind } from './run-work';
 import { performRulesInput } from './config-change';
 import type { ScriptInput } from './run-input';
-import { isIndirectInput, isRulesInput } from './run-input';
+import { isIndirectInput, isRulesInput, isUseInput } from './run-input';
+import { performUseInput } from './implementation-change';
 import { performIndirectInput } from './indirect-commit';
 import { performInput } from './run-inputs';
+import { performLocationSends } from './location-send';
+import { actOnArrival, waitsForArrival } from './riding';
 import { callState } from './state-call';
+import { functionInUse } from './function-lookup';
+import { FunctionName } from './function-name';
+import { sessionMaker } from './session-maker';
+import { readsOfWork } from './effect-reads';
 import type { SimTime } from '../../domain/simulation-engine/sim-time';
 import { toCount } from '../../domain/system/math/math';
 
@@ -22,16 +29,26 @@ function readOrdersInbox(run: IRunState, now: SimTime): IRunState {
     const { outbox } = run.root.state.deliveries;
     const communication = run.root.effects.direct.values.orders;
     const due = OrdersState.dueDeliveriesEvents(run.root.state.orders, outbox, communication);
+    const madeBy = sessionMaker(run.line);
     return due.reduce((done, event) => {
+        const readDeliveriesEventFunction = functionInUse(
+            done,
+            FunctionName.OrdersReadDeliveriesEvent,
+        );
         const step = callState(
-            OrdersState.readDeliveriesEvent,
+            readDeliveriesEventFunction,
             done.root.state.orders,
             now,
             event,
+            madeBy,
         );
         const read = applyOrdersStep(done, step, NO_CAUSE);
+        const recordDeliveriesEventReadFunction = functionInUse(
+            read,
+            FunctionName.OrdersRecordDeliveriesEventRead,
+        );
         const recordDeliveriesEventRead = callState(
-            OrdersState.recordDeliveriesEventRead,
+            recordDeliveriesEventReadFunction,
             read.root.state.orders,
             event,
             outbox,
@@ -45,17 +62,27 @@ function readDeliveriesInbox(run: IRunState, now: SimTime): IRunState {
     const { outbox } = run.root.state.orders;
     const communication = run.root.effects.direct.values.deliveries;
     const due = DeliveriesState.dueOrdersEvents(run.root.state.deliveries, outbox, communication);
+    const madeBy = sessionMaker(run.line);
     return due.reduce((done, event) => {
+        const readOrdersEventFunction = functionInUse(
+            done,
+            FunctionName.DeliveriesReadOrdersEvent,
+        );
         const step = callState(
-            DeliveriesState.readOrdersEvent,
+            readOrdersEventFunction,
             done.root.state.deliveries,
             done.root.state.drivers,
             now,
             event,
+            madeBy,
         );
         const read = applyDeliveriesStep(done, step, NO_CAUSE);
+        const recordOrdersEventReadFunction = functionInUse(
+            read,
+            FunctionName.DeliveriesRecordOrdersEventRead,
+        );
         const recordOrdersEventRead = callState(
-            DeliveriesState.recordOrdersEventRead,
+            recordOrdersEventReadFunction,
             read.root.state.deliveries,
             event,
             outbox,
@@ -67,14 +94,20 @@ function readDeliveriesInbox(run: IRunState, now: SimTime): IRunState {
 
 function dispatchPass(run: IRunState, now: SimTime): IRunState {
     const { drivers } = run.root.effects.direct.values;
+    const madeBy = sessionMaker(run.line);
     return DeliveriesState.openRequests(run.root.state.deliveries).reduce((done, orderId) => {
+        const notifyNextDriverFunction = functionInUse(
+            done,
+            FunctionName.DeliveriesNotifyNextDriver,
+        );
         const step = callState(
-            DeliveriesState.notifyNextDriver,
+            notifyNextDriverFunction,
             done.root.state.deliveries,
             done.root.state.drivers,
             orderId,
             now,
             drivers,
+            madeBy,
         );
         return applyDeliveriesStep(done, step, NO_CAUSE);
     }, run);
@@ -86,8 +119,9 @@ function runJob(run: IRunState, job: RunJob, now: SimTime): IRunState {
             return readOrdersInbox(run, now);
         case RunJobs.HandoffRetry: {
             const communication = run.root.effects.direct.values.orders;
+            const retryHandoffsFunction = functionInUse(run, FunctionName.OrdersRetryHandoffs);
             const step = callState(
-                OrdersState.retryHandoffs,
+                retryHandoffsFunction,
                 run.root.state.orders,
                 now,
                 communication,
@@ -109,16 +143,26 @@ function runJobSession(run: IRunState, job: RunJob, at: SimTime): IRunState {
     const started = startSession(run, at);
     const ran = runJob(started, job, at);
     const stateCommits = toCount(ran.line.commits.size - started.line.commits.size);
-    const runState = commitEffect(ran, { kind: EffectKind.Job, at, job, stateCommits });
+    const reads = readsOfWork(ran, started, []);
+    const runState = commitEffect(ran, { kind: EffectKind.Job, at, job, stateCommits, reads });
     return finishSession(runState);
 }
 
-/** Runs a step of the script: a command, rules to change, or an indirect effect. */
+/**
+ * Runs a step of the script: a command, rules to change, functions to switch, or an indirect
+ * effect.
+ */
 function performStep(run: IRunState, step: ScriptInput): IRunState {
     if (isRulesInput(step)) {
         return performRulesInput(run, step);
     }
-    return isIndirectInput(step) ? performIndirectInput(run, step) : performInput(run, step);
+    if (isUseInput(step)) {
+        return performUseInput(run, step);
+    }
+    if (isIndirectInput(step)) {
+        return performIndirectInput(run, step);
+    }
+    return waitsForArrival(run, step) ? actOnArrival(run, step) : performInput(run, step);
 }
 
 /** Runs the next piece of work: a pure step from one state to the next. */
@@ -129,6 +173,10 @@ export function runNextWork(run: IRunState): IRunState {
             return runJobSession(run, work.job, at);
         case WorkKind.ScriptedStep:
             return performStep(run, work.step);
+        case WorkKind.LocationSend:
+            return performLocationSends(run, work.driverIds, at);
+        case WorkKind.Arrival:
+            return performInput(run, work.step, work.waiting);
         default:
             return unreachable(work);
     }

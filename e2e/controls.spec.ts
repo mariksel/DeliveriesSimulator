@@ -230,3 +230,18 @@ test('the Follow button is small and round', async ({ page }) => {
     expect(box.width).toBe(box.height);
     expect(box.width).toBeLessThanOrEqual(32);
 });
+
+test('a tooltip lets the pointer through to whatever it covers', async ({ page }) => {
+    await openRun(page);
+    await page.getByRole('button', { name: 'Step' }).focus();
+    const bubble = page.getByRole('tooltip');
+    await expect(bubble).toBeVisible();
+
+    const box = (await bubble.boundingBox())!;
+    const isUnderPointer = await page.evaluate(
+        ({ x, y }) => document.elementFromPoint(x, y)?.closest('.cdk-overlay-container') !== null,
+        { x: box.x + box.width / 2, y: box.y + box.height / 2 },
+    );
+
+    expect(isUnderPointer).toBe(false);
+});

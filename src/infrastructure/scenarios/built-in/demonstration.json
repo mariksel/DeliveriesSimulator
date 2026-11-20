@@ -1,0 +1,710 @@
+{
+    "format": 1,
+    "name": "Demonstration: a busy lunch",
+    "description": "An hour of lunch across four areas: ten orders from four restaurants to six customers, with drivers the rules turn down, a request ignored, two drivers racing to accept, a request stuck until a rule widens the maximum distance, and a restaurant running late. At minute 37:30 the map shows an order at every stage; every order is delivered by the end.",
+    "version": "V1.0.0",
+    "seed": 42,
+    "runUntil": "h01:m00:s00:ms00",
+    "city": {
+        "origin": {
+            "latitude": 10.3,
+            "longitude": 20.8
+        },
+        "widthKm": 4,
+        "heightKm": 4,
+        "across": 2,
+        "down": 2,
+        "seed": 7
+    },
+    "rules": [
+        {
+            "rule": "drivers.near-restaurant",
+            "parameter": "max-distance",
+            "value": 1000
+        },
+        {
+            "rule": "drivers.not-busy",
+            "parameter": "busy-at-picked-up-orders",
+            "value": 1
+        }
+    ],
+    "restaurants": [
+        {
+            "id": "pizza-corner",
+            "area": "area-1",
+            "location": {
+                "latitude": 10.308094,
+                "longitude": 20.807312
+            }
+        },
+        {
+            "id": "noodle-bar",
+            "area": "area-1",
+            "location": {
+                "latitude": 10.304497,
+                "longitude": 20.811883
+            }
+        },
+        {
+            "id": "green-bowl",
+            "area": "area-2",
+            "location": {
+                "latitude": 10.308993,
+                "longitude": 20.827422
+            }
+        },
+        {
+            "id": "night-bakery",
+            "area": "area-4",
+            "location": {
+                "latitude": 10.328778,
+                "longitude": 20.82925
+            }
+        }
+    ],
+    "customers": [
+        {
+            "id": "anna",
+            "restaurant": "pizza-corner",
+            "addresses": [
+                {
+                    "id": "anna-home",
+                    "location": {
+                        "latitude": 10.31349,
+                        "longitude": 20.804113
+                    }
+                },
+                {
+                    "id": "anna-office",
+                    "area": "area-1"
+                }
+            ]
+        },
+        {
+            "id": "ben",
+            "restaurant": "pizza-corner",
+            "addresses": [
+                {
+                    "id": "ben-flat",
+                    "location": {
+                        "latitude": 10.312141,
+                        "longitude": 20.813711
+                    }
+                }
+            ]
+        },
+        {
+            "id": "chen",
+            "restaurant": "noodle-bar",
+            "addresses": [
+                {
+                    "id": "chen-home",
+                    "location": {
+                        "latitude": 10.302248,
+                        "longitude": 20.815996
+                    }
+                }
+            ]
+        },
+        {
+            "id": "dara",
+            "restaurant": "green-bowl",
+            "addresses": [
+                {
+                    "id": "dara-home",
+                    "location": {
+                        "latitude": 10.305396,
+                        "longitude": 20.832449
+                    }
+                }
+            ]
+        },
+        {
+            "id": "eli",
+            "restaurant": "green-bowl",
+            "addresses": [
+                {
+                    "id": "eli-home",
+                    "location": {
+                        "latitude": 10.314839,
+                        "longitude": 20.823308
+                    }
+                }
+            ]
+        },
+        {
+            "id": "fay",
+            "restaurant": "night-bakery",
+            "addresses": [
+                {
+                    "id": "fay-home",
+                    "location": {
+                        "latitude": 10.332825,
+                        "longitude": 20.833363
+                    }
+                }
+            ]
+        }
+    ],
+    "drivers": [
+        {
+            "id": "sam",
+            "area": "area-1",
+            "availability": "Available",
+            "location": {
+                "latitude": 10.310342,
+                "longitude": 20.807312
+            },
+            "locatedAt": "h00:m00:s00:ms00"
+        },
+        {
+            "id": "tia",
+            "area": "area-1",
+            "availability": "FreeForDelivery",
+            "location": {
+                "latitude": 10.305846,
+                "longitude": 20.807312
+            },
+            "locatedAt": "h00:m00:s00:ms00"
+        },
+        {
+            "id": "uma",
+            "area": "area-1",
+            "availability": "Offline",
+            "location": {
+                "latitude": 10.308544,
+                "longitude": 20.808226
+            },
+            "locatedAt": "h00:m00:s00:ms00"
+        },
+        {
+            "id": "vic",
+            "area": "area-1",
+            "availability": "Available",
+            "location": {
+                "latitude": 10.307195,
+                "longitude": 20.805941
+            },
+            "locatedAt": "h00:m00:s00:ms00",
+            "sendsEvery": "h00:m10:s00:ms00"
+        },
+        {
+            "id": "wes",
+            "area": "area-1",
+            "availability": "Available",
+            "location": {
+                "latitude": 10.317087,
+                "longitude": 20.817367
+            },
+            "locatedAt": "h00:m00:s00:ms00"
+        },
+        {
+            "id": "xan",
+            "area": "area-1",
+            "availability": "Available",
+            "location": {
+                "latitude": 10.304497,
+                "longitude": 20.811883
+            },
+            "locatedAt": "h00:m00:s00:ms00",
+            "speedKmh": 6
+        },
+        {
+            "id": "yara",
+            "area": "area-2",
+            "availability": "Available",
+            "location": {
+                "latitude": 10.310792,
+                "longitude": 20.826507
+            },
+            "locatedAt": "h00:m00:s00:ms00"
+        },
+        {
+            "id": "zed",
+            "area": "area-2",
+            "availability": "Available",
+            "location": {
+                "latitude": 10.307195,
+                "longitude": 20.828336
+            },
+            "locatedAt": "h00:m00:s00:ms00"
+        },
+        {
+            "id": "omar",
+            "area": "area-3",
+            "availability": "Available",
+            "location": {
+                "latitude": 10.32698,
+                "longitude": 20.809141
+            },
+            "locatedAt": "h00:m00:s00:ms00"
+        },
+        {
+            "id": "kai",
+            "area": "area-4",
+            "availability": "Available",
+            "location": {
+                "latitude": 10.320684,
+                "longitude": 20.821023
+            },
+            "locatedAt": "h00:m00:s00:ms00"
+        }
+    ],
+    "steps": [
+        {
+            "at": "h00:m01:s00:ms00",
+            "actor": "pizza-corner",
+            "command": "create-order",
+            "order": "A",
+            "customer": "anna",
+            "address": "anna-home"
+        },
+        {
+            "at": "h00:m01:s05:ms00",
+            "actor": "pizza-corner",
+            "command": "request-delivery",
+            "order": "A"
+        },
+        {
+            "at": "h00:m01:s30:ms00",
+            "actor": "uma",
+            "command": "accept",
+            "order": "A"
+        },
+        {
+            "at": "h00:m02:s00:ms00",
+            "actor": "tia",
+            "command": "accept",
+            "order": "A"
+        },
+        {
+            "at": "h00:m02:s00:ms00",
+            "actor": "noodle-bar",
+            "command": "create-order",
+            "order": "B",
+            "customer": "chen",
+            "address": "chen-home"
+        },
+        {
+            "at": "h00:m02:s30:ms00",
+            "actor": "noodle-bar",
+            "command": "mark-ready",
+            "order": "B"
+        },
+        {
+            "at": "h00:m03:s00:ms00",
+            "actor": "noodle-bar",
+            "command": "request-delivery",
+            "order": "B"
+        },
+        {
+            "at": "h00:m03:s30:ms00",
+            "actor": "xan",
+            "command": "accept",
+            "order": "B"
+        },
+        {
+            "at": "h00:m04:s00:ms00",
+            "actor": "xan",
+            "command": "pick-up",
+            "order": "B"
+        },
+        {
+            "at": "h00:m05:s00:ms00",
+            "actor": "tia",
+            "command": "pick-up",
+            "order": "A"
+        },
+        {
+            "at": "h00:m06:s00:ms00",
+            "actor": "pizza-corner",
+            "command": "mark-ready",
+            "order": "A"
+        },
+        {
+            "at": "h00:m06:s00:ms00",
+            "actor": "pizza-corner",
+            "command": "create-order",
+            "order": "C",
+            "customer": "ben",
+            "address": "ben-flat"
+        },
+        {
+            "at": "h00:m06:s10:ms00",
+            "actor": "pizza-corner",
+            "command": "request-delivery",
+            "order": "C"
+        },
+        {
+            "at": "h00:m06:s30:ms00",
+            "actor": "vic",
+            "command": "accept",
+            "order": "C"
+        },
+        {
+            "at": "h00:m06:s40:ms00",
+            "actor": "xan",
+            "command": "accept",
+            "order": "C"
+        },
+        {
+            "at": "h00:m06:s50:ms00",
+            "actor": "wes",
+            "command": "accept",
+            "order": "C"
+        },
+        {
+            "at": "h00:m07:s00:ms00",
+            "actor": "omar",
+            "command": "accept",
+            "order": "C"
+        },
+        {
+            "at": "h00:m07:s10:ms00",
+            "actor": "tia",
+            "command": "pick-up",
+            "order": "A"
+        },
+        {
+            "at": "h00:m07:s30:ms00",
+            "indirect": "driver-ignores-request",
+            "actor": "sam",
+            "order": "C",
+            "label": "sam-ignored-c"
+        },
+        {
+            "at": "h00:m08:s00:ms00",
+            "actor": "green-bowl",
+            "command": "create-order",
+            "order": "D",
+            "customer": "dara",
+            "address": "dara-home"
+        },
+        {
+            "at": "h00:m08:s05:ms00",
+            "actor": "green-bowl",
+            "command": "request-delivery",
+            "order": "D"
+        },
+        {
+            "at": "h00:m08:s30:ms00",
+            "actor": "tia",
+            "command": "accept",
+            "order": "C",
+            "after": "sam-ignored-c"
+        },
+        {
+            "at": "h00:m09:s00:ms00",
+            "actor": "pizza-corner",
+            "command": "mark-ready",
+            "order": "C"
+        },
+        {
+            "at": "h00:m09:s00:ms00",
+            "actor": "green-bowl",
+            "command": "mark-ready",
+            "order": "D"
+        },
+        {
+            "at": "h00:m09:s00:ms00",
+            "actor": "night-bakery",
+            "command": "create-order",
+            "order": "E",
+            "customer": "fay",
+            "address": "fay-home"
+        },
+        {
+            "at": "h00:m09:s05:ms00",
+            "actor": "night-bakery",
+            "command": "request-delivery",
+            "order": "E"
+        },
+        {
+            "at": "h00:m09:s10:ms00",
+            "actor": "zed",
+            "command": "accept",
+            "order": "D"
+        },
+        {
+            "at": "h00:m09:s10:ms500",
+            "actor": "yara",
+            "command": "accept",
+            "order": "D"
+        },
+        {
+            "at": "h00:m10:s00:ms00",
+            "actor": "tia",
+            "command": "pick-up",
+            "order": "C"
+        },
+        {
+            "at": "h00:m10:s00:ms00",
+            "actor": "zed",
+            "command": "pick-up",
+            "order": "D"
+        },
+        {
+            "at": "h00:m12:s00:ms00",
+            "actor": "kai",
+            "command": "accept",
+            "order": "E"
+        },
+        {
+            "at": "h00:m12:s00:ms00",
+            "actor": "pizza-corner",
+            "command": "create-order",
+            "order": "F",
+            "customer": "anna",
+            "address": "anna-office"
+        },
+        {
+            "at": "h00:m12:s05:ms00",
+            "actor": "pizza-corner",
+            "command": "request-delivery",
+            "order": "F"
+        },
+        {
+            "at": "h00:m13:s00:ms00",
+            "indirect": "restaurant-runs-late",
+            "actor": "pizza-corner",
+            "order": "F",
+            "lateBy": "h00:m05:s00:ms00",
+            "label": "pizza-late"
+        },
+        {
+            "at": "h00:m13:s30:ms00",
+            "actor": "sam",
+            "command": "accept",
+            "order": "F"
+        },
+        {
+            "at": "h00:m15:s00:ms00",
+            "actor": "tia",
+            "command": "deliver",
+            "order": "A"
+        },
+        {
+            "at": "h00:m15:s00:ms00",
+            "actor": "night-bakery",
+            "command": "mark-ready",
+            "order": "E"
+        },
+        {
+            "at": "h00:m18:s00:ms00",
+            "actor": "tia",
+            "command": "deliver",
+            "order": "C"
+        },
+        {
+            "at": "h00:m19:s00:ms00",
+            "actor": "pizza-corner",
+            "command": "mark-ready",
+            "order": "F",
+            "after": "pizza-late"
+        },
+        {
+            "at": "h00:m19:s30:ms00",
+            "actor": "sam",
+            "command": "pick-up",
+            "order": "F"
+        },
+        {
+            "at": "h00:m20:s00:ms00",
+            "set": [
+                {
+                    "rule": "drivers.near-restaurant",
+                    "parameter": "max-distance",
+                    "value": 3000
+                }
+            ]
+        },
+        {
+            "at": "h00:m21:s00:ms00",
+            "actor": "kai",
+            "command": "accept",
+            "order": "E"
+        },
+        {
+            "at": "h00:m22:s00:ms00",
+            "actor": "zed",
+            "command": "deliver",
+            "order": "D"
+        },
+        {
+            "at": "h00:m23:s00:ms00",
+            "actor": "kai",
+            "command": "pick-up",
+            "order": "E"
+        },
+        {
+            "at": "h00:m27:s00:ms00",
+            "actor": "sam",
+            "command": "deliver",
+            "order": "F"
+        },
+        {
+            "at": "h00:m30:s00:ms00",
+            "actor": "xan",
+            "command": "deliver",
+            "order": "B"
+        },
+        {
+            "at": "h00:m31:s00:ms00",
+            "actor": "kai",
+            "command": "deliver",
+            "order": "E"
+        },
+        {
+            "at": "h00:m32:s00:ms00",
+            "actor": "green-bowl",
+            "command": "create-order",
+            "order": "G",
+            "customer": "eli",
+            "address": "eli-home"
+        },
+        {
+            "at": "h00:m32:s10:ms00",
+            "actor": "green-bowl",
+            "command": "request-delivery",
+            "order": "G"
+        },
+        {
+            "at": "h00:m33:s00:ms00",
+            "actor": "green-bowl",
+            "command": "mark-ready",
+            "order": "G"
+        },
+        {
+            "at": "h00:m33:s30:ms00",
+            "actor": "zed",
+            "command": "accept",
+            "order": "G"
+        },
+        {
+            "at": "h00:m35:s00:ms00",
+            "actor": "zed",
+            "command": "pick-up",
+            "order": "G"
+        },
+        {
+            "at": "h00:m35:s00:ms00",
+            "actor": "noodle-bar",
+            "command": "create-order",
+            "order": "H",
+            "customer": "chen",
+            "address": "chen-home"
+        },
+        {
+            "at": "h00:m35:s10:ms00",
+            "actor": "noodle-bar",
+            "command": "request-delivery",
+            "order": "H"
+        },
+        {
+            "at": "h00:m36:s00:ms00",
+            "actor": "green-bowl",
+            "command": "create-order",
+            "order": "J",
+            "customer": "dara",
+            "address": "dara-home"
+        },
+        {
+            "at": "h00:m36:s10:ms00",
+            "actor": "green-bowl",
+            "command": "request-delivery",
+            "order": "J"
+        },
+        {
+            "at": "h00:m36:s30:ms00",
+            "actor": "yara",
+            "command": "accept",
+            "order": "J"
+        },
+        {
+            "at": "h00:m37:s00:ms00",
+            "actor": "pizza-corner",
+            "command": "create-order",
+            "order": "I",
+            "customer": "ben",
+            "address": "ben-flat"
+        },
+        {
+            "at": "h00:m38:s00:ms00",
+            "actor": "noodle-bar",
+            "command": "mark-ready",
+            "order": "H"
+        },
+        {
+            "at": "h00:m38:s00:ms00",
+            "actor": "green-bowl",
+            "command": "mark-ready",
+            "order": "J"
+        },
+        {
+            "at": "h00:m39:s00:ms00",
+            "actor": "xan",
+            "command": "accept",
+            "order": "H"
+        },
+        {
+            "at": "h00:m39:s00:ms00",
+            "actor": "yara",
+            "command": "pick-up",
+            "order": "J"
+        },
+        {
+            "at": "h00:m40:s00:ms00",
+            "actor": "xan",
+            "command": "pick-up",
+            "order": "H"
+        },
+        {
+            "at": "h00:m40:s00:ms00",
+            "actor": "pizza-corner",
+            "command": "request-delivery",
+            "order": "I"
+        },
+        {
+            "at": "h00:m41:s00:ms00",
+            "actor": "pizza-corner",
+            "command": "mark-ready",
+            "order": "I"
+        },
+        {
+            "at": "h00:m41:s30:ms00",
+            "actor": "sam",
+            "command": "accept",
+            "order": "I"
+        },
+        {
+            "at": "h00:m43:s00:ms00",
+            "actor": "sam",
+            "command": "pick-up",
+            "order": "I"
+        },
+        {
+            "at": "h00:m44:s00:ms00",
+            "actor": "zed",
+            "command": "deliver",
+            "order": "G"
+        },
+        {
+            "at": "h00:m47:s00:ms00",
+            "actor": "yara",
+            "command": "deliver",
+            "order": "J"
+        },
+        {
+            "at": "h00:m48:s00:ms00",
+            "actor": "xan",
+            "command": "deliver",
+            "order": "H"
+        },
+        {
+            "at": "h00:m50:s00:ms00",
+            "actor": "sam",
+            "command": "deliver",
+            "order": "I"
+        }
+    ]
+}

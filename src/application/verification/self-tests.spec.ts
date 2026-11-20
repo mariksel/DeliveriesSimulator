@@ -1,3 +1,4 @@
+import { TESTING_FUNCTIONS } from '../../application-core/simulation-engine/function-lookup.testing';
 import { describe, expect, it } from 'vitest';
 
 import { List } from 'immutable';
@@ -43,11 +44,11 @@ const blindTo =
 // testing's changes take effect, and could not catch any.
 describe('the simulator self-tests', () => {
     it('pass a known good run', () => {
-        expect(runSelfTests().isKnownGoodRunPassing).toBe(true);
+        expect(runSelfTests(TESTING_FUNCTIONS).isKnownGoodRunPassing).toBe(true);
     });
 
     it('report every way of breaking a run', () => {
-        const unreported = runSelfTests()
+        const unreported = runSelfTests(TESTING_FUNCTIONS)
             .results.filter((result) => !result.isReported)
             .map((result) => result.name);
 
@@ -56,12 +57,17 @@ describe('the simulator self-tests', () => {
 
     const cases = Object.values(Criterion);
     it.each(cases)('break %s in at least one way', (criterion) => {
-        const hasResult = runSelfTests().results.some((result) => result.criterion === criterion);
+        const hasResult = runSelfTests(TESTING_FUNCTIONS).results.some(
+            (result) => result.criterion === criterion,
+        );
         expect(hasResult).toBe(true);
     });
 
     it('name each way of breaking a run, under its criterion', () => {
-        const names = runSelfTests().results.map((result) => [result.criterion, result.name]);
+        const names = runSelfTests(TESTING_FUNCTIONS).results.map((result) => [
+            result.criterion,
+            result.name,
+        ]);
 
         expect(names).toEqual([
             ['Valid final state', 'an order that ends before it is delivered'],
@@ -81,13 +87,13 @@ describe('the simulator self-tests', () => {
     });
 
     it('come out as passed when every break is reported', () => {
-        expect(runSelfTests().isPassed).toBe(true);
+        expect(runSelfTests(TESTING_FUNCTIONS).isPassed).toBe(true);
     });
 
     describe('given a checker that does not work', () => {
         it('do not pass one that finds nothing', () => {
             const check = checkerFinding();
-            const report = runSelfTests(check);
+            const report = runSelfTests(TESTING_FUNCTIONS, check);
 
             expect(report.isKnownGoodRunPassing).toBe(true);
             const hasResult = report.results.some((result) => result.isReported);
@@ -97,7 +103,7 @@ describe('the simulator self-tests', () => {
 
         it('do not pass one that fails even a good run', () => {
             const check = checkerFinding(...Object.values(Criterion));
-            const report = runSelfTests(check);
+            const report = runSelfTests(TESTING_FUNCTIONS, check);
 
             expect(report.isKnownGoodRunPassing).toBe(false);
             const isEveryResult = report.results.every((result) => result.isReported);
@@ -107,7 +113,7 @@ describe('the simulator self-tests', () => {
 
         it('do not pass the real checker when it is blind to one criterion', () => {
             const check = blindTo(Criterion.OutboxForEveryEvent);
-            const report = runSelfTests(check);
+            const report = runSelfTests(TESTING_FUNCTIONS, check);
 
             expect(report.isKnownGoodRunPassing).toBe(true);
             const results = report.results
@@ -123,7 +129,7 @@ describe('the simulator self-tests', () => {
 
         it('do not count a problem found under another criterion', () => {
             const check = checkerFinding(Criterion.ValidFinalState);
-            const report = runSelfTests(check);
+            const report = runSelfTests(TESTING_FUNCTIONS, check);
 
             const results = report.results
                 .filter((result) => result.isReported)
@@ -132,7 +138,7 @@ describe('the simulator self-tests', () => {
         });
 
         it('do not report a criterion the checker gives no result for', () => {
-            const report = runSelfTests(() => ({
+            const report = runSelfTests(TESTING_FUNCTIONS, () => ({
                 isPassed: true,
                 results: [],
                 ordersJudged: toCount(1),

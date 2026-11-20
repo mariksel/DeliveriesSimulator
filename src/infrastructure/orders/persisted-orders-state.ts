@@ -18,6 +18,14 @@ import type { OrderStatus } from '../../domain/orders/order-status';
 import { OrdersOutboxEvent } from '../../domain/orders/orders-outbox-event';
 import { OrdersState } from '../../domain/orders/orders-state';
 import type { IPersistedRestaurantPlace } from '../restaurants/persisted-restaurant-place';
+import type { IPersistedDeliveryAddress } from '../restaurants/customers/persisted-customer';
+import {
+    fromPersistedDeliveryAddress,
+    toPersistedDeliveryAddress,
+} from '../restaurants/customers/persisted-customer';
+import type { DeliveryAddress } from '../../domain/restaurants/customers/delivery-address';
+import { toAddressId } from '../../domain/restaurants/customers/delivery-address';
+import { toCustomerId } from '../../domain/restaurants/customers/customer';
 import {
     fromPersistedRestaurantPlace,
     toPersistedRestaurantPlace,
@@ -44,11 +52,28 @@ import { toCount } from '../../domain/system/math/math';
 import type { InstantAt } from '../../domain/system/time/instant';
 import { toOrdersOutboxEventId } from '../../domain/orders/orders-outbox-event';
 import { toDeliveriesOutboxEventId } from '../../domain/drivers/deliveries/deliveries-outbox-event';
+import type {
+    IPersistedMapChange,
+    PersistedListChange,
+} from '../system/records/persisted-changes';
+import {
+    appliedListChange,
+    appliedMapChange,
+    appliedValueChange,
+    listChange,
+    mapChange,
+    presentOrNone,
+    valueChange,
+} from '../system/records/persisted-changes';
+import type { IPersistedMaker } from '../system/records/persisted-maker';
+import { fromPersistedMaker, toPersistedMaker } from '../system/records/persisted-maker';
 
 /** The part of an order that never changes, persisted. */
 export interface IPersistedOrder {
     readonly id: string;
     readonly restaurantId: string;
+    readonly customerId: string;
+    readonly addressId: string;
 }
 
 /** An order's version, persisted with the versions before it. */
@@ -56,16 +81,21 @@ export interface IPersistedOrderVersion {
     readonly number: number;
     readonly previous: IPersistedOrderVersion | null;
     readonly orderId: string;
-    readonly status: OrderStatus;
     readonly isDeliveryRequestPending: boolean;
-    readonly isReady: boolean;
-    readonly driverId: string | null;
+    /** The job run or API call that made this version, or the run's start (FND-81). */
+    readonly madeBy: IPersistedMaker;
 }
 
 /** The restaurant an order is from, persisted with the order it belongs to. */
 export interface IPersistedOrderRestaurant {
     readonly orderId: string;
     readonly restaurant: IPersistedRestaurantPlace;
+}
+
+/** The stored address an order goes to, persisted with the order it belongs to (FND-90). */
+export interface IPersistedOrderAddress {
+    readonly orderId: string;
+    readonly address: IPersistedDeliveryAddress;
 }
 
 /** An orders event, persisted. */
@@ -114,6 +144,8 @@ export interface IPersistedDeliveryCopyVersion {
     readonly previous: IPersistedDeliveryCopyVersion | null;
     readonly orderId: string;
     readonly events: readonly IPersistedDeliveriesEventCopy[];
+    /** The job run or API call that made this version, or the run's start (FND-81). */
+    readonly madeBy: IPersistedMaker;
 }
 
 /** The orders module's state, persisted. */
@@ -121,6 +153,8 @@ export interface IPersistedOrdersState {
     readonly orders: readonly IPersistedOrder[];
     readonly orderVersions: readonly IPersistedOrderVersion[];
     readonly restaurants: readonly IPersistedOrderRestaurant[];
+    /** Absent for a run saved before orders had customers, which made no order (FND-90). */
+    readonly addresses?: readonly IPersistedOrderAddress[];
     readonly eventsByOrder: readonly IPersistedGroup<IPersistedOrderEventRecord>[];
     readonly outbox: readonly IPersistedOrdersOutboxEvent[];
     readonly inbox: readonly IPersistedInboxRecord[];
@@ -133,30 +167,43 @@ export interface IPersistedOrdersState {
 const toPersistedOrder = (order: Order): IPersistedOrder => ({
     id: order.id,
     restaurantId: order.restaurantId,
+    customerId: order.customerId,
+    addressId: order.addressId,
 });
 
 const fromPersistedOrder = (order: IPersistedOrder): Order =>
-    Order.create({ id: toOrderId(order.id), restaurantId: toRestaurantId(order.restaurantId) });
+    Order.create({
+        id: toOrderId(order.id),
+        restaurantId: toRestaurantId(order.restaurantId),
+        customerId: toCustomerId(order.customerId),
+        addressId: toAddressId(order.addressId),
+    });
 
-const toPersistedOrderVersion = (version: OrderVersion): IPersistedOrderVersion => ({
+const toPersistedOrderVersion = (
+    version: OrderVersion,
+    stopAt: OrderVersion | null = null,
+): IPersistedOrderVersion => ({
     number: version.number,
-    previous: version.previous === null ? null : toPersistedOrderVersion(version.previous),
+    previous:
+        version.previous === null || version.previous === stopAt
+            ? null
+            : toPersistedOrderVersion(version.previous, stopAt),
     orderId: version.orderId,
-    status: version.status,
     isDeliveryRequestPending: version.isDeliveryRequestPending,
-    isReady: version.isReady,
-    driverId: version.driverId,
+    madeBy: toPersistedMaker(version.madeBy),
 });
 
-const fromPersistedOrderVersion = (version: IPersistedOrderVersion): OrderVersion =>
+const fromPersistedOrderVersion = (
+    version: IPersistedOrderVersion,
+    tail: OrderVersion | null = null,
+): OrderVersion =>
     OrderVersion.create({
         orderId: toOrderId(version.orderId),
-        status: version.status,
         isDeliveryRequestPending: version.isDeliveryRequestPending,
-        isReady: version.isReady,
-        driverId: version.driverId === null ? null : toDriverId(version.driverId),
         number: toVersionNumber(version.number),
-        previous: version.previous === null ? null : fromPersistedOrderVersion(version.previous),
+        previous:
+            version.previous === null ? tail : fromPersistedOrderVersion(version.previous, tail),
+        madeBy: fromPersistedMaker(version.madeBy),
     });
 
 /** An orders event, persisted. */
@@ -252,16 +299,24 @@ const fromPersistedCopy = (copy: IPersistedDeliveryCopy): DeliveryCopy =>
         orderDeliveryId: toOrderDeliveryId(copy.orderDeliveryId),
     });
 
-const toPersistedCopyVersion = (version: DeliveryCopyVersion): IPersistedDeliveryCopyVersion => ({
+const toPersistedCopyVersion = (
+    version: DeliveryCopyVersion,
+    stopAt: DeliveryCopyVersion | null = null,
+): IPersistedDeliveryCopyVersion => ({
     number: version.number,
-    previous: version.previous === null ? null : toPersistedCopyVersion(version.previous),
+    previous:
+        version.previous === null || version.previous === stopAt
+            ? null
+            : toPersistedCopyVersion(version.previous, stopAt),
     orderId: version.orderId,
     events: version.events.map(toPersistedCopiedEvent).toArray(),
+    madeBy: toPersistedMaker(version.madeBy),
 });
 
 function fromPersistedCopyVersion(
     version: IPersistedDeliveryCopyVersion,
     instantAt: InstantAt,
+    tail: DeliveryCopyVersion | null = null,
 ): DeliveryCopyVersion {
     const events = version.events.map((item) => fromPersistedCopiedEvent(item, instantAt));
     return DeliveryCopyVersion.create({
@@ -270,15 +325,18 @@ function fromPersistedCopyVersion(
         number: toVersionNumber(version.number),
         previous:
             version.previous === null
-                ? null
-                : fromPersistedCopyVersion(version.previous, instantAt),
+                ? tail
+                : fromPersistedCopyVersion(version.previous, instantAt, tail),
+        madeBy: fromPersistedMaker(version.madeBy),
     });
 }
 
 /** The orders module's state, persisted. */
 export const toPersistedOrdersState = (state: OrdersState): IPersistedOrdersState => ({
     orders: toPersistedRecords(state.orders, toPersistedOrder),
-    orderVersions: toPersistedRecords(state.orderVersions, toPersistedOrderVersion),
+    orderVersions: toPersistedRecords(state.orderVersions, (version) =>
+        toPersistedOrderVersion(version),
+    ),
     restaurants: state.restaurants
         .entrySeq()
         .map(([orderId, restaurant]) => ({
@@ -286,12 +344,21 @@ export const toPersistedOrdersState = (state: OrdersState): IPersistedOrdersStat
             restaurant: toPersistedRestaurantPlace(restaurant),
         }))
         .toArray(),
+    addresses: state.addresses
+        .entrySeq()
+        .map(([orderId, address]) => ({
+            orderId,
+            address: toPersistedDeliveryAddress(address),
+        }))
+        .toArray(),
     eventsByOrder: toPersistedGroups(state.eventsByOrder, toPersistedOrderEvent),
     outbox: state.outbox.map(toPersistedOrdersOutboxEvent).toArray(),
     inbox: toPersistedInbox(state.inbox),
     inboxPosition: toPersistedInboxPosition(state.inboxPosition),
     copies: toPersistedRecords(state.copies, toPersistedCopy),
-    copyVersions: toPersistedRecords(state.copyVersions, toPersistedCopyVersion),
+    copyVersions: toPersistedRecords(state.copyVersions, (version) =>
+        toPersistedCopyVersion(version),
+    ),
     nextOrder: state.nextOrder,
 });
 
@@ -304,15 +371,20 @@ export function fromPersistedOrdersState(
         toOrderId(entry.orderId),
         fromPersistedRestaurantPlace(entry.restaurant),
     ]);
+    const addresses = (state.addresses ?? []).map((entry): [OrderId, DeliveryAddress] => [
+        toOrderId(entry.orderId),
+        fromPersistedDeliveryAddress(entry.address),
+    ]);
     const outbox = state.outbox.map((item) => fromPersistedOrdersOutboxEvent(item, instantAt));
     return OrdersState.create({
         orders: fromPersistedRecords(state.orders, fromPersistedOrder, (order) => order.id),
         orderVersions: fromPersistedRecords(
             state.orderVersions,
-            fromPersistedOrderVersion,
+            (item) => fromPersistedOrderVersion(item),
             (version) => version.orderId,
         ),
         restaurants: OrderedMap(restaurants),
+        addresses: OrderedMap(addresses),
         eventsByOrder: fromPersistedGroups(state.eventsByOrder, toOrderId, (item) =>
             fromPersistedOrderEvent(item, instantAt),
         ),
@@ -326,5 +398,130 @@ export function fromPersistedOrdersState(
             (version) => version.orderId,
         ),
         nextOrder: toCount(state.nextOrder),
+    });
+}
+
+/**
+ * The orders module's state's change from its parent's, part by part, each left out when it is
+ * the parent's (FND-81). A version is saved down to the one the parent holds.
+ */
+export interface IPersistedOrdersChange {
+    readonly orders?: IPersistedMapChange<IPersistedOrder> | undefined;
+    readonly orderVersions?: IPersistedMapChange<IPersistedOrderVersion> | undefined;
+    readonly restaurants?: IPersistedMapChange<IPersistedRestaurantPlace> | undefined;
+    readonly addresses?: IPersistedMapChange<IPersistedDeliveryAddress> | undefined;
+    readonly eventsByOrder?:
+        IPersistedMapChange<readonly IPersistedOrderEventRecord[]> | undefined;
+    readonly outbox?: PersistedListChange<IPersistedOrdersOutboxEvent> | undefined;
+    readonly inbox?: IPersistedMapChange<number> | undefined;
+    readonly inboxPosition?: IPersistedInboxPosition | undefined;
+    readonly copies?: IPersistedMapChange<IPersistedDeliveryCopy> | undefined;
+    readonly copyVersions?: IPersistedMapChange<IPersistedDeliveryCopyVersion> | undefined;
+    readonly nextOrder?: number | undefined;
+}
+
+/** The orders module's state's change from its parent's, or undefined when it is the parent's. */
+export function toPersistedOrdersChange(
+    parent: OrdersState,
+    child: OrdersState,
+): IPersistedOrdersChange | undefined {
+    if (parent === child) {
+        return undefined;
+    }
+    return presentOrNone({
+        orders: mapChange(parent.orders, child.orders, toOrderId, (order) =>
+            toPersistedOrder(order),
+        ),
+        orderVersions: mapChange(
+            parent.orderVersions,
+            child.orderVersions,
+            toOrderId,
+            (version, before) => toPersistedOrderVersion(version, before ?? null),
+        ),
+        restaurants: mapChange(parent.restaurants, child.restaurants, toOrderId, (place) =>
+            toPersistedRestaurantPlace(place),
+        ),
+        addresses: mapChange(parent.addresses, child.addresses, toOrderId, (address) =>
+            toPersistedDeliveryAddress(address),
+        ),
+        eventsByOrder: mapChange(parent.eventsByOrder, child.eventsByOrder, toOrderId, (events) =>
+            events.map(toPersistedOrderEvent).toArray(),
+        ),
+        outbox: listChange(parent.outbox, child.outbox, toPersistedOrdersOutboxEvent),
+        inbox: mapChange(
+            parent.inbox,
+            child.inbox,
+            toDeliveriesOutboxEventId,
+            (at) => at.sinceStart.milliseconds,
+        ),
+        inboxPosition: valueChange(
+            parent.inboxPosition,
+            child.inboxPosition,
+            toPersistedInboxPosition,
+        ),
+        copies: mapChange(parent.copies, child.copies, toOrderId, toPersistedCopy),
+        copyVersions: mapChange(
+            parent.copyVersions,
+            child.copyVersions,
+            toOrderId,
+            (version, before) => toPersistedCopyVersion(version, before ?? null),
+        ),
+        nextOrder: valueChange(parent.nextOrder, child.nextOrder, (next) => next),
+    });
+}
+
+/** The orders module's state, from its parent's and its change. */
+export function fromPersistedOrdersChange(
+    parent: OrdersState,
+    change: IPersistedOrdersChange | undefined,
+    instantAt: InstantAt,
+): OrdersState {
+    if (change === undefined) {
+        return parent;
+    }
+    return OrdersState.create({
+        orders: appliedMapChange(parent.orders, change.orders, toOrderId, (order) =>
+            fromPersistedOrder(order),
+        ),
+        orderVersions: appliedMapChange(
+            parent.orderVersions,
+            change.orderVersions,
+            toOrderId,
+            (version, before) => fromPersistedOrderVersion(version, before ?? null),
+        ),
+        restaurants: appliedMapChange(parent.restaurants, change.restaurants, toOrderId, (place) =>
+            fromPersistedRestaurantPlace(place),
+        ),
+        addresses: appliedMapChange(parent.addresses, change.addresses, toOrderId, (address) =>
+            fromPersistedDeliveryAddress(address),
+        ),
+        eventsByOrder: appliedMapChange(
+            parent.eventsByOrder,
+            change.eventsByOrder,
+            toOrderId,
+            (events) => {
+                const restored = events.map((event) => fromPersistedOrderEvent(event, instantAt));
+                return List(restored);
+            },
+        ),
+        outbox: appliedListChange(parent.outbox, change.outbox, (event) =>
+            fromPersistedOrdersOutboxEvent(event, instantAt),
+        ),
+        inbox: appliedMapChange(parent.inbox, change.inbox, toDeliveriesOutboxEventId, (at) =>
+            instantAt(at),
+        ),
+        inboxPosition: appliedValueChange(parent.inboxPosition, change.inboxPosition, (position) =>
+            fromPersistedInboxPosition(position, instantAt),
+        ),
+        copies: appliedMapChange(parent.copies, change.copies, toOrderId, (copy) =>
+            fromPersistedCopy(copy),
+        ),
+        copyVersions: appliedMapChange(
+            parent.copyVersions,
+            change.copyVersions,
+            toOrderId,
+            (version, before) => fromPersistedCopyVersion(version, instantAt, before ?? null),
+        ),
+        nextOrder: appliedValueChange(parent.nextOrder, change.nextOrder, (next) => toCount(next)),
     });
 }

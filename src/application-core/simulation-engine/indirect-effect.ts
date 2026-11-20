@@ -2,6 +2,8 @@ import { recordPart } from '../../domain/system/digests/digest-parts';
 import type { Duration } from '../../domain/system/time/duration';
 import type { SimTime } from '../../domain/simulation-engine/sim-time';
 import type { IndirectLabel, InputActor, InputOrderName } from './input-names';
+import type { RideStatement } from './ride';
+import { RideKind } from './ride';
 
 /** The kinds of decision or change outside the service, which it takes no part in (FND-89). */
 export const IndirectKind = {
@@ -51,8 +53,20 @@ export interface IIndirectMoment {
     readonly isScripted: boolean;
 }
 
-/** One decision or change outside the service, in the order it happened. */
-export type IndirectEffect = IndirectStatement & IIndirectMoment;
+/**
+ * One decision or change outside the service, in the order it happened: one stated by hand or by
+ * a script, or one a riding driver makes (FND-90).
+ */
+export type IndirectEffect = (IndirectStatement | RideStatement) & IIndirectMoment;
+
+/** A stated indirect effect: one a person or a script states, not one a riding driver makes. */
+export type StatedIndirectEffect = IndirectStatement & IIndirectMoment;
+
+/** Whether an indirect effect was stated, by hand or by a script, rather than made by a rider. */
+export const isStatedIndirect = (effect: IndirectEffect): effect is StatedIndirectEffect =>
+    effect.kind !== RideKind.SetsOff &&
+    effect.kind !== RideKind.ActsOnArrival &&
+    effect.kind !== RideKind.GoesToWait;
 
 /** The actor who decided, or null for a kind with none. */
 const actorOf = (effect: IndirectEffect): InputActor | null =>
@@ -67,6 +81,9 @@ const lateByOf = (effect: IndirectEffect): number | null =>
  * then the ones only some kinds have, which are null for the rest.
  */
 export function indirectEffectPart(effect: IndirectEffect): string {
+    if (!isStatedIndirect(effect)) {
+        return ridePart(effect);
+    }
     const time = effect.at.digestPart();
     const actor = actorOf(effect);
     const lateBy = lateByOf(effect);
@@ -78,6 +95,35 @@ export function indirectEffectPart(effect: IndirectEffect): string {
         { text: effect.order },
         { textOrNull: actor },
         { numberOrNull: lateBy },
+    ]);
+}
+
+/** A riding driver's decision, written out field by field for the run digest. */
+function ridePart(effect: RideStatement & IIndirectMoment): string {
+    const time = effect.at.digestPart();
+    const head = [{ text: effect.kind }, { part: time }, { isTrue: effect.isScripted }];
+    if (effect.kind === RideKind.ActsOnArrival) {
+        return recordPart([
+            ...head,
+            { text: effect.actor },
+            { text: effect.command },
+            { text: effect.order },
+        ]);
+    }
+    const path = effect.path
+        .map((point) => recordPart([{ number: point.latitude }, { number: point.longitude }]))
+        .join('');
+    const where =
+        effect.kind === RideKind.GoesToWait
+            ? [{ text: effect.areaId }]
+            : [{ text: effect.stopOrder }, { isTrue: effect.isPickUp }];
+    return recordPart([
+        ...head,
+        { text: effect.actor },
+        ...where,
+        { part: path },
+        { number: effect.metres },
+        { number: effect.speedKmh },
     ]);
 }
 

@@ -6,8 +6,11 @@ import { unreachable } from '../../domain/system/validation/unreachable';
 import type { CommandRefusal } from './command-outcome';
 import type {
     ICommandIssuedData,
+    ICommandSubject,
+    ISentPoint,
     ICommandRefusedData,
     IConfigChangedData,
+    IFunctionVersionSwitchedData,
     IInboxReadData,
     INotificationSentData,
     IOrderCreatedData,
@@ -16,7 +19,8 @@ import type {
     OutboxEntry,
     RunLogEntry,
 } from './run-log-entry';
-import { isModuleEvent, isOutboxEntry } from './run-log-entry';
+import type { EngineEntry } from './run-log-entry';
+import { isEngineEntry, isModuleEvent, isOutboxEntry } from './run-log-entry';
 import type { IndirectEffect } from './indirect-effect';
 import { indirectEffectPart, indirectEffectsEqual } from './indirect-effect';
 
@@ -24,6 +28,8 @@ const orderCreatedPart = (data: IOrderCreatedData): string =>
     recordPart([
         { text: data.id },
         { text: data.restaurantId },
+        { text: data.customerId },
+        { text: data.addressId },
         { text: data.status },
         { number: data.version },
         { isTrue: data.isDeliveryRequestPending },
@@ -41,9 +47,25 @@ function notificationSentPart(data: INotificationSentData): string {
     return recordPart([{ part: notification }, { isTrue: data.isOutstanding }]);
 }
 
+/** One app's send, written out for the digest. */
+const sentPointPart = (send: ISentPoint): string =>
+    recordPart([{ text: send.actor }, { number: send.latitude }, { number: send.longitude }]);
+
+/** What a command was about, written out for the digest. */
+function subjectPart(subject: ICommandSubject): string {
+    if ('order' in subject) {
+        return recordPart([{ text: subject.order }]);
+    }
+    if ('sends' in subject) {
+        const sends = subject.sends.map(sentPointPart).join('');
+        return recordPart([{ part: sends }]);
+    }
+    return recordPart([{ number: subject.latitude }, { number: subject.longitude }]);
+}
+
 function commandIssuedPart(data: ICommandIssuedData): string {
-    const subject = recordPart([{ text: data.data.order }]);
-    return recordPart([{ text: data.actor }, { text: data.name }, { part: subject }]);
+    const subject = subjectPart(data.data);
+    return recordPart([{ textOrNull: data.actor }, { text: data.name }, { part: subject }]);
 }
 
 /** A refusal: a code, or the code from orders that deliveries passed on. */
@@ -65,15 +87,27 @@ function configChangedPart(data: IConfigChangedData): string {
     return recordPart(changes);
 }
 
+const functionVersionSwitchedPart = (data: IFunctionVersionSwitchedData): string =>
+    recordPart([{ text: data.function }, { number: data.before }, { number: data.after }]);
+
 const moduleEventPart = (entry: ModuleEventEntry): string =>
     entry.source === LogSource.Orders ? ordersEventPart(entry.data) : entry.data.digestPart();
 
 const outboxPart = (entry: OutboxEntry): string => entry.data.digestPart();
 
+/** An entry the Simulation engine wrote, its data written out field by field. */
+const enginePart = (entry: EngineEntry): string =>
+    entry.kind === TechnicalLogKind.ConfigChanged
+        ? configChangedPart(entry.data)
+        : functionVersionSwitchedPart(entry.data);
+
 /** An entry's data, written out field by field, by its kind. */
 function dataPart(entry: RunLogEntry): string {
     if (isModuleEvent(entry)) {
         return moduleEventPart(entry);
+    }
+    if (isEngineEntry(entry)) {
+        return enginePart(entry);
     }
     if (isOutboxEntry(entry)) {
         return outboxPart(entry);
@@ -89,8 +123,6 @@ function dataPart(entry: RunLogEntry): string {
             return commandIssuedPart(entry.data);
         case TechnicalLogKind.CommandRefused:
             return commandRefusedPart(entry.data);
-        case TechnicalLogKind.ConfigChanged:
-            return configChangedPart(entry.data);
         case TechnicalLogKind.IndirectEffectHappened:
             return indirectEffectPart(entry.data);
         default:
@@ -123,6 +155,8 @@ function orderCreatedEqual(first: IOrderCreatedData, second: RunLogEntry): boole
     return allTrue(
         first.id === data.id,
         first.restaurantId === data.restaurantId,
+        first.customerId === data.customerId,
+        first.addressId === data.addressId,
         first.status === data.status,
         first.version === data.version,
         first.isDeliveryRequestPending === data.isDeliveryRequestPending,
@@ -148,11 +182,19 @@ function commandsIssuedEqual(first: ICommandIssuedData, second: RunLogEntry): bo
         return false;
     }
     const { data } = second;
-    return allTrue(
-        first.actor === data.actor,
-        first.name === data.name,
-        first.data.order === data.data.order,
-    );
+    const isSameSubject = subjectsEqual(first.data, data.data);
+    return allTrue(first.actor === data.actor, first.name === data.name, isSameSubject);
+}
+
+/** Whether two commands were about the same order, or sent the same points. */
+function subjectsEqual(first: ICommandSubject, second: ICommandSubject): boolean {
+    if ('order' in first || 'order' in second) {
+        return 'order' in first && 'order' in second && first.order === second.order;
+    }
+    if ('sends' in first || 'sends' in second) {
+        return 'sends' in first && 'sends' in second && subjectPart(first) === subjectPart(second);
+    }
+    return first.latitude === second.latitude && first.longitude === second.longitude;
 }
 
 function refusalsEqual(first: CommandRefusal, second: CommandRefusal): boolean {
@@ -182,6 +224,21 @@ function configChangesEqual(first: IConfigChangedData, second: RunLogEntry): boo
             const other = others.get(index);
             return other !== undefined && changed.equals(other);
         })
+    );
+}
+
+function functionVersionsSwitchedEqual(
+    first: IFunctionVersionSwitchedData,
+    second: RunLogEntry,
+): boolean {
+    if (second.kind !== TechnicalLogKind.FunctionVersionSwitched) {
+        return false;
+    }
+    const { data } = second;
+    return allTrue(
+        first.function === data.function,
+        first.before === data.before,
+        first.after === data.after,
     );
 }
 
@@ -217,10 +274,19 @@ function outboxEventsEqual(first: OutboxEntry, second: RunLogEntry): boolean {
     return second.source === LogSource.Deliveries && first.data.equals(second.data);
 }
 
+/** Whether an entry the Simulation engine wrote holds the same data as the second. */
+const engineEntriesEqual = (first: EngineEntry, second: RunLogEntry): boolean =>
+    first.kind === TechnicalLogKind.ConfigChanged
+        ? configChangesEqual(first.data, second)
+        : functionVersionsSwitchedEqual(first.data, second);
+
 /** Whether the second entry holds the same typed data as the first, of the first one's kind. */
 function dataEqual(first: RunLogEntry, second: RunLogEntry): boolean {
     if (isModuleEvent(first)) {
         return moduleEventsEqual(first, second);
+    }
+    if (isEngineEntry(first)) {
+        return engineEntriesEqual(first, second);
     }
     if (isOutboxEntry(first)) {
         return outboxEventsEqual(first, second);
@@ -236,8 +302,6 @@ function dataEqual(first: RunLogEntry, second: RunLogEntry): boolean {
             return commandsIssuedEqual(first.data, second);
         case TechnicalLogKind.CommandRefused:
             return commandsRefusedEqual(first.data, second);
-        case TechnicalLogKind.ConfigChanged:
-            return configChangesEqual(first.data, second);
         case TechnicalLogKind.IndirectEffectHappened:
             return indirectEffectsHappenedEqual(first.data, second);
         default:

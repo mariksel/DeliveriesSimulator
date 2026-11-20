@@ -12,17 +12,23 @@ import {
 } from '../../application-core/simulation-engine/run-branches';
 import { isBetweenGroups } from '../../application-core/simulation-engine/run-places';
 import type { IRunState } from '../../application-core/simulation-engine/run-state';
-import { oneOrderRun } from '../../application/simulation-engine/one-order-run.testing';
+import {
+    oneOrderRun,
+    twoOrderRun,
+} from '../../application/simulation-engine/one-order-run.testing';
+import { toInputOrderName } from '../../application-core/simulation-engine/input-names';
 import { SimulationRun } from '../../application/simulation-engine/simulation-run';
 import type { Position } from '../../domain/system/math/math';
 import { toPosition } from '../../domain/system/math/math';
 import type { IGridCommit, ITimelineNode, ITimelineRow } from './timeline-grid';
 import {
     columnHolding,
+    commitNodeAt,
+    holdsPlace,
     keysHolding,
     lineThrough,
     NodeKind,
-    RowMode,
+    TimelineView,
     TimelineGrid,
     timelineGrid,
     timelineRows,
@@ -99,7 +105,7 @@ const FORKED_BRANCHES = branchLinesOf(FORKED).toArray();
 
 describe('the timeline grid', () => {
     it('shows every commit of Main once, in order, in its own column', () => {
-        const grid = timelineGrid(MAIN_BRANCHES, RowMode.ByTime);
+        const grid = timelineGrid(MAIN_BRANCHES, TimelineView.ByTime);
 
         const ids = grid.columns.map((column) => column.id);
         expect(ids).toEqual([MAIN_BRANCH]);
@@ -109,7 +115,7 @@ describe('the timeline grid', () => {
     });
 
     it('groups commits in job runs and API calls, named from their effect', () => {
-        const grid = timelineGrid(MAIN_BRANCHES, RowMode.ByTime);
+        const grid = timelineGrid(MAIN_BRANCHES, TimelineView.ByTime);
 
         const sessions = nodesOfKind(grid.nodes, NodeKind.Session);
         const kinds = sessions.map((node) => node.label.split(':')[0]);
@@ -119,7 +125,7 @@ describe('the timeline grid', () => {
     });
 
     it('skips a span with only one thing in it', () => {
-        const grid = timelineGrid(MAIN_BRANCHES, RowMode.ByTime);
+        const grid = timelineGrid(MAIN_BRANCHES, TimelineView.ByTime);
 
         const hours = nodesOfKind(grid.nodes, NodeKind.Hour);
         const minutes = nodesOfKind(grid.nodes, NodeKind.Minute);
@@ -128,7 +134,7 @@ describe('the timeline grid', () => {
     });
 
     it("gives a fork its own column, starting at its fork point, joined to Main's commit", () => {
-        const grid = timelineGrid(FORKED_BRANCHES, RowMode.ByTime);
+        const grid = timelineGrid(FORKED_BRANCHES, TimelineView.ByTime);
 
         const [main, fork] = grid.columns;
         expect(main?.join).toBeNull();
@@ -140,7 +146,7 @@ describe('the timeline grid', () => {
         expect(mainPlaces).toHaveLength(COMMITS);
     });
 
-    it.each([RowMode.ByTime, RowMode.ByNumber])(
+    it.each([TimelineView.ByTime, TimelineView.ByNumber])(
         'lines up a fork that changed nothing with Main, row for row, %s',
         (mode) => {
             const grid = timelineGrid(FORKED_BRANCHES, mode);
@@ -155,7 +161,7 @@ describe('the timeline grid', () => {
     );
 
     it('groups job runs and API calls by hundreds and tens by number', () => {
-        const grid = timelineGrid(MAIN_BRANCHES, RowMode.ByNumber);
+        const grid = timelineGrid(MAIN_BRANCHES, TimelineView.ByNumber);
 
         const hours = nodesOfKind(grid.nodes, NodeKind.Hour);
         const tens = nodesOfKind(grid.nodes, NodeKind.Ten);
@@ -166,7 +172,7 @@ describe('the timeline grid', () => {
     it('grows, as a run goes, into the grid it would be if built at once', () => {
         const [main] = MAIN_BRANCHES;
         const line = main?.line ?? List();
-        const grid = new TimelineGrid(RowMode.ByTime);
+        const grid = new TimelineGrid(TimelineView.ByTime);
         const steps = [Math.floor(COMMITS * THIRD), Math.floor(COMMITS * HALF), COMMITS];
 
         steps.forEach((size) => {
@@ -175,7 +181,7 @@ describe('the timeline grid', () => {
             grid.update(grown);
         });
 
-        const whole = timelineGrid(MAIN_BRANCHES, RowMode.ByTime);
+        const whole = timelineGrid(MAIN_BRANCHES, TimelineView.ByTime);
         const grownPlaces = placesIn(grid.nodes, MAIN_BRANCH);
         const wholePlaces = placesIn(whole.nodes, MAIN_BRANCH);
         expect(grownPlaces).toEqual(wholePlaces);
@@ -191,14 +197,14 @@ describe('the timeline grid', () => {
         const third = forkAt(backAgain, FORK_PLACE);
         const branches = branchLinesOf(third).toArray();
 
-        const grid = timelineGrid(branches, RowMode.ByTime);
+        const grid = timelineGrid(branches, TimelineView.ByTime);
 
         const names = grid.columns.map((column) => column.name);
         expect(names).toEqual(['Fork 2', 'Main', 'Fork 1', 'Fork 3']);
     });
 
     it('names the module each state commit changed, and the module that called it', () => {
-        const grid = timelineGrid(MAIN_BRANCHES, RowMode.ByTime);
+        const grid = timelineGrid(MAIN_BRANCHES, TimelineView.ByTime);
         const commitNodes = nodesOfKind(grid.nodes, NodeKind.Commit);
         const pairs = commitNodes.flatMap((node) => {
             const own = node.commits.get(MAIN_BRANCH) ?? [];
@@ -220,7 +226,7 @@ describe('the timeline grid', () => {
         const twice = forkAt(FORKED, early);
         const branches = branchLinesOf(twice).toArray();
 
-        const grid = timelineGrid(branches, RowMode.ByTime);
+        const grid = timelineGrid(branches, TimelineView.ByTime);
 
         const last = grid.columns.at(-1);
         expect(last?.forkedFrom).toBe(FORK);
@@ -231,7 +237,7 @@ describe('the timeline grid', () => {
         const early = groupPlaceAfter(FORKED, THIRD);
         const twice = forkAt(FORKED, early);
         const branches = branchLinesOf(twice).toArray();
-        const grid = timelineGrid(branches, RowMode.ByTime);
+        const grid = timelineGrid(branches, TimelineView.ByTime);
         const current = twice.history.current;
 
         const through = lineThrough(grid.columns, current);
@@ -249,7 +255,7 @@ describe('the timeline grid', () => {
 });
 
 describe('the rows of the timeline grid', () => {
-    const grid = timelineGrid(MAIN_BRANCHES, RowMode.ByTime);
+    const grid = timelineGrid(MAIN_BRANCHES, TimelineView.ByTime);
 
     /** Whether a row is the commit row of Main's commit at a place. */
     const isCommitAt = (row: ITimelineRow, place: Position): boolean =>
@@ -293,5 +299,128 @@ describe('the rows of the timeline grid', () => {
         const depths = events.map((row) => row.depth - (commitRow?.depth ?? 0));
         const isOneBelow = depths.every((depth) => depth === 1);
         expect(isOneBelow).toBe(true);
+    });
+});
+
+describe('the views by order and by driver', () => {
+    const byTime = timelineGrid(MAIN_BRANCHES, TimelineView.ByTime);
+    const byOrder = timelineGrid(MAIN_BRANCHES, TimelineView.ByOrder);
+    const byDriver = timelineGrid(MAIN_BRANCHES, TimelineView.ByDriver);
+    const orderName = toInputOrderName('A');
+    const orderId = MAIN.cache.orderIds.get(orderName)!;
+    const onMainByOrder = placesIn(byOrder.nodes, MAIN_BRANCH);
+
+    /** Each job run's or API call's places in Main's column, by its key's last part. */
+    function sessionPlaces(nodes: readonly ITimelineNode[]): Map<string, readonly number[]> {
+        const sessions = nodesOfKind(nodes, NodeKind.Session);
+        const pairs = sessions.map((node) => {
+            const own = node.commits.get(MAIN_BRANCH) ?? [];
+            const parts = node.key.split('/');
+            const name = parts.at(-1) ?? '';
+            const places = own.map((commit) => commit.place);
+            return [name, places] as const;
+        });
+        return new Map(pairs);
+    }
+
+    it('groups by order, naming each by its ID', () => {
+        const top = byOrder.nodes.map((node) => [node.kind, node.label, node.subject]);
+
+        expect(top).toEqual([[NodeKind.Order, `Order ${orderId}`, orderId]]);
+    });
+
+    it('shows each job run or API call under an order whole, as the view by time does', () => {
+        const underOrder = sessionPlaces(byOrder.nodes);
+        const byTimeSessions = sessionPlaces(byTime.nodes);
+
+        const names = [...underOrder.keys()];
+        const asByTime = names.map((name) => byTimeSessions.get(name));
+        const asByOrder = names.map((name) => underOrder.get(name));
+        expect(names.length).toBeGreaterThan(0);
+        expect(asByOrder).toEqual(asByTime);
+    });
+
+    it('leaves out the commits that touched no order', () => {
+        const shown = placesIn(byOrder.nodes, MAIN_BRANCH);
+
+        expect(shown.length).toBeGreaterThan(0);
+        expect(shown.length).toBeLessThan(COMMITS);
+    });
+
+    it('groups by driver', () => {
+        const top = byDriver.nodes.map((node) => [node.kind, node.label]);
+
+        expect(top).toEqual([[NodeKind.Driver, 'Driver driver-1']]);
+    });
+
+    it('puts a job run that touched two orders under both, the same commits under each', () => {
+        const two = twoOrderRun();
+        const lines = branchLinesOf(two).toArray();
+
+        const grid = timelineGrid(lines, TimelineView.ByOrder);
+
+        const [first, second] = grid.nodes.map((node) => sessionPlaces([node]));
+        const firstNames = [...first!.keys()];
+        const shared = firstNames.filter((name) => second!.has(name));
+        const underFirst = shared.map((name) => first!.get(name));
+        const underSecond = shared.map((name) => second!.get(name));
+        expect(grid.nodes).toHaveLength(2);
+        expect(shared.length).toBeGreaterThan(0);
+        expect(underFirst).toEqual(underSecond);
+    });
+
+    it('works out the index of a branch that is not current, giving what it showed while current', () => {
+        const forked = timelineGrid(FORKED_BRANCHES, TimelineView.ByOrder);
+
+        const onMain = placesIn(forked.nodes, MAIN_BRANCH);
+
+        expect(onMain).toEqual(onMainByOrder);
+    });
+
+    it("adds a fork's own commits only, in its own column", () => {
+        const forked = timelineGrid(FORKED_BRANCHES, TimelineView.ByOrder);
+
+        const onFork = placesIn(forked.nodes, FORK);
+
+        const isOwn = onFork.every((place) => place > FORK_PLACE);
+        expect(onFork.length).toBeGreaterThan(0);
+        expect(isOwn).toBe(true);
+    });
+
+    it('opens the order holding a commit, down to it, and finds its commit node', () => {
+        const [order] = byOrder.nodes;
+        const own = order!.commits.get(MAIN_BRANCH)!;
+        const place = own.at(-1)!.place;
+
+        const keys = keysHolding(byOrder.nodes, MAIN_BRANCH, place);
+        const node = commitNodeAt(byOrder.nodes, MAIN_BRANCH, place);
+
+        const found = firstPlace(node!, MAIN_BRANCH);
+        expect(keys[0]).toBe(order!.key);
+        expect(node!.kind).toBe(NodeKind.Commit);
+        expect(found).toBe(place);
+    });
+});
+
+describe("finding a place among a column's commits", () => {
+    const grid = timelineGrid(MAIN_BRANCHES, TimelineView.ByOrder);
+    const own = grid.nodes[0]!.commits.get(MAIN_BRANCH)!;
+    const held = own.map((commit) => commit.place);
+    const places = new Set<number>(held);
+    const every = Array.from({ length: COMMITS }, (_, at) => at + 1);
+    const missing = toPosition(every.find((place) => !places.has(place))!);
+
+    it.each(held)('finds place %s, which it holds', (place) => {
+        const isHeld = holdsPlace(own, place);
+
+        expect(isHeld).toBe(true);
+    });
+
+    it('does not find a place it skips, nor any place in no commits', () => {
+        const isInOwn = holdsPlace(own, missing);
+        const isInNone = holdsPlace(undefined, missing);
+        const isInEmpty = holdsPlace([], missing);
+
+        expect([isInOwn, isInNone, isInEmpty]).toEqual([false, false, false]);
     });
 });

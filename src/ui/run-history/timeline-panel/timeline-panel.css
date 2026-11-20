@@ -408,6 +408,28 @@ button.cell.count:focus-visible {
     border-color: var(--color-accent);
 }
 
+/* A row stating a gap in simulated time, in the view by time; on the axis, space to scale. */
+.row.is-gap {
+    height: var(--gap-height, var(--row-height));
+    overflow: hidden;
+}
+
+.row.is-gap .label-text {
+    color: var(--color-muted);
+    font-style: italic;
+}
+
+.threshold {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+}
+
+/* A closed group holding a commit of the order or driver selected (FND-81). */
+.cell.count.is-highlighted {
+    background-color: var(--color-highlight);
+}
+
 /* A commit: its node on the lane and its text are one target, and a fork point has a fork. */
 .cell.commit {
     padding: var(--space-none);
@@ -526,7 +548,8 @@ button.cell.count:focus-visible {
     background-color: var(--color-actors);
 }
 
-[data-mark='ConfigChange'] .mark {
+[data-mark='ConfigChange'] .mark,
+[data-mark='ImplementationChange'] .mark {
     background-color: var(--color-orders);
 }
 
@@ -666,6 +689,44 @@ button.cell.count:focus-visible {
     background-color: var(--color-accent-hover);
 }
 
+/* An order's or a driver's label: the toggle fills it, and the highlight button sits at its end. */
+.subject-toggle {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    gap: var(--space-1);
+    min-width: 0;
+    padding: var(--space-none);
+    color: inherit;
+    text-align: left;
+    background-color: transparent;
+    border-style: none;
+    border-radius: 0;
+    cursor: pointer;
+}
+
+.highlight {
+    flex: none;
+    padding: var(--space-none) var(--space-1);
+    font-size: 11px;
+}
+
+.highlight.is-set {
+    color: var(--color-text);
+    background-color: var(--color-highlight);
+    border-color: var(--color-highlight-edge);
+}
+
+/* The order or driver selected, and its commits, in every view (FND-81). */
+.row.is-highlighted {
+    --row-background: var(--color-highlight);
+}
+
+.cell.is-highlighted .select {
+    background-color: var(--color-highlight);
+    box-shadow: inset 0 0 0 1px var(--color-highlight-edge);
+}
+
 /* A commit or event after the commit shown: it had not happened yet there (FND-86). */
 .cell.is-later {
     color: var(--color-disabled-text);
@@ -707,4 +768,22 @@ button.cell.count:focus-visible {
     stroke-width: 2;
     stroke-linecap: round;
     stroke-linejoin: round;
+}
+
+/* What the page asks before deleting a branch, over the heading, above the rows below. */
+.heading .confirm {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 2;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1);
+    min-width: 16rem;
+    padding: var(--space-1) var(--space-2);
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border-strong);
+    border-radius: 4px;
+    white-space: normal;
 }

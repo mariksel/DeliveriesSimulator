@@ -1,3 +1,4 @@
+import { TESTING_FUNCTIONS } from '../../application-core/simulation-engine/function-lookup.testing';
 import { describe, expect, it } from 'vitest';
 
 import { List } from 'immutable';
@@ -27,7 +28,7 @@ const problemsOf = (result: ScenarioRunResult): IScenarioProblem[] =>
     result.isOk ? [] : result.problems.toArray();
 
 function completed(scenario: IScenario = ONE_ORDER_SCENARIO): IScenarioRun {
-    const result = runScenario(scenario);
+    const result = runScenario(scenario, TESTING_FUNCTIONS);
     if (!result.isOk) {
         throw new Error(`The scenario did not run: ${result.problems.size} problems.`);
     }
@@ -94,14 +95,17 @@ describe('the scenario runner', () => {
     it('passes on what is wrong with a scenario that could not be read, without running it', () => {
         const problems = List.of({ path: 'seed', message: 'is missing' });
 
-        const result = runScenarioResult({ isOk: false, problems });
+        const result = runScenarioResult({ isOk: false, problems }, TESTING_FUNCTIONS);
 
         const passedOn = problemsOf(result);
         expect(passedOn).toEqual([{ path: 'seed', message: 'is missing' }]);
     });
 
     it('runs a scenario that was read', () => {
-        const result = runScenarioResult({ isOk: true, scenario: ONE_ORDER_SCENARIO });
+        const result = runScenarioResult(
+            { isOk: true, scenario: ONE_ORDER_SCENARIO },
+            TESTING_FUNCTIONS,
+        );
 
         expect(result.isOk && result.run.digest).toBe(ONE_ORDER_DIGEST);
     });
@@ -109,7 +113,10 @@ describe('the scenario runner', () => {
     it('refuses a version this simulator does not have', () => {
         const run = completed();
 
-        const result = runScenario({ ...run.scenario, version: toVersionId('V9.9.9') });
+        const result = runScenario(
+            { ...run.scenario, version: toVersionId('V9.9.9') },
+            TESTING_FUNCTIONS,
+        );
         const problems = problemsOf(result);
         expect(problems).toEqual([NOT_AVAILABLE]);
     });

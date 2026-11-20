@@ -10,3 +10,6 @@ playwright-report/
 .stryker-tmp/
 .idea/
 .vitest/
+
+# Written by npm run snapshots, and compared as written.
+src/infrastructure/verification/snapshots/

@@ -1,6 +1,8 @@
 import type { IndirectStatement } from '../../../application-core/simulation-engine/indirect-effect';
 import { IndirectKind } from '../../../application-core/simulation-engine/indirect-effect';
+import type { IndirectLabel } from '../../../application-core/simulation-engine/run-input';
 import {
+    toIndirectLabel,
     toInputActor,
     toInputOrderName,
 } from '../../../application-core/simulation-engine/run-input';
@@ -50,6 +52,8 @@ export interface IIndirectFields {
     readonly actor: string;
     readonly order: string;
     readonly lateBy: string;
+    /** A label a later step can follow from, or blank for none (FND-89). */
+    readonly label: string;
 }
 
 /** What the form came to: a statement to make, or what is wrong. */
@@ -78,30 +82,53 @@ function lateByOf(text: string): number | null {
     return milliseconds === null || milliseconds <= 0 ? null : milliseconds;
 }
 
+/** The label typed, or null when blank, or what is wrong: one the run already uses (FND-89). */
+function labelOf(
+    text: string,
+    usedLabels: readonly string[],
+): { readonly label: IndirectLabel | null } | { readonly problem: string } {
+    const trimmed = text.trim();
+    if (trimmed === '') {
+        return { label: null };
+    }
+    if (usedLabels.includes(trimmed)) {
+        return { problem: `The label "${trimmed}" is already used in this run.` };
+    }
+    return { label: toIndirectLabel(trimmed) };
+}
+
 /**
- * The statement the form's fields make, stated by hand, so with no label, or what is wrong with
- * them.
+ * The statement the form's fields make, stated by hand, with the label typed if any, or what is
+ * wrong with them, such as a label the run already uses, scripted or by hand (FND-89).
  */
-export function indirectStatementOf(fields: IIndirectFields): IndirectFormResult {
+export function indirectStatementOf(
+    fields: IIndirectFields,
+    usedLabels: readonly string[] = [],
+): IndirectFormResult {
     if (fields.order === '') {
         return refused('Choose an order.');
     }
+    const labelled = labelOf(fields.label, usedLabels);
+    if ('problem' in labelled) {
+        return refused(labelled.problem);
+    }
+    const { label } = labelled;
     const order = toInputOrderName(fields.order);
     if (fields.kind === IndirectKind.CustomerWontTakeOrder) {
-        return { isOk: true, statement: { kind: fields.kind, order, label: null } };
+        return { isOk: true, statement: { kind: fields.kind, order, label } };
     }
     if (fields.actor === '') {
         return refused('Choose who decides.');
     }
     const actor = toInputActor(fields.actor);
     if (fields.kind === IndirectKind.DriverIgnoresRequest) {
-        return { isOk: true, statement: { kind: fields.kind, order, label: null, actor } };
+        return { isOk: true, statement: { kind: fields.kind, order, label, actor } };
     }
     const lateBy = lateByOf(fields.lateBy);
     if (lateBy === null) {
         return refused('How much later is a time above none, such as h00:m01:s30:ms00.');
     }
     const duration = toDuration(lateBy);
-    const statement = { kind: fields.kind, order, label: null, actor, lateBy: duration };
+    const statement = { kind: fields.kind, order, label, actor, lateBy: duration };
     return { isOk: true, statement };
 }

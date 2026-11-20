@@ -1,26 +1,18 @@
 <div class="toolbar">
-    <span id="row-mode-heading">Rows</span>
-    <div class="button-group" role="group" aria-labelledby="row-mode-heading">
+    <span id="view-heading">View</span>
+    <div class="button-group" role="group" aria-labelledby="view-heading">
+        @for (button of viewButtons; track button.view) {
         <button
             type="button"
-            data-testid="rows-by-time"
-            appTooltip="Line commits up by simulated time, under hours and minutes"
-            [class.is-selected]="rowMode() === modes.ByTime"
-            [attr.aria-pressed]="rowMode() === modes.ByTime"
-            (click)="mode.emit(modes.ByTime)"
+            [attr.data-testid]="'view-' + button.view"
+            [appTooltip]="button.tooltip"
+            [class.is-selected]="view() === button.view"
+            [attr.aria-pressed]="view() === button.view"
+            (click)="viewTo.emit(button.view)"
         >
-            By time
+            {{ button.label }}
         </button>
-        <button
-            type="button"
-            data-testid="rows-by-number"
-            appTooltip="Line up each branch's nth job run or API call, under hundreds and tens"
-            [class.is-selected]="rowMode() === modes.ByNumber"
-            [attr.aria-pressed]="rowMode() === modes.ByNumber"
-            (click)="mode.emit(modes.ByNumber)"
-        >
-            By number
-        </button>
+        }
     </div>
     <span id="zoom-heading">Zoom</span>
     <div class="button-group" role="group" aria-labelledby="zoom-heading">
@@ -34,6 +26,59 @@
             (click)="zoomTo.emit(level)"
         >
             {{ zoomLabel(level) }}
+        </button>
+        }
+    </div>
+    @if (view() === views.ByTime) {
+    <label class="threshold">
+        Gaps over
+        <select
+            data-testid="gap-threshold"
+            appTooltip="Show a row for each gap in simulated time longer than this"
+            (change)="chooseThreshold($any($event.target).value)"
+        >
+            @for (threshold of thresholds; track threshold.ms) {
+            <option [value]="threshold.ms" [selected]="threshold.ms === gapThresholdMs()">
+                {{ threshold.label }}
+            </option>
+            }
+        </select>
+    </label>
+    <div class="button-group" role="group" aria-label="Gaps as">
+        <button
+            type="button"
+            data-testid="gaps-as-List"
+            appTooltip="Show each gap as a row stating how long it is"
+            [class.is-selected]="gapDisplay() === displays.List"
+            [attr.aria-pressed]="gapDisplay() === displays.List"
+            (click)="displayTo.emit(displays.List)"
+        >
+            List
+        </button>
+        <button
+            type="button"
+            data-testid="gaps-as-Axis"
+            appTooltip="Show each gap as space to scale, growing with the logarithm of its length"
+            [class.is-selected]="gapDisplay() === displays.Axis"
+            [attr.aria-pressed]="gapDisplay() === displays.Axis"
+            (click)="displayTo.emit(displays.Axis)"
+        >
+            Axis
+        </button>
+    </div>
+    }
+    <span id="kinds-heading">Filter</span>
+    <div class="button-group" role="group" aria-labelledby="kinds-heading">
+        @for (button of kindButtons; track button.kind) {
+        <button
+            type="button"
+            [attr.data-testid]="'show-' + button.kind"
+            [appTooltip]="kindTooltip(button)"
+            [class.is-selected]="!hiddenKinds().has(button.kind)"
+            [attr.aria-pressed]="!hiddenKinds().has(button.kind)"
+            (click)="toggleKind.emit(button.kind)"
+        >
+            {{ button.label }}
         </button>
         }
     </div>
@@ -97,6 +142,34 @@
             >
                 <app-pencil-icon />
             </button>
+            @if (heading.canDelete) {
+            <button
+                type="button"
+                class="icon"
+                data-testid="branch-delete"
+                [appTooltip]="heading.deleteLabel"
+                [attr.aria-label]="heading.deleteLabel"
+                (click)="askToDelete(heading)"
+            >
+                <app-trash-icon />
+            </button>
+            } } @if (deleting() === heading.id) {
+            <span class="confirm" data-testid="branch-delete-confirm" role="alertdialog">
+                <span
+                    >Delete {{ heading.name }} and its own commits? It cannot be brought
+                    back.</span
+                >
+                <button
+                    type="button"
+                    data-testid="branch-delete-yes"
+                    (click)="confirmDelete(heading)"
+                >
+                    Delete
+                </button>
+                <button type="button" data-testid="branch-delete-no" (click)="deleting.set(null)">
+                    Cancel
+                </button>
+            </span>
             }
         </span>
         }
@@ -106,7 +179,7 @@
 <cdk-virtual-scroll-viewport
     class="list"
     data-testid="timeline-rows"
-    [itemSize]="rowHeight"
+    [appRowOffsets]="offsets()"
     (scroll)="noticeScroll()"
 >
     <div
@@ -117,8 +190,12 @@
         [class.is-event]="row.isEvent"
         [class.is-group]="row.kind !== nodeKinds.Commit && !row.isConnector"
         [class.is-connector]="row.isConnector"
+        [class.is-gap]="row.gapMs !== null"
+        [attr.data-gap]="row.gapMs"
+        [style.--gap-height]="gapHeight(row)"
+        [class.is-highlighted]="row.isHighlighted"
     >
-        @if (row.isConnector) {
+        @if (row.isConnector || row.gapMs !== null) {
         <span class="label connector-label" [style.--depth]="row.depth">
             <span class="chevron-space" aria-hidden="true"></span>
             <span class="label-text">{{ row.label }}</span>
@@ -137,7 +214,43 @@
             [class.is-lane-to-right]="cell.lane.isLeavingRight"
             [class.is-lane-crossed]="cell.lane.isCrossed"
         ></span>
-        } } @else { @if (row.canOpen) {
+        } } @else { @if (row.subject !== null) {
+        <!-- An order's or a driver's label opens it, and its button highlights it everywhere. -->
+        <span class="label subject" [style.--depth]="row.depth">
+            <button
+                type="button"
+                class="subject-toggle"
+                data-testid="timeline-toggle"
+                [appTooltip]="(row.isOpen ? 'Close ' : 'Open ') + row.label"
+                [attr.aria-expanded]="row.isOpen"
+                [attr.aria-label]="(row.isOpen ? 'Close ' : 'Open ') + row.label"
+                (pointerdown)="stopFollowing()"
+                (click)="toggleRow(row)"
+            >
+                <svg
+                    class="chevron"
+                    [class.is-open]="row.isOpen"
+                    viewBox="0 0 12 12"
+                    aria-hidden="true"
+                >
+                    <path d="M4 2l4 4-4 4" />
+                </svg>
+                <span class="label-text">{{ row.label }}</span>
+            </button>
+            <button
+                type="button"
+                class="highlight"
+                data-testid="subject-highlight"
+                [class.is-set]="row.isHighlighted"
+                [appTooltip]="highlightLabel(row)"
+                [attr.aria-label]="highlightLabel(row)"
+                [attr.aria-pressed]="row.isHighlighted"
+                (click)="chooseSubject(row)"
+            >
+                Highlight
+            </button>
+        </span>
+        } @else if (row.canOpen) {
         <!-- A group's label opens it, and a commit's whole label opens its events. -->
         <button
             type="button"
@@ -183,6 +296,7 @@
             [class.is-later]="cell.isLater"
             [class.is-shown]="cell.isShown"
             [class.is-fork-point]="cell.isForkPoint"
+            [class.is-highlighted]="cell.isHighlighted"
         >
             <button
                 type="button"
@@ -277,6 +391,7 @@
             [class.is-lane-to-right]="cell.lane.isLeavingRight"
             [class.is-lane-crossed]="cell.lane.isCrossed"
             [class.has-shown]="cell.hasShown"
+            [class.is-highlighted]="cell.isHighlighted"
             [appTooltip]="(row.isOpen ? 'Close ' : 'Open ') + row.label + ': ' + cell.text"
             [attr.aria-label]="(row.isOpen ? 'Close ' : 'Open ') + row.label + ': ' + cell.text"
             [attr.aria-expanded]="row.isOpen"

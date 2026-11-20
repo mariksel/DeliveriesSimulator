@@ -1,7 +1,9 @@
+import { List } from 'immutable';
 import { describe, expect, it } from 'vitest';
 
 import { readScenario } from './read-scenario';
 import type { IScenario } from '../../application-core/scenarios/scenario';
+import { toSimTime } from '../../domain/simulation-engine/sim-time';
 
 const VALID = {
     format: 1,
@@ -10,8 +12,29 @@ const VALID = {
     version: 'V1.0.0',
     seed: 42,
     runUntil: 'h00:m05:s00:ms00',
+    city: {
+        origin: { latitude: 10.325, longitude: 20.815 },
+        widthKm: 2,
+        heightKm: 2,
+        across: 2,
+        down: 2,
+        seed: 7,
+    },
     restaurants: [
         { id: 'restaurant-1', area: 'area-1', location: { latitude: 10.33, longitude: 20.82 } },
+    ],
+    customers: [
+        {
+            id: 'customer-1',
+            restaurant: 'restaurant-1',
+            addresses: [
+                {
+                    id: 'address-1',
+                    area: 'area-1',
+                    location: { latitude: 10.3275, longitude: 20.8225 },
+                },
+            ],
+        },
     ],
     drivers: [
         {
@@ -24,7 +47,14 @@ const VALID = {
         { id: 'driver-2', area: 'area-1', availability: 'Offline' },
     ],
     steps: [
-        { at: 'h00:m00:s01:ms00', actor: 'restaurant-1', command: 'create-order', order: 'A' },
+        {
+            at: 'h00:m00:s01:ms00',
+            actor: 'restaurant-1',
+            command: 'create-order',
+            order: 'A',
+            customer: 'customer-1',
+            address: 'address-1',
+        },
         { at: 'h00:m00:s02:ms00', actor: 'restaurant-1', command: 'request-delivery', order: 'A' },
         { at: 'h00:m00:s40:ms00', actor: 'restaurant-1', command: 'mark-ready', order: 'A' },
         { at: 'h00:m01:s00:ms00', actor: 'driver-1', command: 'accept', order: 'A' },
@@ -105,6 +135,135 @@ describe('readScenario', () => {
         });
     });
 
+    it('reads the city, with its areas named row by row from the south-west', () => {
+        const { city } = read(VALID).start;
+
+        const names = city!.areaIds.toArray();
+        expect(names).toEqual(['area-1', 'area-2', 'area-3', 'area-4']);
+        expect(city!.seed).toBe(7);
+        expect(city!.blockMetres).toBe(200);
+    });
+
+    it('reads how far apart the local streets are, when the city says', () => {
+        const wider = changed((scenario): void => {
+            (scenario.city as Record<string, unknown>)['blockMetres'] = 250;
+        });
+
+        const { city } = read(wider).start;
+
+        expect(city!.blockMetres).toBe(250);
+    });
+
+    it('reads the waiting points the city sets, by area', () => {
+        const placed = changed((scenario): void => {
+            (scenario.city as Record<string, unknown>)['waitingPoints'] = {
+                'area-2': { latitude: 10.33, longitude: 20.83 },
+            };
+        });
+
+        const { city } = read(placed).start;
+
+        const points = city!.waitingPoints.toJS();
+        expect(points).toEqual({ 'area-2': { latitude: 10.33, longitude: 20.83 } });
+    });
+
+    it("picks a point in a restaurant's area when it gives only an area, whatever the run's seed", () => {
+        const onlyArea = changed((scenario): void => {
+            delete (scenario.restaurants[0] as Record<string, unknown>)['location'];
+            scenario.restaurants[0]!.area = 'area-4';
+        });
+        const otherSeed = changed((scenario): void => {
+            delete (scenario.restaurants[0] as Record<string, unknown>)['location'];
+            scenario.restaurants[0]!.area = 'area-4';
+            scenario.seed = 9;
+        });
+
+        const { start } = read(onlyArea);
+        const again = read(otherSeed);
+
+        const restaurant = start.restaurants.get(0)!;
+        const area = start.city!.areaAt(restaurant.coordinates);
+        expect(area).toBe('area-4');
+        const picked = again.start.restaurants.get(0);
+        expect(picked).toEqual(restaurant);
+    });
+
+    it("names the areas as the city gives them, and finds each place's area from its point", () => {
+        const named = changed((scenario): void => {
+            (scenario.city as Record<string, unknown>)['areas'] = ['sw', 'se', 'nw', 'ne'];
+            delete (scenario.restaurants[0] as Record<string, unknown>)['area'];
+            delete (scenario.drivers[0] as Record<string, unknown>)['area'];
+            delete (scenario.customers[0]!.addresses[0] as Record<string, unknown>)['area'];
+            scenario.drivers[1]!.area = 'ne';
+        });
+
+        const { start } = read(named);
+
+        const areas = [start.restaurants.get(0)!.areaId, ...start.drivers.map((d) => d.areaId)];
+        expect(areas).toEqual(['sw', 'sw', 'ne']);
+    });
+
+    it("reads how often each driver's app sends and how fast they ride, 30 s and 20 km/h unless given", () => {
+        const given = changed((scenario): void => {
+            const [first] = scenario.drivers as Record<string, unknown>[];
+            first!['sendsEvery'] = 'h00:m00:s10:ms00';
+            first!['speedKmh'] = 15;
+        });
+
+        const { start } = read(given);
+
+        const riders = start.riders
+            .map((rider) => [rider.driverId, rider.sendEvery.milliseconds, rider.speedKmh])
+            .toArray();
+        expect(riders).toEqual([
+            ['driver-1', 10_000, 15],
+            ['driver-2', 30_000, 20],
+        ]);
+    });
+
+    it('reads a pick-up that runs at its time, without waiting for its driver', () => {
+        const given = changed((scenario): void => {
+            const pickUp = scenario.steps.find((step) => step.command === 'pick-up');
+            (pickUp as Record<string, unknown>)['atItsTime'] = true;
+        });
+
+        const { steps } = read(given);
+
+        const atItsTime = steps.toArray().filter((step) => 'isAtItsTime' in step);
+        expect(atItsTime).toHaveLength(1);
+    });
+
+    it('refuses atItsTime on a step that is not a pick-up or delivery, or not true or false', () => {
+        const given = changed((scenario): void => {
+            const [first] = scenario.steps as Record<string, unknown>[];
+            first!['atItsTime'] = true;
+            const pickUp = scenario.steps.find((step) => step.command === 'pick-up');
+            (pickUp as Record<string, unknown>)['atItsTime'] = 'yes';
+        });
+
+        const problems = problemsOf(given);
+
+        expect(problems).toEqual([
+            'steps[0].atItsTime: is only for a pick-up or delivery step',
+            'steps[4].atItsTime: must be true or false',
+        ]);
+    });
+
+    it("refuses a driver's send interval of none, or a speed that is not above 0", () => {
+        const given = changed((scenario): void => {
+            const [first, second] = scenario.drivers as Record<string, unknown>[];
+            first!['sendsEvery'] = 'h00:m00:s00:ms00';
+            second!['speedKmh'] = 0;
+        });
+
+        const problems = problemsOf(given);
+
+        expect(problems).toEqual([
+            'drivers[0].sendsEvery: must be more than none',
+            'drivers[1].speedKmh: must be a number above 0',
+        ]);
+    });
+
     it('allows a scenario with no description, drivers, or steps', () => {
         const secondChanged = changed((scenario): void => {
             delete (scenario as Record<string, unknown>)['description'];
@@ -116,14 +275,17 @@ describe('readScenario', () => {
         expect(scenario.description).toBeNull();
     });
 
-    it('allows the far ends of the ranges', () => {
+    it('reads the far ends of the ranges, and finds such places outside the city', () => {
         const secondChanged = changed((scenario): void => {
             scenario.restaurants[0]!.location = { latitude: -90, longitude: 180 };
             scenario.drivers[0]!.location = { latitude: 90, longitude: -180 };
             scenario.seed = 4294967295;
         });
         const problems = problemsOf(secondChanged);
-        expect(problems).toEqual([]);
+        expect(problems).toEqual([
+            'restaurants[0].location: lies outside the city',
+            'drivers[0].location: lies outside the city',
+        ]);
     });
 
     it('allows a step exactly at runUntil', () => {
@@ -312,11 +474,123 @@ describe('readScenario', () => {
             'restaurants[0].location.longitude: must be a number from -180 to 180',
         ],
         [
-            'a restaurant with no location',
+            'a restaurant with neither a location nor an area',
             (scenario): void => {
                 delete (scenario.restaurants[0] as Record<string, unknown>)['location'];
+                delete (scenario.restaurants[0] as Record<string, unknown>)['area'];
             },
-            'restaurants[0].location: is missing',
+            'restaurants[0].area: is missing: give an area, a location, or both',
+        ],
+        [
+            'a driver with neither a location nor an area',
+            (scenario): void => {
+                delete (scenario.drivers[1] as Record<string, unknown>)['area'];
+            },
+            'drivers[1].area: is missing: give an area, a location, or both',
+        ],
+        [
+            'a point and an area that disagree',
+            (scenario): void => {
+                scenario.restaurants[0]!.area = 'area-2';
+            },
+            'restaurants[0].area: is "area-2", but the location lies in "area-1"',
+        ],
+        [
+            "an area that is not one of the city's",
+            (scenario): void => {
+                scenario.drivers[1]!.area = 'area-9';
+            },
+            "drivers[1].area: is not one of the city's areas",
+        ],
+        [
+            'no city',
+            (scenario): void => {
+                delete (scenario as Record<string, unknown>)['city'];
+            },
+            'city: is missing',
+        ],
+        [
+            'a city whose areas are not square',
+            (scenario): void => {
+                scenario.city.heightKm = 3;
+            },
+            "city: A city's areas must be square, not 1 km wide and 1.5 km high.",
+        ],
+        [
+            'a city with no areas across',
+            (scenario): void => {
+                scenario.city.across = 0;
+            },
+            'city.across: must be a whole number from 1 to 1000',
+        ],
+        [
+            'a city of no width',
+            (scenario): void => {
+                scenario.city.widthKm = 0;
+            },
+            'city.widthKm: must be a number above 0',
+        ],
+        [
+            'too few area names',
+            (scenario): void => {
+                (scenario.city as Record<string, unknown>)['areas'] = ['north'];
+            },
+            'city.areas: must name all 4 areas, row by row',
+        ],
+        [
+            'area names that repeat',
+            (scenario): void => {
+                (scenario.city as Record<string, unknown>)['areas'] = ['a', 'a', 'b', 'c'];
+            },
+            'city.areas: must be a list of different names that are not blank',
+        ],
+        [
+            'blocks of no metres',
+            (scenario): void => {
+                (scenario.city as Record<string, unknown>)['blockMetres'] = 0;
+            },
+            'city.blockMetres: must be a number of metres above 0',
+        ],
+        [
+            'waiting points that are not an object',
+            (scenario): void => {
+                (scenario.city as Record<string, unknown>)['waitingPoints'] = [];
+            },
+            'city.waitingPoints: must be an object of points, by area',
+        ],
+        [
+            'a waiting point for an area the city does not have',
+            (scenario): void => {
+                (scenario.city as Record<string, unknown>)['waitingPoints'] = {
+                    'area-9': { latitude: 10.33, longitude: 20.82 },
+                };
+            },
+            "city.waitingPoints.area-9: is not one of the city's areas",
+        ],
+        [
+            'a waiting point outside its area',
+            (scenario): void => {
+                (scenario.city as Record<string, unknown>)['waitingPoints'] = {
+                    'area-2': { latitude: 10.33, longitude: 20.82 },
+                };
+            },
+            'city.waitingPoints.area-2: must lie in that area',
+        ],
+        [
+            'a waiting point with no longitude',
+            (scenario): void => {
+                (scenario.city as Record<string, unknown>)['waitingPoints'] = {
+                    'area-1': { latitude: 10.33 },
+                };
+            },
+            'city.waitingPoints.area-1.longitude: must be a number from -180 to 180',
+        ],
+        [
+            'an unknown field in the city',
+            (scenario): void => {
+                (scenario.city as Record<string, unknown>)['density'] = 5;
+            },
+            'city.density: is not a field of this format',
         ],
         [
             'an unknown availability',
@@ -436,7 +710,9 @@ describe('readScenario', () => {
             'version: is missing',
             'seed: must be a whole number from 0 to 4294967295',
             'runUntil: is missing',
+            'city: is missing',
             'restaurants: is missing',
+            'customers: is missing',
             'drivers: is missing',
             'steps: is missing',
         ]);
@@ -457,5 +733,64 @@ describe('readScenario', () => {
         const result = readScenario({});
 
         expect(result.isOk).toBe(false);
+    });
+});
+
+describe('a use step', () => {
+    /** The valid scenario with a step added, kept in time order after the first step. */
+    const withStep = (step: Record<string, unknown>): unknown =>
+        changed((scenario) => {
+            (scenario.steps as unknown[]).splice(1, 0, step);
+        });
+
+    it('switches functions to the versions it names, at its time', () => {
+        const file = withStep({
+            at: 'h00:m00:s01:ms00',
+            use: [{ function: 'orders.pick-up', version: 1 }],
+        });
+
+        const scenario = read(file);
+
+        const [, step] = scenario.steps.toArray();
+        expect(step).toEqual({
+            at: toSimTime(1000),
+            use: List([{ function: 'orders.pick-up', version: 1 }]),
+        });
+    });
+
+    it.each<[string, unknown, string]>([
+        [
+            'a function that does not exist',
+            [{ function: 'orders.fly', version: 1 }],
+            'steps[1].use[0].function: "orders.fly" is not a state function',
+        ],
+        [
+            'a version that does not exist',
+            [{ function: 'orders.pick-up', version: 2 }],
+            'steps[1].use[0].version: orders.pick-up has no version 2',
+        ],
+        [
+            'a version that is not a whole number',
+            [{ function: 'orders.pick-up', version: 1.5 }],
+            'steps[1].use[0].version: must be a whole number from 1',
+        ],
+        [
+            'an entry with other fields',
+            [{ function: 'orders.pick-up', version: 1, why: 'x' }],
+            'steps[1].use[0].why',
+        ],
+        ['an empty list', [], 'steps[1].use: must list at least one function and its version'],
+        [
+            'an entry that is not an object',
+            ['orders.pick-up'],
+            'steps[1].use[0]: must have fields',
+        ],
+    ])('refuses %s, saying where', (_name, use, problem) => {
+        const file = withStep({ at: 'h00:m00:s01:ms00', use });
+
+        const problems = problemsOf(file);
+
+        const isFound = problems.some((each) => each.startsWith(problem));
+        expect(isFound).toBe(true);
     });
 });

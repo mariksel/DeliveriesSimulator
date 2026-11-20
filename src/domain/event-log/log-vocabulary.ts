@@ -18,6 +18,7 @@ export const TechnicalLogKind = {
     CommandIssued: 'CommandIssued',
     CommandRefused: 'CommandRefused',
     ConfigChanged: 'ConfigChanged',
+    FunctionVersionSwitched: 'FunctionVersionSwitched',
     IndirectEffectHappened: 'IndirectEffectHappened',
 } as const;
 

@@ -15,7 +15,11 @@ function ownOrder(entry: RunLogEntry): string | null {
     if (entry.kind === TechnicalLogKind.OrderCreated) {
         return entry.data.id;
     }
-    return entry.kind === TechnicalLogKind.CommandIssued ? entry.data.data.order : null;
+    if (entry.kind !== TechnicalLogKind.CommandIssued) {
+        return null;
+    }
+    const subject = entry.data.data;
+    return 'order' in subject ? subject.order : null;
 }
 
 /**

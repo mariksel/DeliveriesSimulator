@@ -3,11 +3,13 @@
 ## Version and status
 
 - **Version:** `V1.0.0`, a built snapshot
-  ([FND-40](../../decisions/project-foundation.md#fnd-40--kinds-of-version)).
+  ([FND-40](../../decisions/project-foundation/versions.md#fnd-40--kinds-of-version)).
 - **State described:** the real service's working tree on 2026-11-03, including uncommitted
   changes and the module copies, which are built and awaiting the real service's review
-  ([FND-45](../../decisions/project-foundation.md#fnd-45--version-folder-layout)).
-- **Status:** Observed in the real service's code.
+  ([FND-45](../../decisions/project-foundation/versions.md#fnd-45--version-folder-layout)).
+- **Status:** Observed in the real service's code, and confirmed by the user on 2026-11-03.
+  [I01-E02-001](../../../backlogs/Initiatives/Archive/Done/I01-requirements-and-backlog-creation/Archive/Done/I01-E02-delivery-domain-inventory/Archive/Done/High/I01-E02-001-flows-states-actors-and-events.md)
+  recorded the confirmation.
 
 ## States
 
@@ -78,7 +80,8 @@ rules page, not written yet.
 
 ## Source conflicts resolved for this version
 
-These follow [FND-39](../../decisions/project-foundation.md#fnd-39--source-conflicts-resolved):
+These follow
+[FND-39](../../decisions/project-foundation/capabilities-and-inventory.md#fnd-39--source-conflicts-resolved):
 a return can be requested only after a failed delivery attempt, and accepting a return never
 waits for a payment return. A driver's rejection closes the request, and an ignore leaves it
 open for other drivers.

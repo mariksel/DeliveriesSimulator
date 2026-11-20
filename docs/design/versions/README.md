@@ -1,8 +1,9 @@
 # Versions
 
 Each version of the real service's delivery logic has a folder here, named after its full number
-([FND-41](../decisions/project-foundation.md#fnd-41--version-numbers)). A version's pages are
-its specification ([FND-36](../decisions/project-foundation.md#fnd-36--inventory-per-version)).
+([FND-41](../decisions/project-foundation/versions.md#fnd-41--version-numbers)). A version's pages
+are its specification
+([FND-36](../decisions/project-foundation/capabilities-and-inventory.md#fnd-36--inventory-per-version)).
 Versions after `V1.0.0` describe only what differs from the version they are based on.
 
 | Version | Kind | Based on | Status |

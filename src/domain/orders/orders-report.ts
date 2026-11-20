@@ -1,7 +1,8 @@
 import type { List } from 'immutable';
 
 import type { DeliveriesOutboxEvent } from '../drivers/deliveries/deliveries-outbox-event';
-import type { Order, OrderVersion } from './order';
+import type { Order } from './order';
+import type { OrderView } from './order-view';
 import type { OrderEventRecord } from './order-event-record';
 import type { OrdersOutboxEvent } from './orders-outbox-event';
 import type { IInstant } from '../system/time/instant';
@@ -22,14 +23,16 @@ export interface IOrderCreatedReport {
     readonly kind: typeof OrdersReportKind.OrderCreated;
     readonly at: IInstant;
     readonly order: Order;
-    readonly version: OrderVersion;
+    /** The order's full view as it was created. */
+    readonly view: OrderView;
 }
 
 /** An event added to the module's event table, with the order as it then stood. */
 export interface IOrderEventRecordedReport {
     readonly kind: typeof OrdersReportKind.EventRecorded;
     readonly event: OrderEventRecord;
-    readonly version: OrderVersion;
+    /** The order's full view once the event is recorded. */
+    readonly view: OrderView;
 }
 
 /** An event added to the orders outbox. */

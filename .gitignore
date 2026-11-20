@@ -7,6 +7,3 @@ playwright-report/
 .stryker-tmp/
 .idea/
 .vitest/
-.env
-.env.*
-*.log

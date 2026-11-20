@@ -1,3 +1,13 @@
+import {
+    TableFunctionLookup,
+    TESTING_FUNCTIONS,
+    TODAYS_FUNCTIONS,
+} from '../../application-core/simulation-engine/function-lookup.testing';
+import { List } from 'immutable';
+import { CommitKind } from '../../application-core/simulation-engine/commit';
+import { FunctionName } from '../../application-core/simulation-engine/function-name';
+import { OrdersState } from '../../domain/orders/orders-state';
+import { toVersionNumber } from '../../domain/system/records/version-chain';
 import { describe, expect, it } from 'vitest';
 
 import { ONE_ORDER_SCENARIO } from '../../application-core/scenarios/one-order.testing';
@@ -25,7 +35,7 @@ const END = toSimTime(300_000);
 
 function opened(): { wall: FakeWallClock; live: LiveScenarioRun } {
     const wall = new FakeWallClock();
-    return { wall, live: new LiveScenarioRun(ONE_ORDER_SCENARIO, wall) };
+    return { wall, live: new LiveScenarioRun(ONE_ORDER_SCENARIO, wall, TESTING_FUNCTIONS) };
 }
 
 /** Ticks with a stated real time between ticks until the run stops going. */
@@ -37,7 +47,7 @@ function runToStop(wall: FakeWallClock, live: LiveScenarioRun, msPerTick: number
 }
 
 function headlessDigest(scenario: IScenario = ONE_ORDER_SCENARIO): string {
-    const result = runScenario(scenario);
+    const result = runScenario(scenario, TESTING_FUNCTIONS);
     return result.isOk ? result.run.digest : '';
 }
 
@@ -227,7 +237,7 @@ describe('a scenario being watched', () => {
         function openedToEndLate(): { wall: FakeWallClock; live: LiveScenarioRun } {
             const wall = new FakeWallClock();
             const scenario = { ...ONE_ORDER_SCENARIO, runUntil: lateEnd };
-            return { wall, live: new LiveScenarioRun(scenario, wall) };
+            return { wall, live: new LiveScenarioRun(scenario, wall, TESTING_FUNCTIONS) };
         }
 
         it('gets there at max, where no time passes on its own', () => {
@@ -279,7 +289,7 @@ describe('a scenario being watched', () => {
 
         function steppedToTheEnd(): LiveScenarioRun {
             const wallClock = new FakeWallClock();
-            const live = new LiveScenarioRun(scenario, wallClock);
+            const live = new LiveScenarioRun(scenario, wallClock, TESTING_FUNCTIONS);
             while (live.now.isBefore(END)) {
                 live.step();
             }
@@ -425,5 +435,29 @@ describe('a scenario being watched', () => {
 
             expect(live.state).toBe(LiveRunState.Failed);
         });
+    });
+});
+
+describe('switching a version by hand in a live run', () => {
+    it('forks first when an earlier commit is shown, as a rule change does', () => {
+        const markReady = [OrdersState.markReady, OrdersState.markReady];
+        const table = { ...TODAYS_FUNCTIONS, [FunctionName.OrdersMarkReady]: markReady };
+        const lookup = new TableFunctionLookup(table);
+        const clock = new FakeWallClock();
+        const live = new LiveScenarioRun(ONE_ORDER_SCENARIO, clock, lookup);
+        live.step();
+        live.step();
+        live.showPlace(1);
+        const version = toVersionNumber(1);
+        const uses = List([{ function: FunctionName.OrdersMarkReady, version }]);
+
+        live.switchVersions(uses);
+
+        const branches = live.branches.size;
+        const latest = live.runState.line.commits.last();
+        const inUse = live.functionVersions.get(FunctionName.OrdersMarkReady);
+        expect(branches).toBe(2);
+        expect(latest?.kind).toBe(CommitKind.ImplementationChange);
+        expect(inUse).toBe(1);
     });
 });

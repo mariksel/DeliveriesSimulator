@@ -1,0 +1,25 @@
+:host {
+    display: block;
+}
+
+.save-form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: var(--space-2);
+    padding: var(--space-2);
+    background-color: var(--color-band);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.save-form label {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    color: var(--color-muted);
+}
+
+.invalid {
+    align-self: center;
+    color: var(--color-fail);
+}

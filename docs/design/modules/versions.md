@@ -4,8 +4,9 @@
 
 - **Design version:** `D0.6.0`.
 - **Status:** Approved as a module in
-  [FND-56](../decisions/project-foundation.md#fnd-56--module-boundaries). Not implemented: no
-  source exists. The [implementation roadmap](../roadmap/implementation-roadmap.md) says which
+  [FND-56](../decisions/project-foundation/architecture-and-code.md#fnd-56--module-boundaries). Not
+  implemented: no source exists. The [implementation roadmap](../roadmap/implementation-roadmap.md)
+  says which
   stage builds it.
 
 ## Current and approved responsibilities
@@ -17,17 +18,18 @@ service. The versions themselves are specified in [versions](../versions/README.
 ## Key approved business rules
 
 - What a version is, its numbers, and its lifecycle:
-  [FND-40](../decisions/project-foundation.md#fnd-40--kinds-of-version) to
-  [FND-44](../decisions/project-foundation.md#fnd-44--version-lifecycle).
-- Comparison: [FND-51](../decisions/project-foundation.md#fnd-51--comparison).
-- Conformance exchange: [FND-52](../decisions/project-foundation.md#fnd-52--conformance-exchange).
+  [FND-40](../decisions/project-foundation/versions.md#fnd-40--kinds-of-version) to
+  [FND-44](../decisions/project-foundation/versions.md#fnd-44--version-lifecycle).
+- Comparison: [FND-51](../decisions/project-foundation/simulation-model.md#fnd-51--comparison).
+- Conformance exchange:
+  [FND-52](../decisions/project-foundation/simulation-model.md#fnd-52--conformance-exchange).
 - Tuned setups as what-if variations:
-  [FND-54](../decisions/project-foundation.md#fnd-54--tunability).
+  [FND-54](../decisions/project-foundation/simulation-model.md#fnd-54--tunability).
 
 ## Dependencies
 
 From the confirmed [dependency graph](README.md#dependency-graph)
-([FND-56](../decisions/project-foundation.md#fnd-56--module-boundaries)):
+([FND-56](../decisions/project-foundation/architecture-and-code.md#fnd-56--module-boundaries)):
 
 - **Uses:** [Business rules](business-rules.md) (rules per version), [Scenarios](scenarios.md)
   (runs to compare), and [Run history](run-history.md) (stored runs).

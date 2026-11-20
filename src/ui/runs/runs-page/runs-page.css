@@ -85,3 +85,60 @@ h2 {
 .problems {
     color: var(--color-fail);
 }
+
+.saved-runs {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    max-width: 960px;
+    margin: var(--space-none);
+    padding: var(--space-none);
+    list-style: none;
+}
+
+/* A saved run's row: its name and details, then its actions, with what it asks or says below. */
+.saved-card {
+    flex-wrap: wrap;
+}
+
+.saved-heading {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.saved-details,
+.empty,
+.progress {
+    color: var(--color-muted);
+}
+
+.saved-actions,
+.confirm {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.confirm,
+.progress,
+.invalid {
+    flex-basis: 100%;
+}
+
+.invalid {
+    color: var(--color-fail);
+}
+
+/* What a saved run's snapshot tests found, a line for each, below its actions. */
+.snapshot {
+    flex-basis: 100%;
+    margin: var(--space-none);
+    padding: var(--space-none);
+    list-style: none;
+}
+
+.snapshot .is-match {
+    color: var(--color-pass);
+}

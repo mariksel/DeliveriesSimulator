@@ -16,7 +16,10 @@ try {
     const { runSelfTests } = await vite.ssrLoadModule(
         '/src/application/verification/self-tests.ts',
     );
-    const report = runSelfTests();
+    const { REGISTERED_FUNCTIONS } = await vite.ssrLoadModule(
+        '/src/infrastructure/simulation-engine/function-registry.ts',
+    );
+    const report = runSelfTests(REGISTERED_FUNCTIONS);
     const reportJson = JSON.stringify(report, null, JSON_INDENT);
     console.log(reportJson);
     process.exitCode = report.isPassed ? 0 : 1;

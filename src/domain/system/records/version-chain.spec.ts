@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { IVersion } from './version-chain';
-import { assertVersionLink, FIRST_VERSION, versionChain } from './version-chain';
+import { assertVersionLink, FIRST_VERSION, versionChain, versionNumbered } from './version-chain';
 import { toVersionNumber } from './version-chain';
 
 interface ITestVersion extends IVersion<ITestVersion> {
@@ -30,6 +30,29 @@ describe('versionChain', () => {
             .map((version) => version.name)
             .toArray();
         expect(names).toEqual(['first', 'second', 'third']);
+    });
+});
+
+describe('versionNumbered', () => {
+    const second = after(FIRST, 'second');
+    const third = after(second, 'third');
+
+    it.each<[number, string]>([
+        [3, 'third'],
+        [2, 'second'],
+        [1, 'first'],
+    ])('finds version %i back from a later one', (number, name) => {
+        const wanted = toVersionNumber(number);
+        const found = versionNumbered(third, wanted);
+
+        expect(found?.name).toBe(name);
+    });
+
+    it('finds nothing for a number past the later version', () => {
+        const wanted = toVersionNumber(3);
+        const found = versionNumbered(second, wanted);
+
+        expect(found).toBeUndefined();
     });
 });
 

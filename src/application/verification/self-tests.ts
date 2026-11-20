@@ -1,3 +1,4 @@
+import type { FunctionLookup } from '../../application-core/simulation-engine/function-lookup';
 import type { List } from 'immutable';
 
 import type { LogEntry } from '../../domain/event-log/log-entry';
@@ -269,8 +270,8 @@ const SELF_TESTS: readonly ISelfTest[] = [
     },
 ];
 
-function knownGoodLog(): List<RunLogEntry> {
-    const result = runScenario(SELF_TEST_CASE);
+function knownGoodLog(functions: FunctionLookup): List<RunLogEntry> {
+    const result = runScenario(SELF_TEST_CASE, functions);
     if (!result.isOk) {
         const messages = result.problems.map((problem) => problem.message).join('; ');
         throw new Error(`The self-tests' known case cannot run: ${messages}.`);
@@ -283,9 +284,10 @@ function knownGoodLog(): List<RunLogEntry> {
  * reports it.
  */
 export function runSelfTests(
+    functions: FunctionLookup,
     check: (entries: List<RunLogEntry>) => IRunCheck = checkRun,
 ): ISelfTestReport {
-    const entries = knownGoodLog();
+    const entries = knownGoodLog(functions);
     const isKnownGoodRunPassing = check(entries).isPassed;
     const results = SELF_TESTS.map(({ criterion, name, breakIt }) => {
         const secondBreakIt = breakIt(entries);

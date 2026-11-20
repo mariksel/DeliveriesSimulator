@@ -9,6 +9,11 @@ export const ScriptRefusal = {
     UnknownRestaurant: 'UnknownRestaurant',
     /** A create order step names an order the script has already created. */
     OrderAlreadyCreated: 'OrderAlreadyCreated',
+    /**
+     * A create order step names no address of the script's, or one not of its customer, or a
+     * customer not of its restaurant (FND-90).
+     */
+    UnknownAddress: 'UnknownAddress',
 } as const;
 
 /** One of the values of {@link ScriptRefusal}. */

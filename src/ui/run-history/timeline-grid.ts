@@ -6,6 +6,15 @@ import type { IMainRoot } from '../../application-core/simulation-engine/main-ro
 import { EffectKind } from '../../application-core/simulation-engine/direct-effect';
 import type { Position } from '../../domain/system/math/math';
 import { toPosition } from '../../domain/system/math/math';
+import { changedModules, StateModule } from '../../application-core/run-history/run-query';
+import type { IRunIndex } from '../../application-core/simulation-engine/run-index';
+import {
+    EMPTY_RUN_INDEX,
+    indexOfCommits,
+} from '../../application-core/simulation-engine/run-index';
+import type { SessionId } from '../../application-core/simulation-engine/session-id';
+import type { ISubjectsOfCommit, SubjectId } from './timeline-subjects';
+import { SubjectKind, SubjectWalk } from './timeline-subjects';
 
 /**
  * The timeline as a grid (FND-81, FND-87): a column for each branch, holding its own commits, and
@@ -13,16 +22,31 @@ import { toPosition } from '../../domain/system/math/math';
  * once. These plain functions work it out from the commits; nothing about it is saved.
  */
 
-/** How rows line up across the columns. */
-export const RowMode = {
+/**
+ * The timeline's views over the same commits (FND-81): how rows group and line up across the
+ * columns. A commit can sit in more than one view, and under more than one order or driver.
+ */
+export const TimelineView = {
     /** Commits at the same simulated time share a band, under hours and minutes. */
     ByTime: 'ByTime',
     /** Each branch's nth job run or API call shares rows, under hundreds and tens of them. */
     ByNumber: 'ByNumber',
+    /** Each order's job runs and API calls, each shown whole, then its commits in time order. */
+    ByOrder: 'ByOrder',
+    /** Each driver's job runs and API calls, each shown whole, then its commits in time order. */
+    ByDriver: 'ByDriver',
 } as const;
 
-/** One of the values of {@link RowMode}. */
-export type RowMode = (typeof RowMode)[keyof typeof RowMode];
+/** One of the values of {@link TimelineView}. */
+export type TimelineView = (typeof TimelineView)[keyof typeof TimelineView];
+
+/** What the views by order and by driver group by; null for the views by time and by number. */
+const SUBJECT_OF_VIEW: Readonly<Record<TimelineView, SubjectKind | null>> = {
+    [TimelineView.ByTime]: null,
+    [TimelineView.ByNumber]: null,
+    [TimelineView.ByOrder]: SubjectKind.Order,
+    [TimelineView.ByDriver]: SubjectKind.Driver,
+};
 
 /** What a node of the grid is. */
 export const NodeKind = {
@@ -30,8 +54,18 @@ export const NodeKind = {
     Minute: 'Minute',
     Hundred: 'Hundred',
     Ten: 'Ten',
+    /** An order, in the view by order: the job runs and API calls that touched it. */
+    Order: 'Order',
+    /** A driver, in the view by driver: the job runs and API calls that touched them. */
+    Driver: 'Driver',
     /** A job run or API call: the commits made during it. */
     Session: 'Session',
+    /** Back-to-back empty job runs, collapsed into one row (FND-81). */
+    EmptyRuns: 'EmptyRuns',
+    /** The empty runs of one job, inside collapsed empty job runs. */
+    JobRuns: 'JobRuns',
+    /** A row stating a gap in simulated time, which no grid holds, only the rows drawn. */
+    Gap: 'Gap',
     /** One commit in each column that has one there. */
     Commit: 'Commit',
 } as const;
@@ -72,14 +106,10 @@ export interface IGridCommit {
 }
 
 /** The modules a state commit can change, as the timeline names them. */
-export const TimelineModule = {
-    Orders: 'Orders',
-    Drivers: 'Drivers',
-    Deliveries: 'Deliveries',
-} as const;
+export const TimelineModule = StateModule;
 
 /** One of the values of {@link TimelineModule}. */
-export type TimelineModule = (typeof TimelineModule)[keyof typeof TimelineModule];
+export type TimelineModule = StateModule;
 
 /**
  * The module a state commit changed: the part of the state root that is not the one before's.
@@ -89,14 +119,8 @@ function moduleChanged(commit: ICommit, before: IMainRoot): TimelineModule | nul
     if (commit.kind !== CommitKind.State) {
         return null;
     }
-    const { state } = commit.root;
-    if (state.orders !== before.state.orders) {
-        return TimelineModule.Orders;
-    }
-    if (state.deliveries !== before.state.deliveries) {
-        return TimelineModule.Deliveries;
-    }
-    return state.drivers === before.state.drivers ? null : TimelineModule.Drivers;
+    const changed = changedModules(before, commit.root);
+    return changed[0] ?? null;
 }
 
 /** A group or a commit of the grid, the same in every column. */
@@ -105,9 +129,16 @@ export interface ITimelineNode {
     readonly key: string;
     readonly kind: NodeKind;
     readonly label: string;
+    /** For an order's or a driver's group, its ID; null for every other node. */
+    readonly subject: SubjectId | null;
     readonly children: readonly ITimelineNode[];
     /** Each column's commits under it, oldest first; a column with none is left out. */
     readonly commits: ReadonlyMap<BranchId, readonly IGridCommit[]>;
+    /**
+     * Every commit under it, the ones the filter hides too, when it hides some: what finds the
+     * group holding a hidden commit. Left out, it is `commits`.
+     */
+    readonly held?: ReadonlyMap<BranchId, readonly IGridCommit[]>;
 }
 
 /** The columns, and the top level of the groups. */
@@ -144,6 +175,8 @@ interface ISegment {
     readonly label: string;
     /** Sorts the nodes at one level, compared number by number. */
     readonly order: readonly number[];
+    /** For an order's or a driver's group, its ID. */
+    readonly subject?: SubjectId;
 }
 
 /** What walking a line has counted so far. */
@@ -178,8 +211,11 @@ function blockSegment(number: number, size: number, kind: NodeKind, prefix: stri
 }
 
 /** The spans above whatever is at a time, or after the nth job run or API call. */
-function spansOf(mode: RowMode, at: number, number: number): readonly ISegment[] {
-    if (mode === RowMode.ByTime) {
+function spansOf(mode: TimelineView, at: number, number: number): readonly ISegment[] {
+    if (mode === TimelineView.ByOrder || mode === TimelineView.ByDriver) {
+        return [];
+    }
+    if (mode === TimelineView.ByTime) {
         return [hourSegment(at), minuteSegment(at)];
     }
     const hundred = blockSegment(number, HUNDRED, NodeKind.Hundred, 'Job runs and calls ');
@@ -195,11 +231,11 @@ function nextAt(counts: ICounts, at: number): number {
 }
 
 /** A job run's or API call's segment, the first time one of its commits is met. */
-function newSession(counts: ICounts, mode: RowMode, at: number): ISegment {
+function newSession(counts: ICounts, mode: TimelineView, at: number): ISegment {
     counts.sessions += 1;
     counts.loneSinceSession = 0;
     const number = counts.sessions;
-    if (mode === RowMode.ByNumber) {
+    if (mode === TimelineView.ByNumber) {
         return { key: `n${number}`, kind: NodeKind.Session, label: '', order: [number, 0] };
     }
     const ordinal = nextAt(counts, at);
@@ -207,9 +243,9 @@ function newSession(counts: ICounts, mode: RowMode, at: number): ISegment {
 }
 
 /** A commit made outside any job run or API call, such as a config change. */
-function loneSegment(counts: ICounts, mode: RowMode, at: number): ISegment {
+function loneSegment(counts: ICounts, mode: TimelineView, at: number): ISegment {
     counts.loneSinceSession += 1;
-    if (mode === RowMode.ByNumber) {
+    if (mode === TimelineView.ByNumber) {
         const { sessions, loneSinceSession } = counts;
         const key = `l${sessions}.${loneSinceSession}`;
         return { key, kind: NodeKind.Commit, label: '', order: [sessions, loneSinceSession] };
@@ -218,14 +254,24 @@ function loneSegment(counts: ICounts, mode: RowMode, at: number): ISegment {
     return { key: `l${at}.${ordinal}`, kind: NodeKind.Commit, label: '', order: [at, ordinal] };
 }
 
+/**
+ * One commit's path down to it: the spans above it, then its job run or API call and its place
+ * there, or, made outside one, its own place. By order and by driver, there are no spans, and an
+ * order or a driver goes above the rest.
+ */
+interface IPath {
+    readonly spans: readonly ISegment[];
+    readonly rest: readonly ISegment[];
+}
+
 /** One commit's path, from the top of the grid down to it. */
-function pathOf(counts: ICounts, mode: RowMode, commit: ICommit): readonly ISegment[] {
+function pathOf(counts: ICounts, mode: TimelineView, commit: ICommit): IPath {
     const { session } = commit;
     const at = commit.at.milliseconds;
     if (session === null) {
         const lone = loneSegment(counts, mode, at);
         const spans = spansOf(mode, at, counts.sessions);
-        return [...spans, lone];
+        return { spans, rest: [lone] };
     }
     const known = counts.sessionsSeen.get(session);
     const group = known ?? newSession(counts, mode, at);
@@ -241,7 +287,7 @@ function pathOf(counts: ICounts, mode: RowMode, commit: ICommit): readonly ISegm
     // By number, a job run's first number is its own; by time, all its commits share a time.
     const [number = 0] = group.order;
     const spans = spansOf(mode, at, number);
-    return [...spans, group, slot];
+    return { spans, rest: [group, slot] };
 }
 
 /** Nothing counted yet. */
@@ -360,6 +406,10 @@ class GridNode implements ITimelineNode {
         return this.ownCommits;
     }
 
+    get subject(): SubjectId | null {
+        return this.segment.subject ?? null;
+    }
+
     /** Its children in order, each span with only one thing in it skipped. */
     get children(): readonly ITimelineNode[] {
         if (this.sorted === null) {
@@ -378,11 +428,19 @@ class GridNode implements ITimelineNode {
 
     /** Adds a commit to this node, and below it down its path. */
     add(path: readonly ISegment[], gridCommit: IGridCommit): void {
-        this.sorted = null;
         this.named = null;
         const own = this.ownCommits.get(gridCommit.column) ?? [];
         this.ownCommits.set(gridCommit.column, own);
         own.push(gridCommit);
+        this.addBelow(path, gridCommit);
+    }
+
+    /**
+     * Adds a commit below this node, down its path, without holding it itself, as the top of the
+     * grid does: there a commit under several orders would be held more than once.
+     */
+    addBelow(path: readonly ISegment[], gridCommit: IGridCommit): void {
+        this.sorted = null;
         const [next, ...rest] = path;
         if (next === undefined) {
             return;
@@ -404,16 +462,50 @@ class GridNode implements ITimelineNode {
     }
 }
 
+/** A commit of the job run or API call under way, and its path below an order or a driver. */
+interface IPlaced {
+    readonly rest: readonly ISegment[];
+    readonly gridCommit: IGridCommit;
+}
+
 /** How far the grid has taken in a branch's line, and what it counted on the way. */
 interface IWalked {
     readonly counts: ICounts;
     size: number;
     /** The last commit walked, and the module it changed, which the next is told apart from. */
     last: { readonly commit: ICommit; readonly module: TimelineModule | null } | null;
+    /** By order or by driver, what each commit goes under; null in the other views. */
+    readonly subjects: SubjectWalk | null;
+    /** By order or by driver, the branch's own commits of the job run or API call under way. */
+    work: { readonly session: SessionId | null; readonly placed: IPlaced[] };
+}
+
+/** The index of a branch's line: the run's own for the current branch, or worked out. */
+function indexOfBranch(branch: IBranchLine): IRunIndex {
+    if (branch.index !== null) {
+        return branch.index;
+    }
+    const root = branch.line.last()?.root ?? branch.start;
+    return indexOfCommits(branch.line, root);
+}
+
+/** The module a commit changed, and the one that called it, against the commit before. */
+function modulesOf(
+    walked: IWalked,
+    branch: IBranchLine,
+    commit: ICommit,
+): Pick<IGridCommit, 'module' | 'calledFrom'> {
+    const { last } = walked;
+    const before = last?.commit.root ?? branch.start;
+    const module = moduleChanged(commit, before);
+    const isSameWork = last !== null && last.commit.session === commit.session;
+    const isCall = isSameWork && module !== null && last.module !== null && last.module !== module;
+    walked.last = { commit, module };
+    return { module, calledFrom: isCall ? last.module : null };
 }
 
 /**
- * The grid of every branch's commits, in one mode: a column for each branch laid out as a tree,
+ * The grid of every branch's commits, in one view: a column for each branch laid out as a tree,
  * and the groups that line its commits up with the other branches'. It takes in each branch's new
  * commits as the run goes, as a line only ever grows.
  */
@@ -425,6 +517,9 @@ export class TimelineGrid implements ITimelineGrid {
         order: [],
     });
     private readonly walked = new Map<BranchId, IWalked>();
+    /** Each order's or driver's group, by its ID, in the order they were first met. */
+    private readonly subjectSegments = new Map<SubjectId, ISegment>();
+    private readonly subjectKind: SubjectKind | null;
     private shownColumns: readonly ITimelineColumn[] = [];
 
     get columns(): readonly ITimelineColumn[] {
@@ -436,7 +531,9 @@ export class TimelineGrid implements ITimelineGrid {
         return this.top.children;
     }
 
-    constructor(readonly mode: RowMode) {}
+    constructor(readonly view: TimelineView) {
+        this.subjectKind = SUBJECT_OF_VIEW[view];
+    }
 
     /** Takes in the branches as they are now: their names, and the commits not taken in yet. */
     update(branches: readonly IBranchLine[]): void {
@@ -457,35 +554,97 @@ export class TimelineGrid implements ITimelineGrid {
      * own job runs line up with its parent's, but adds only the branch's own.
      */
     private takeIn(branch: IBranchLine): void {
-        const walked = this.walked.get(branch.id) ?? { counts: noCounts(), size: 0, last: null };
-        this.walked.set(branch.id, walked);
+        const walked = this.walkOf(branch.id);
         const from = walked.size;
+        if (from >= branch.line.size) {
+            return;
+        }
+        // By order and by driver, a branch other than the current one has its index worked out.
+        const index = walked.subjects === null ? EMPTY_RUN_INDEX : indexOfBranch(branch);
         branch.line.slice(from).forEach((commit, offset) => {
-            const index = from + offset;
-            const path = pathOf(walked.counts, this.mode, commit);
-            const { last } = walked;
-            const before = last?.commit.root ?? branch.start;
-            const module = moduleChanged(commit, before);
-            const isSameWork = last !== null && last.commit.session === commit.session;
-            const isCall =
-                isSameWork && module !== null && last.module !== null && last.module !== module;
-            const calledFrom = isCall ? last.module : null;
-            walked.last = { commit, module };
-            if (index >= branch.forkedAt) {
-                const place = toPosition(index + 1);
-                this.top.add(path, { column: branch.id, place, commit, module, calledFrom });
+            const { spans, rest } = pathOf(walked.counts, this.view, commit);
+            const modules = modulesOf(walked, branch, commit);
+            const met = walked.subjects?.take(commit, index) ?? null;
+            const at = from + offset;
+            if (at < branch.forkedAt) {
+                return;
             }
+            const place = toPosition(at + 1);
+            const gridCommit: IGridCommit = { column: branch.id, place, commit, ...modules };
+            if (met === null) {
+                this.top.addBelow([...spans, ...rest], gridCommit);
+                return;
+            }
+            this.addUnderSubjects(walked, met, { rest, gridCommit });
         });
         walked.size = branch.line.size;
+    }
+
+    private walkOf(id: BranchId): IWalked {
+        const known = this.walked.get(id);
+        if (known !== undefined) {
+            return known;
+        }
+        const kind = this.subjectKind;
+        const walked: IWalked = {
+            counts: noCounts(),
+            size: 0,
+            last: null,
+            subjects: kind === null ? null : new SubjectWalk(kind),
+            work: { session: null, placed: [] },
+        };
+        this.walked.set(id, walked);
+        return walked;
+    }
+
+    /**
+     * Adds a commit under each order or driver it goes under. One first met at this commit also
+     * takes the earlier commits of its job run or API call, as a job run is shown whole.
+     */
+    private addUnderSubjects(walked: IWalked, met: ISubjectsOfCommit, placed: IPlaced): void {
+        const { commit } = placed.gridCommit;
+        const { session } = commit;
+        if (session !== walked.work.session) {
+            walked.work = { session, placed: [] };
+        }
+        const earlier = [...walked.work.placed];
+        if (session !== null) {
+            walked.work.placed.push(placed);
+        }
+        met.subjects.forEach((subject, order) => {
+            const segment = this.subjectSegment(subject, commit.at.milliseconds);
+            const commits = order >= met.firstMet ? [...earlier, placed] : [placed];
+            commits.forEach(({ rest, gridCommit }) => {
+                this.top.addBelow([segment, ...rest], gridCommit);
+            });
+        });
+    }
+
+    /** An order's or a driver's group, made the first time it is met, in that order. */
+    private subjectSegment(subject: SubjectId, at: number): ISegment {
+        const known = this.subjectSegments.get(subject);
+        if (known !== undefined) {
+            return known;
+        }
+        const isOrder = this.subjectKind === SubjectKind.Order;
+        const segment: ISegment = {
+            key: `${isOrder ? 'o' : 'd'}:${subject}`,
+            kind: isOrder ? NodeKind.Order : NodeKind.Driver,
+            label: `${isOrder ? 'Order' : 'Driver'} ${subject}`,
+            order: [at, this.subjectSegments.size],
+            subject,
+        };
+        this.subjectSegments.set(subject, segment);
+        return segment;
     }
 }
 
 /**
- * The grid of every branch's commits, by time or by number, as it stands: a run as it goes keeps
- * one {@link TimelineGrid} and updates it instead.
+ * The grid of every branch's commits, in one view, as it stands: a run as it goes keeps one
+ * {@link TimelineGrid} and updates it instead.
  */
-export function timelineGrid(branches: readonly IBranchLine[], mode: RowMode): TimelineGrid {
-    const grid = new TimelineGrid(mode);
+export function timelineGrid(branches: readonly IBranchLine[], view: TimelineView): TimelineGrid {
+    const grid = new TimelineGrid(view);
     grid.update(branches);
     return grid;
 }
@@ -569,33 +728,65 @@ export function columnHolding(
     return last?.[0] ?? branch;
 }
 
-/** Whether a node holds a column's commit at a place: a column's commits under a node run on. */
+/**
+ * Whether a column's commits, oldest first, hold the one at a place. By time and by number a
+ * group's commits run on, but under an order or a driver they skip the others', so it searches.
+ */
+export function holdsPlace(own: readonly IGridCommit[] | undefined, place: Position): boolean {
+    if (own === undefined) {
+        return false;
+    }
+    let low = 0;
+    let high = own.length - 1;
+    while (low <= high) {
+        const middle = Math.floor((low + high) / 2);
+        const found = own[middle]?.place ?? place;
+        if (found === place) {
+            return true;
+        }
+        if (found < place) {
+            low = middle + 1;
+        } else {
+            high = middle - 1;
+        }
+    }
+    return false;
+}
+
+/** Whether a node holds a column's commit at a place, shown or hidden by the filter. */
 function holds(node: ITimelineNode, column: BranchId, place: Position): boolean {
-    const own = node.commits.get(column);
-    const first = own?.[0];
-    const last = own?.at(-1);
-    return (
-        first !== undefined && last !== undefined && first.place <= place && place <= last.place
-    );
+    const all = node.held ?? node.commits;
+    const own = all.get(column);
+    return holdsPlace(own, place);
 }
 
 /**
- * The keys of the groups holding a column's commit at a place, from the top down, so the group
- * holding the commit shown can be opened.
+ * The groups holding a column's commit at a place, from the top down, so the group holding the
+ * commit shown can be opened.
  */
-export function keysHolding(
+export function groupsHolding(
     nodes: readonly ITimelineNode[],
     column: BranchId,
     place: Position,
-): readonly string[] {
+): readonly ITimelineNode[] {
     const found = nodes.find(
         (node) => node.kind !== NodeKind.Commit && holds(node, column, place),
     );
     if (found === undefined) {
         return [];
     }
-    const below = keysHolding(found.children, column, place);
-    return [found.key, ...below];
+    const below = groupsHolding(found.children, column, place);
+    return [found, ...below];
+}
+
+/** The keys of the groups holding a column's commit at a place, from the top down. */
+export function keysHolding(
+    nodes: readonly ITimelineNode[],
+    column: BranchId,
+    place: Position,
+): readonly string[] {
+    const groups = groupsHolding(nodes, column, place);
+    return groups.map((group) => group.key);
 }
 
 /** The commit node of a column's commit at a place, if the grid holds it. */

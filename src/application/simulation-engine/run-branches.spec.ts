@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { isBetweenGroups, latestPlace } from '../../application-core/simulation-engine/run-places';
 import type { IRunState } from '../../application-core/simulation-engine/run-state';
 import {
+    canDeleteBranch,
+    deleteBranch,
     forkAt,
     rename,
     switchTo,
@@ -225,5 +227,43 @@ describe("a run's branches", () => {
         const same = switchTo(MAIN, MAIN_BRANCH);
 
         expect(same).toBe(MAIN);
+    });
+});
+
+const FORKED = forkedAndRunOn(MAIN);
+const FORK = FORKED.history.current;
+
+describe('deleting a branch', () => {
+    it('takes a fork being watched away, and watches Main again at its latest commit', () => {
+        const deleted = deleteBranch(FORKED, FORK);
+
+        const branches = branchesOf(deleted).toArray();
+        const ids = branches.map((branch) => branch.id);
+        expect(ids).toEqual([MAIN_BRANCH]);
+        expect(deleted.history.current).toBe(MAIN_BRANCH);
+        const latest = latestPlace(deleted);
+        expect(latest).toBe(LATEST);
+        expect(deleted.line.sessionsOpened).toBe(MAIN.line.sessionsOpened);
+    });
+
+    it('takes away a fork not being watched, leaving the branch watched as it was', () => {
+        const backOnMain = switchTo(FORKED, MAIN_BRANCH);
+
+        const deleted = deleteBranch(backOnMain, FORK);
+
+        const branches = branchesOf(deleted).toArray();
+        expect(branches).toHaveLength(1);
+        expect(deleted.line).toBe(backOnMain.line);
+    });
+
+    it('never takes Main, nor a branch another forks from', () => {
+        const forkOfFork = forkAt(FORKED, FORK_PLACE);
+
+        const canMain = canDeleteBranch(FORKED, MAIN_BRANCH);
+        const canParent = canDeleteBranch(forkOfFork, FORK);
+        const canChild = canDeleteBranch(forkOfFork, forkOfFork.history.current);
+
+        expect([canMain, canParent, canChild]).toEqual([false, false, true]);
+        expect(() => deleteBranch(forkOfFork, FORK)).toThrow('no forks of its own');
     });
 });

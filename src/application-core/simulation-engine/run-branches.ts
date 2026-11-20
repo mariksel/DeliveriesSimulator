@@ -15,6 +15,7 @@ import type { ICommitLine } from './commit-line';
 import type { IMainRoot } from './main-root';
 import type { BranchId } from './branch-id';
 import { toBranchId } from './branch-id';
+import type { IRunIndex } from './run-index';
 
 /**
  * Forking, switching, and naming a run's branches (FND-81, FND-87). The engine works on the
@@ -36,6 +37,11 @@ export interface IBranchLine {
     /** The root the run started from, before its first commit, which every line shares. */
     readonly start: IMainRoot;
     readonly line: List<ICommit>;
+    /**
+     * The current branch's index from the run's cache, or null for another branch, whose index
+     * `indexOfCommits` works out when it is needed (FND-81).
+     */
+    readonly index: IRunIndex | null;
 }
 
 /** One branch as the tree shows it. */
@@ -139,6 +145,31 @@ export function switchTo(run: IRunState, id: BranchId): IRunState {
     return onLine(run, switched, line);
 }
 
+/**
+ * Whether a branch can be deleted: any but Main, once no branch forks from it, so deleting it
+ * takes no other branch's commits with it (FND-81).
+ */
+export function canDeleteBranch(run: IRunState, id: BranchId): boolean {
+    const branch = run.history.branches.get(id);
+    const hasForks = run.history.branches.some((each) => each.forkedFrom === id);
+    return branch !== undefined && branch.forkedFrom !== null && !hasForks;
+}
+
+/**
+ * Deletes a branch with no forks of its own, never Main, and its own commits with it. Deleting
+ * the branch being watched watches the branch it forked from, at its latest commit (FND-81).
+ */
+export function deleteBranch(run: IRunState, id: BranchId): IRunState {
+    if (!canDeleteBranch(run, id)) {
+        throw new RangeError('Only a branch with no forks of its own, other than Main, can go.');
+    }
+    const branch = branchOf(run.history, id);
+    const parent = required(branch.forkedFrom, `the branch ${id} forked from`);
+    const watched = run.history.current === id ? switchTo(run, parent) : run;
+    const branches = watched.history.branches.delete(id);
+    return { ...watched, history: { ...watched.history, branches } };
+}
+
 /** Gives a branch another name, which must not be blank. Its ID stays as it is. */
 export function rename(run: IRunState, id: BranchId, name: string): IRunState {
     const trimmed = name.trim();
@@ -186,6 +217,7 @@ export function branchLinesOf(run: IRunState): List<IBranchLine> {
                 isCurrent,
                 start: run.line.start,
                 line: commits.toList(),
+                index: isCurrent ? run.cache.index : null,
             };
         })
         .toList();
@@ -204,7 +236,7 @@ function grown(run: IRunState, earlier: IBranchLine): IBranchLine {
         return required(commit, `commit ${id}`);
     });
     const line = earlier.line.concat(added);
-    return { ...earlier, line };
+    return { ...earlier, line, index: run.cache.index };
 }
 
 /**

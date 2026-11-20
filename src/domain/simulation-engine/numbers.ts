@@ -9,6 +9,12 @@ const TWO_32 = 4294967296;
 
 /** A moment by the browser's real clock, in milliseconds. It drives a watched run. */
 export type WallTime = number & { readonly brand: 'WallTime' };
+/**
+ * A moment on the calendar, in milliseconds since the start of 1970 in UTC: the date and time a
+ * person reads, such as when a run was saved. Unlike a {@link WallTime}, it means the same moment
+ * in any session.
+ */
+export type CalendarTime = number & { readonly brand: 'CalendarTime' };
 /** A run's seed: a whole number from 0 to 2^32 - 1. */
 export type Seed = number & { readonly brand: 'Seed' };
 /** One 32-bit word of a random stream, or a number drawn whole from one. */
@@ -20,6 +26,14 @@ export function toWallTime(value: number): WallTime {
         return refuse('A real time', value, 'a finite number');
     }
     return value as WallTime;
+}
+
+/** A moment on the calendar, which must be a finite number. */
+export function toCalendarTime(value: number): CalendarTime {
+    if (!Number.isFinite(value)) {
+        return refuse('A calendar time', value, 'a finite number');
+    }
+    return value as CalendarTime;
 }
 
 /** A seed, which must be a whole number from 0 to 2^32 - 1. */

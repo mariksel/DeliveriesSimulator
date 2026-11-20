@@ -22,11 +22,14 @@ npm run dev        # start the app (Vite)
 |---------|--------------|
 | `npm run dev` | Start the development server |
 | `npm run build` | Production build into `dist/` |
+| `npm run preview` | Serve the production build |
 | `npm test` | Unit and component tests (Vitest) |
 | `npm run test:coverage` | Tests with coverage |
 | `npm run test:e2e` | End-to-end tests (Playwright) |
 | `npm run test:mutation` | Mutation tests (Stryker) |
 | `npm run lint` | ESLint |
+| `npm run format` / `npm run check:format` | Format with Prettier / check formatting |
+| `npm run check:styles` | Stylelint on the CSS |
 | `npm run check:architecture` | Layer and dependency rules (dependency-cruiser) and core type check |
 | `npm run check:types` | Type check of the source and its tests |
 | `npm run check:public-safety` | Looks for private text in the files git would publish |
@@ -34,6 +37,7 @@ npm run dev        # start the app (Vite)
 | `npm run scenario` | Run a scenario from the command line |
 | `npm run benchmark` | City-scale benchmark (`-- --drivers n --orders n`) |
 | `npm run self-test` | Simulator self-tests |
+| `npm run snapshots` | Regenerate the saved-run snapshots the snapshot tests compare against (only when a new state function version is added) |
 
 ## Documentation
 

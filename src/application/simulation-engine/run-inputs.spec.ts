@@ -1,5 +1,13 @@
+import { TESTING_FUNCTIONS } from '../../application-core/simulation-engine/function-lookup.testing';
 import { List } from 'immutable';
 import { describe, expect, it } from 'vitest';
+import {
+    TEST_ADDRESS,
+    TO_TEST_ADDRESS,
+    toTestAddress,
+} from '../../application-core/simulation-engine/run-customers.testing';
+import { toCustomerId } from '../../domain/restaurants/customers/customer';
+import { toAddressId } from '../../domain/restaurants/customers/delivery-address';
 
 import { checkDeterminism } from './determinism-check';
 import { HAPPY_PATH, START } from './one-order-run.testing';
@@ -27,10 +35,12 @@ import {
 import { toSeed } from '../../domain/simulation-engine/numbers';
 import { toVersionNumber } from '../../domain/system/records/version-chain';
 import { toSimTime } from '../../domain/simulation-engine/sim-time';
+import { orderFacts } from '../../domain/orders/order-facts.testing';
 
 function runScript(steps: readonly IRunInput[], until = 300_000, seed = 1): SimulationRun {
-    const secondRun = createRun({ seed: toSeed(seed) });
-    const scriptedSteps = List(steps);
+    const secondRun = createRun({ functions: TESTING_FUNCTIONS, seed: toSeed(seed) });
+    const sentSteps = steps.map(toTestAddress);
+    const scriptedSteps = List(sentSteps);
     const start = scheduleInputs(secondRun, START, scriptedSteps);
     const run = new SimulationRun(start);
     const time = toSimTime(until);
@@ -63,7 +73,8 @@ describe('scripted actors', () => {
         const run = runScript(HAPPY_PATH);
 
         const id = toOrderId('order-1');
-        const orderVersion = run.state.root.state.orders.orderVersionOf(id);
+        const view = run.state.root.state.orders.viewOf(id);
+        const orderVersion = orderFacts(view);
         expect(orderVersion).toMatchObject({
             status: 'Delivered',
             number: toVersionNumber(7),
@@ -75,6 +86,18 @@ describe('scripted actors', () => {
         );
         const secondRefusals = refusals(run);
         expect(secondRefusals).toEqual([]);
+    });
+
+    it("create an order for its customer, and hand Deliveries its address's point", () => {
+        const run = runScript(HAPPY_PATH);
+
+        const id = toOrderId('order-1');
+        const order = run.state.root.state.orders.orderOf(id);
+        const delivery = run.state.root.state.deliveries.deliveryOf(id);
+        expect(order).toMatchObject({ customerId: 'customer-1', addressId: 'address-1' });
+        expect(delivery?.destination).toEqual(TEST_ADDRESS.coordinates);
+        const created = run.state.cache.log.entries.find((entry) => entry.kind === 'OrderCreated');
+        expect(created?.data).toMatchObject({ customerId: 'customer-1', addressId: 'address-1' });
     });
 
     it('act at exactly the times the steps state, each by its stated actor', () => {
@@ -89,7 +112,8 @@ describe('scripted actors', () => {
         const run = runScript(HAPPY_PATH, 1999);
 
         const id = toOrderId('order-1');
-        const orderVersion = run.state.root.state.orders.orderVersionOf(id);
+        const view = run.state.root.state.orders.viewOf(id);
+        const orderVersion = orderFacts(view);
         expect(orderVersion).toMatchObject({
             status: 'Created',
             number: toVersionNumber(1),
@@ -115,7 +139,7 @@ describe('scripted actors', () => {
         const run = runScript(steps);
 
         const id = toOrderId('order-1');
-        expect(run.state.root.state.orders.orderVersionOf(id)?.isReady).toBe(true);
+        expect(run.state.root.state.orders.viewOf(id)?.isReady).toBe(true);
         const secondRefusals = refusals(run);
         expect(secondRefusals).toEqual([]);
     });
@@ -145,9 +169,9 @@ describe('scripted actors', () => {
         const run = runScript(steps);
 
         const id = toOrderId('order-1');
-        expect(run.state.root.state.orders.orderVersionOf(id)?.isReady).toBe(false);
+        expect(run.state.root.state.orders.viewOf(id)?.isReady).toBe(false);
         const orderId = toOrderId('order-2');
-        expect(run.state.root.state.orders.orderVersionOf(orderId)?.isReady).toBe(true);
+        expect(run.state.root.state.orders.viewOf(orderId)?.isReady).toBe(true);
     });
 
     it('add the starting drivers, so dispatch can notify them', () => {
@@ -260,6 +284,34 @@ describe('scripted actors', () => {
                 ],
                 [3, 'accept', 'UnknownDriver'],
             ],
+            [
+                'an address the script does not hold',
+                [
+                    {
+                        at: toSimTime(1),
+                        actor: toInputActor('restaurant-1'),
+                        command: 'create-order',
+                        order: toInputOrderName('A'),
+                        customer: TO_TEST_ADDRESS.customer,
+                        address: toAddressId('address-9'),
+                    },
+                ],
+                [1, 'create-order', 'UnknownAddress'],
+            ],
+            [
+                "an address that is not the named customer's",
+                [
+                    {
+                        at: toSimTime(1),
+                        actor: toInputActor('restaurant-1'),
+                        command: 'create-order',
+                        order: toInputOrderName('A'),
+                        customer: toCustomerId('customer-9'),
+                        address: TO_TEST_ADDRESS.address,
+                    },
+                ],
+                [1, 'create-order', 'UnknownAddress'],
+            ],
         ])('%s', (_name, steps, refusal) => {
             const run = runScript(steps);
             const secondRefusals = refusals(run);
@@ -274,7 +326,7 @@ describe('scripted actors', () => {
             const secondRefusals = refusals(run);
             expect(secondRefusals).toEqual([[120_000, 'pick-up', { orders: 'NotReady' }]]);
             const id = toOrderId('order-1');
-            expect(run.state.root.state.orders.orderVersionOf(id)?.status).toBe('DriverAssigned');
+            expect(run.state.root.state.orders.viewOf(id)?.status).toBe('DriverAssigned');
         });
 
         it('traces a refusal to its command', () => {
@@ -313,7 +365,8 @@ describe('scripted actors', () => {
             ];
 
             const id = toOrderId('order-1');
-            const orderVersion = runScript(steps).state.root.state.orders.orderVersionOf(id);
+            const view = runScript(steps).state.root.state.orders.viewOf(id);
+            const orderVersion = orderFacts(view);
             expect(orderVersion).toBeDefined();
         });
     });
@@ -323,7 +376,7 @@ describe("a script's rule changes", () => {
     const tenSeconds = changesOf(DISPATCH_PASS, DISPATCH_PASS_INTERVAL, 10_000);
 
     function runWithRules(start: IRunStart, steps: readonly ScriptInput[]): SimulationRun {
-        const created = createRun({ seed: toSeed(1) });
+        const created = createRun({ functions: TESTING_FUNCTIONS, seed: toSeed(1) });
         const scriptedSteps = List(steps);
         const scheduled = scheduleInputs(created, start, scriptedSteps);
         const run = new SimulationRun(scheduled);

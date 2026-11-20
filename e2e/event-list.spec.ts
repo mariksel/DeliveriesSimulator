@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import { expect, test } from '@playwright/test';
 
 async function ranToTheEnd(page: Page): Promise<void> {
@@ -12,8 +12,15 @@ async function ranToTheEnd(page: Page): Promise<void> {
     await expect(statusState).toHaveText('Ended');
     await page.getByTestId('events-tab').click();
     const eventRow = page.getByTestId('event-list').getByTestId('event-row').last();
-    await expect(eventRow).toContainText('37');
+    await expect(eventRow).toContainText('51');
 }
+
+/**
+ * The run's last inbox read, which carries an outbox event and has a cause: drivers' apps sending
+ * their locations write the very last events.
+ */
+const lastInboxRead = (page: Page): Locator =>
+    page.getByTestId('event-row').filter({ hasText: 'InboxEventRead' }).last();
 
 test('the list starts empty, and fills as a run goes', async ({ page }) => {
     await page.goto('/');
@@ -35,16 +42,16 @@ test('it follows the newest event to the end of a run', async ({ page }) => {
     const eventRow = page.getByTestId('event-row').last();
     await expect(eventRow).toBeInViewport();
     const secondEventRow = page.getByTestId('event-row').last();
-    await expect(secondEventRow).toContainText('37');
+    await expect(secondEventRow).toContainText('51');
 });
 
 test('selecting an event shows its full payload', async ({ page }) => {
     await ranToTheEnd(page);
 
-    await page.getByTestId('event-row').last().click();
+    await lastInboxRead(page).click();
 
     const payloadKind = page.getByTestId('payload-kind');
-    await expect(payloadKind).toContainText('#37');
+    await expect(payloadKind).toContainText('#49');
     const payloadJson = page.getByTestId('payload-json');
     await expect(payloadJson).toContainText('"outboxEventId"');
     const payloadSource = page.getByTestId('payload-source');
@@ -56,7 +63,7 @@ test('the verdict and the event have their own tabs', async ({ page }) => {
     const runVerdict = page.getByTestId('run-verdict');
     await expect(runVerdict).toBeVisible();
 
-    await page.getByTestId('event-row').last().click();
+    await lastInboxRead(page).click();
     const payloadKind = page.getByTestId('payload-kind');
     await expect(payloadKind).toBeVisible();
     const secondRunVerdict = page.getByTestId('run-verdict');
@@ -87,12 +94,12 @@ test('the chosen tab joins its panel, and the other sits behind the line', async
 
 test('Caused by selects the entry that caused this one', async ({ page }) => {
     await ranToTheEnd(page);
-    await page.getByTestId('event-row').last().click();
+    await lastInboxRead(page).click();
 
     await page.getByTestId('payload-caused-by').click();
 
     const payloadKind = page.getByTestId('payload-kind');
-    await expect(payloadKind).not.toContainText('#37');
+    await expect(payloadKind).not.toContainText('#48');
     const dataTestideventRowisSelected = page.locator('[data-testid="event-row"].is-selected');
     await expect(dataTestideventRowisSelected).toBeInViewport();
 });
@@ -127,7 +134,7 @@ test('pressing a row stops following before the press is released', async ({ pag
 
     await page.mouse.up();
     const payloadKind = page.getByTestId('payload-kind');
-    await expect(payloadKind).toContainText('#37');
+    await expect(payloadKind).toContainText('#51');
 });
 
 test('the Follow button does not change the height of the list', async ({ page }) => {
@@ -135,7 +142,7 @@ test('the Follow button does not change the height of the list', async ({ page }
     const list = page.getByTestId('event-list');
     const before = (await list.boundingBox())!.height;
 
-    await page.getByTestId('event-row').last().click();
+    await lastInboxRead(page).click();
     const follow = page.getByTestId('follow');
     await expect(follow).toBeVisible();
 
@@ -149,7 +156,7 @@ test('the Follow button does not change the height of the list', async ({ page }
 
 test('Copy says what happened', async ({ page }) => {
     await ranToTheEnd(page);
-    await page.getByTestId('event-row').last().click();
+    await lastInboxRead(page).click();
 
     await page.getByTestId('payload-copy').click();
 

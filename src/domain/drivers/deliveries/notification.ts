@@ -4,6 +4,7 @@ import type { DeliveryEventId } from './delivery-event-id';
 import type { DriverId } from '../driver';
 import type { OrderDeliveryId } from './order-delivery';
 import type { IVersion } from '../../system/records/version-chain';
+import type { Maker } from '../../system/records/maker';
 import { assertVersionLink, FIRST_VERSION } from '../../system/records/version-chain';
 import type { VersionNumber } from '../../system/records/version-chain';
 import type { IInstant } from '../../system/time/instant';
@@ -65,12 +66,13 @@ export class Notification {
 /** One state of a notification. */
 export class NotificationVersion implements IVersion<NotificationVersion> {
     /** A notification just sent, waiting for an answer. */
-    static createNew(notificationId: NotificationId): NotificationVersion {
+    static createNew(notificationId: NotificationId, madeBy: Maker): NotificationVersion {
         return NotificationVersion.create({
             notificationId,
             isOutstanding: true,
             number: FIRST_VERSION,
             previous: null,
+            madeBy,
         });
     }
 
@@ -82,6 +84,7 @@ export class NotificationVersion implements IVersion<NotificationVersion> {
             fields.isOutstanding,
             fields.number,
             fields.previous,
+            fields.madeBy,
         );
     }
 
@@ -92,6 +95,8 @@ export class NotificationVersion implements IVersion<NotificationVersion> {
         readonly isOutstanding: boolean,
         readonly number: VersionNumber,
         readonly previous: NotificationVersion | null,
+        /** The job run or API call that made this version, or the run's start (FND-81). */
+        readonly madeBy: Maker,
     ) {
         Object.freeze(this);
     }

@@ -1,7 +1,7 @@
 import type { IScenario } from './scenario';
 import { ScriptedCommand } from './scripted-command';
 import type { ScenarioStep } from './scripted-step';
-import { isIndirectStep, isRulesStep } from './scripted-step';
+import { isIndirectStep, isRulesStep, isUseStep } from './scripted-step';
 
 /** Who and what a scenario names, which a step stated by hand can refer to (FND-89). */
 export interface IScenarioNames {
@@ -13,7 +13,7 @@ export interface IScenarioNames {
 
 /** The order a step creates, or null for any other step. */
 function createdBy(step: ScenarioStep): string | null {
-    if (isRulesStep(step) || isIndirectStep(step)) {
+    if (isRulesStep(step) || isUseStep(step) || isIndirectStep(step)) {
         return null;
     }
     return step.command === ScriptedCommand.CreateOrder ? step.order : null;

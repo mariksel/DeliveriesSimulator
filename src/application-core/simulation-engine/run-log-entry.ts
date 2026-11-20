@@ -1,3 +1,4 @@
+import type { FunctionName } from './function-name';
 import type { DeliveriesOutboxEvent } from '../../domain/drivers/deliveries/deliveries-outbox-event';
 import { DeliveryEventKind } from '../../domain/drivers/deliveries/delivery-event-kind';
 import type { DeliveryEventRecord } from '../../domain/drivers/deliveries/delivery-event-record';
@@ -7,6 +8,8 @@ import { LogSource, TechnicalLogKind } from '../../domain/event-log/log-vocabula
 import type { DriverId } from '../../domain/drivers/driver';
 import type { OrderId } from '../../domain/orders/order';
 import type { RestaurantId } from '../../domain/restaurants/restaurant-place';
+import type { CustomerId } from '../../domain/restaurants/customers/customer';
+import type { AddressId } from '../../domain/restaurants/customers/delivery-address';
 import type { InputActor, InputOrderName } from './run-input';
 import { OrderEventKind } from '../../domain/orders/order-event-kind';
 import type { OrderEventRecord } from '../../domain/orders/order-event-record';
@@ -26,6 +29,9 @@ import type { DeliveriesOutboxEventId } from '../../domain/drivers/deliveries/de
 export interface IOrderCreatedData {
     readonly id: OrderId;
     readonly restaurantId: RestaurantId;
+    /** The customer it is for, and which of their addresses it goes to (FND-90). */
+    readonly customerId: CustomerId;
+    readonly addressId: AddressId;
     readonly status: OrderStatus;
     readonly version: VersionNumber;
     readonly isDeliveryRequestPending: boolean;
@@ -51,14 +57,26 @@ export interface INotificationSentData {
     readonly isOutstanding: boolean;
 }
 
-/** What a command was about. */
-export interface ICommandSubject {
-    readonly order: InputOrderName;
+/** One app's send, as a log entry lists it: whose app sent it, and the point (FND-90). */
+export interface ISentPoint {
+    readonly actor: InputActor;
+    readonly latitude: number;
+    readonly longitude: number;
 }
 
-/** A command an actor issued. */
+/**
+ * What a command was about: an order; for one app's send, as before batching, the point it sent;
+ * or for the apps due at one moment, each one's send.
+ */
+export type ICommandSubject =
+    | { readonly order: InputOrderName }
+    | { readonly latitude: number; readonly longitude: number }
+    | { readonly sends: readonly ISentPoint[] };
+
+/** A command an actor issued, or, for the apps due at one moment, none of them alone. */
 export interface ICommandIssuedData {
-    readonly actor: InputActor;
+    /** Null for the apps' batched sends, which no one actor issues (FND-90). */
+    readonly actor: InputActor | null;
     readonly name: InputCommand;
     readonly data: ICommandSubject;
 }
@@ -73,6 +91,16 @@ export interface ICommandRefusedData {
 /** Each value a config change changed, by rule and parameter ID, before and after (FND-84). */
 export interface IConfigChangedData {
     readonly changes: List<ValueChanged>;
+}
+
+/**
+ * A state function switched to another of its versions during the run: its name, and its version
+ * before and after (FND-81).
+ */
+export interface IFunctionVersionSwitchedData {
+    readonly function: FunctionName;
+    readonly before: VersionNumber;
+    readonly after: VersionNumber;
 }
 
 /** Orders created an order. */
@@ -145,6 +173,13 @@ export interface IConfigChangedLogRecord {
     readonly data: IConfigChangedData;
 }
 
+/** A state function switched to another of its versions, by an implementation change. */
+export interface IFunctionVersionSwitchedLogRecord {
+    readonly source: typeof LogSource.SimulationEngine;
+    readonly kind: typeof TechnicalLogKind.FunctionVersionSwitched;
+    readonly data: IFunctionVersionSwitchedData;
+}
+
 /**
  * A decision or change outside the service, which the actors made and the service did not see
  * (FND-89).
@@ -167,6 +202,7 @@ export type RunLogRecord =
     | ICommandIssuedLogRecord
     | ICommandRefusedLogRecord
     | IConfigChangedLogRecord
+    | IFunctionVersionSwitchedLogRecord
     | IIndirectEffectLogRecord;
 
 /** One entry of a run's log, with its typed data. */
@@ -193,6 +229,13 @@ export const isModuleEvent = (entry: RunLogEntry): entry is ModuleEventEntry =>
 /** Whether an entry is an outbox write. */
 export const isOutboxEntry = (entry: RunLogEntry): entry is OutboxEntry =>
     entry.kind === TechnicalLogKind.OutboxEventWritten;
+
+/** An entry the Simulation engine wrote: a config change, or a function's version switch. */
+export type EngineEntry = LogEntry<IConfigChangedLogRecord | IFunctionVersionSwitchedLogRecord>;
+
+/** Whether an entry is one the Simulation engine wrote. */
+export const isEngineEntry = (entry: RunLogEntry): entry is EngineEntry =>
+    entry.source === LogSource.SimulationEngine;
 
 /** Whether an entry is an inbox read. */
 export const isInboxRead = (entry: RunLogEntry): entry is InboxReadEntry =>

@@ -2,7 +2,7 @@ import type { Locator, Page } from '@playwright/test';
 import { expect, test } from '@playwright/test';
 
 /** A commit of the one-order run whose state change wrote three events. */
-const COMMIT_WITH_EVENTS = '38';
+const COMMIT_WITH_EVENTS = '40';
 
 async function opened(page: Page): Promise<void> {
     await page.goto('/');
@@ -47,7 +47,7 @@ test('it follows the commit shown to the end of a run, with its groups open', as
 
     const shown = shownCommit(page);
     await expect(shown).toBeInViewport();
-    await expect(shown).toContainText('#231');
+    await expect(shown).toContainText('#255');
 });
 
 test('it follows the commit shown back in time too, on a fork as well', async ({ page }) => {
@@ -118,7 +118,7 @@ test('zoomed out, a closed group is a summary node, and the one holding the comm
     const holding = page.locator('[data-testid="summary-node"].has-shown');
     await expect(holding).toHaveCount(1);
     const count = holding.locator('.summary');
-    await expect(count).toHaveText('231');
+    await expect(count).toHaveText('255');
     const commits = page.getByTestId('commit-cell');
     await expect(commits).toHaveCount(0);
 });
@@ -190,16 +190,19 @@ test('the zoom switch shows hours, minutes, or every commit', async ({ page }) =
 test('rows line up by number too, under blocks of job runs and API calls', async ({ page }) => {
     await ranToTheEnd(page);
 
-    await page.getByTestId('rows-by-number').click();
+    await page.getByTestId('view-ByNumber').click();
 
     const shown = shownCommit(page);
-    await expect(shown).toContainText('#231');
+    await expect(shown).toContainText('#255');
     const list = page.getByTestId('timeline-rows');
-    await list.evaluate((element) => {
-        element.scrollTop = 0;
-    });
     const firstRow = page.getByTestId('timeline-row').first();
-    await expect(firstRow).toContainText('Job runs and calls 1–100');
+    // A loaded browser can draw the list's rows a frame late, so scroll until they have caught up.
+    await expect(async () => {
+        await list.evaluate((element) => {
+            element.scrollTop = 0;
+        });
+        await expect(firstRow).toContainText('Job runs and calls 1–100', { timeout: 1000 });
+    }).toPass();
 });
 
 test('the verdict and the event have their own tabs', async ({ page }) => {

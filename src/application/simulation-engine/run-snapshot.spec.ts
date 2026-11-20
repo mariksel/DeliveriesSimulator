@@ -1,4 +1,10 @@
+import { TESTING_FUNCTIONS } from '../../application-core/simulation-engine/function-lookup.testing';
 import { List } from 'immutable';
+import {
+    TEST_ADDRESS,
+    TO_TEST_ADDRESS,
+} from '../../application-core/simulation-engine/run-customers.testing';
+import { Customer } from '../../domain/restaurants/customers/customer';
 
 import { describe, expect, it } from 'vitest';
 
@@ -41,8 +47,15 @@ const THE_DRIVER = NewDriver.create({
     availability: 'Available' as const,
     location: DriverLocation.create({ coordinates: COORDINATES, deviceTime: toSimTime(0) }),
 });
+/** The restaurant's one customer, at the usual test address. */
+const THE_CUSTOMER = Customer.create({
+    id: TO_TEST_ADDRESS.customer,
+    restaurantId: toRestaurantId('r'),
+});
 const START = {
     restaurants: List.of(THE_RESTAURANT),
+    customers: List.of(THE_CUSTOMER),
+    addresses: List.of(TEST_ADDRESS),
     drivers: List.of(THE_DRIVER),
 };
 const STEPS = List<IRunInput>([
@@ -51,6 +64,7 @@ const STEPS = List<IRunInput>([
         actor: toInputActor('r'),
         command: 'create-order',
         order: toInputOrderName('A'),
+        ...TO_TEST_ADDRESS,
     },
     {
         at: toSimTime(2000),
@@ -87,7 +101,7 @@ const MIDWAY = 100_000;
 const END = 300_000;
 
 function startState(): IRunState {
-    const run = createRun({ seed: toSeed(1) });
+    const run = createRun({ functions: TESTING_FUNCTIONS, seed: toSeed(1) });
     return scheduleInputs(run, START, STEPS);
 }
 /**

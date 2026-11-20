@@ -1,3 +1,4 @@
+import { TESTING_FUNCTIONS } from './function-lookup.testing';
 import { List } from 'immutable';
 import { describe, expect, it } from 'vitest';
 
@@ -17,9 +18,16 @@ import {
 } from './indirect-effects.testing';
 import type { IndirectEffect, IndirectStatement } from './indirect-effect';
 import { forkAt } from './run-branches';
+import { changeConfig } from './config-change';
+import type { ICommit } from './commit';
+import { changesOf } from '../../domain/business-rules/parameter-change.testing';
+import {
+    ORDERS_INBOX_READ_LAG,
+    ORDERS_READ_LAG,
+} from '../../domain/orders/orders-rule-definitions';
 import type { IRunState } from './run-state';
 import { createRun } from './run-state';
-import type { IIndirectInput, IRunInput, IRunStart, ScriptInput } from './run-input';
+import type { IIndirectInput, IRulesInput, IRunInput, IRunStart, ScriptInput } from './run-input';
 import { toIndirectLabel, toInputActor, toInputOrderName } from './run-input';
 import { InputCommand } from './input-command';
 import { scheduleInputs } from './run-inputs';
@@ -27,7 +35,7 @@ import { runNextWork } from './run-step';
 
 /** A run with no inputs, moved on through every job due by a time. */
 function runTo(until: number): IRunState {
-    let run = createRun({ seed: toSeed(7) });
+    let run = createRun({ functions: TESTING_FUNCTIONS, seed: toSeed(7) });
     while (nextWork(run).at.milliseconds <= until) {
         run = runNextWork(run);
     }
@@ -37,6 +45,7 @@ function runTo(until: number): IRunState {
 const AT_MS = 45_000;
 const IGNORED_MS = 10_000;
 const FOLLOWED_MS = 20_000;
+const TUNED_LAG_MS = 30_000;
 const AT = toSimTime(AT_MS);
 
 /** An indirect effect as stated by hand at a time. */
@@ -138,7 +147,7 @@ describe('an indirect step of a script', () => {
 
     /** A run whose script has the indirect step, then a call that follows from it. */
     function scripted(until: number): IRunState {
-        const created = createRun({ seed: toSeed(7) });
+        const created = createRun({ functions: TESTING_FUNCTIONS, seed: toSeed(7) });
         const start: IRunStart = { restaurants: List(), drivers: List() };
         const steps = List<ScriptInput>([ignoredStep, followingCall]);
         let run = scheduleInputs(created, start, steps);
@@ -167,5 +176,58 @@ describe('an indirect step of a script', () => {
         const call = run.line.commits.find((each) => each.kind === CommitKind.Input);
         expect(call?.effect).toMatchObject({ followsFrom: indirect?.id });
         expect(run.cache.stepsRun).toBe(2);
+    });
+});
+
+describe('a config change that follows from an indirect commit', () => {
+    const label = toIndirectLabel('ignored');
+    const ignoredStep: IIndirectInput = { at: toSimTime(IGNORED_MS), indirect: DRIVER_IGNORES };
+    const lag = changesOf(ORDERS_INBOX_READ_LAG, ORDERS_READ_LAG, TUNED_LAG_MS);
+
+    /** A run whose script has the indirect step, then a rules step. */
+    function withRulesStep(rulesStep: IRulesInput): IRunState {
+        const created = createRun({ functions: TESTING_FUNCTIONS, seed: toSeed(7) });
+        const start: IRunStart = { restaurants: List(), drivers: List() };
+        const steps = List<ScriptInput>([ignoredStep, rulesStep]);
+        let run = scheduleInputs(created, start, steps);
+        while (nextWork(run).at.milliseconds <= FOLLOWED_MS) {
+            run = runNextWork(run);
+        }
+        return run;
+    }
+
+    const configCommit = (run: IRunState): ICommit | undefined =>
+        run.line.commits.find((each) => each.kind === CommitKind.ConfigChange);
+    const indirectCommit = (run: IRunState): ICommit | undefined =>
+        run.line.commits.find((each) => each.kind === CommitKind.Indirect);
+
+    it("records it for a rules step, by the indirect step's label", () => {
+        const rulesStep: IRulesInput = { at: toSimTime(FOLLOWED_MS), changes: lag, after: label };
+
+        const run = withRulesStep(rulesStep);
+
+        const config = configCommit(run);
+        const indirect = indirectCommit(run);
+        expect(config?.effect).toMatchObject({ isScripted: true, followsFrom: indirect?.id });
+    });
+
+    it('records none for a rules step that follows nothing', () => {
+        const rulesStep: IRulesInput = { at: toSimTime(FOLLOWED_MS), changes: lag };
+
+        const run = withRulesStep(rulesStep);
+
+        const config = configCommit(run);
+        expect(config?.effect).toMatchObject({ followsFrom: null });
+    });
+
+    it('records the one a change made by hand names', () => {
+        const before = withRulesStep({ at: toSimTime(FOLLOWED_MS), changes: lag });
+        const indirect = indirectCommit(before)!;
+        const at = headAt(before.line);
+
+        const run = changeConfig(before, at, lag, indirect.id);
+
+        const latest = headCommit(run.line);
+        expect(latest?.effect).toMatchObject({ isScripted: false, followsFrom: indirect.id });
     });
 });

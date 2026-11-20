@@ -29,14 +29,18 @@ import { DeliveriesReportKind } from './deliveries-report';
 import { DeliveryEventKind } from './delivery-event-kind';
 import { DeliveryEventRecord } from './delivery-event-record';
 import type { DeliveryHandoff } from './delivery-handoff';
-import type { DriverVersion } from '../driver';
-import type { IHolding } from '../drivers-state';
+import type { DriverLocationVersion } from '../driver-location';
+import { DriverLocation } from '../driver';
+import type { Coordinates } from '../../map-and-routing/coordinates';
+import type { ISentLocation } from './sent-location';
+import type { IDriverView, IHolding } from '../drivers-state';
 import { DriversState } from '../drivers-state';
 import type { DriverRefusal } from './driver-refusal';
 import { DriverRefusalCode } from './driver-refusal';
 import { FollowUpKind } from './follow-up-kind';
 import { Notification, NotificationVersion } from './notification';
-import { DeliveryState, OrderCopy, OrderDelivery, OrderDeliveryVersion } from './order-delivery';
+import { DeliveryState, OrderDelivery, OrderDeliveryVersion } from './order-delivery';
+import { OrderCopyVersion } from './order-copy';
 import type { OrdersAnswer } from './orders-answer';
 import type { RestaurantPlace } from '../../restaurants/restaurant-place';
 import type { Count } from '../../system/math/math';
@@ -44,6 +48,7 @@ import type { IInstant } from '../../system/time/instant';
 import { plusOne, toCount } from '../../system/math/math';
 import { toDeliveriesOutboxEventId } from './deliveries-outbox-event';
 import type { OrdersOutboxEventId } from '../../orders/orders-outbox-event';
+import type { Maker } from '../../system/records/maker';
 
 /**
  * What a step of deliveries comes to: the new state, what it did, and what the engine must still
@@ -53,11 +58,25 @@ export interface IDeliveriesStep {
     readonly state: DeliveriesState;
     readonly reports: List<DeliveriesReport>;
     readonly followUps: List<ICallOrders>;
+    /** The versions the step made, the latest of each record it changed (FND-81). */
+    readonly made: List<DeliveriesVersion>;
 }
+
+/** A version of one of deliveries' records. */
+export type DeliveriesVersion = OrderDeliveryVersion | OrderCopyVersion | NotificationVersion;
 
 /** A step of deliveries that also changed the drivers' counts, which it gives back too. */
 export interface IDeliveriesAndDriversStep extends IDeliveriesStep {
     readonly drivers: DriversState;
+}
+
+/** A location a driver's app sent, received: the drivers, and the driver's version it made. */
+export interface ILocationReceived {
+    readonly state: DeliveriesState;
+    readonly drivers: DriversState;
+    readonly reports: List<DeliveriesReport>;
+    readonly followUps: List<ICallOrders>;
+    readonly made: List<DriverLocationVersion>;
 }
 
 /** A delivery request received: the step, and the order delivery's ID. */
@@ -144,6 +163,7 @@ export class DeliveriesState {
         return DeliveriesState.create({
             deliveries: OrderedMap(),
             deliveryVersions: OrderedMap(),
+            orderCopies: OrderedMap(),
             eventsByOrder: OrderedMap(),
             ordersEventLinks: OrderedMap(),
             outbox: List(),
@@ -163,6 +183,7 @@ export class DeliveriesState {
         return new DeliveriesState(
             fields.deliveries,
             fields.deliveryVersions,
+            fields.orderCopies,
             fields.eventsByOrder,
             fields.ordersEventLinks,
             fields.outbox,
@@ -176,12 +197,13 @@ export class DeliveriesState {
 
     /**
      * Creates the order delivery, its request event, and its copy of the order. A repeat gets the
-     * same ID.
+     * same ID. Each state function that makes versions takes last what makes them.
      */
     static receiveDeliveryRequest(
         state: DeliveriesState,
         at: IInstant,
         handoff: DeliveryHandoff,
+        madeBy: Maker,
     ): IDeliveryRequestReceived {
         const existing = state.deliveries.get(handoff.orderId);
         if (existing !== undefined) {
@@ -191,16 +213,23 @@ export class DeliveriesState {
             id: toOrderDeliveryId(`delivery-${state.nextDelivery}`),
             orderId: handoff.orderId,
             restaurant: handoff.restaurant,
+            destination: handoff.destination,
         });
-        const orderCopy = OrderCopy.create({
-            status: handoff.orderStatus,
-            version: handoff.orderVersion,
-            eventIds: List.of(handoff.requestEventId),
-        });
-        const version = OrderDeliveryVersion.createNew(delivery, orderCopy);
+        const requestEventIds = List.of(handoff.requestEventId);
+        const orderCopy = OrderCopyVersion.createNew(
+            {
+                orderId: handoff.orderId,
+                status: handoff.orderStatus,
+                version: handoff.orderVersion,
+                eventIds: requestEventIds,
+            },
+            madeBy,
+        );
+        const version = OrderDeliveryVersion.createNew(delivery, madeBy);
         const withVersion = state.withDeliveryVersion(version);
         const received = withVersion.with({
             deliveries: state.deliveries.set(delivery.orderId, delivery),
+            orderCopies: state.orderCopies.set(delivery.orderId, orderCopy),
             nextDelivery: plusOne(state.nextDelivery),
         });
         const call = {
@@ -217,6 +246,7 @@ export class DeliveriesState {
             state: recorded.state,
             reports: recorded.reports,
             followUps: List(),
+            made: List.of<DeliveriesVersion>(version, orderCopy),
             orderDeliveryId: delivery.id,
         };
     }
@@ -237,6 +267,7 @@ export class DeliveriesState {
         orderId: OrderId,
         now: IInstant,
         values: DriversRules,
+        madeBy: Maker,
     ): IDeliveriesStep {
         const deliveryVersion = state.deliveryVersions.get(orderId);
         const delivery = required(deliveryVersion, `the delivery of ${orderId}`);
@@ -258,7 +289,7 @@ export class DeliveriesState {
             driverId,
             at: now,
         });
-        const version = NotificationVersion.createNew(notification.id);
+        const version = NotificationVersion.createNew(notification.id, madeBy);
         const notifications = state.notificationsOf(orderId).push(notification);
         const notified = state.with({
             notificationsByOrder: state.notificationsByOrder.set(orderId, notifications),
@@ -271,7 +302,59 @@ export class DeliveriesState {
                 notification,
                 version,
             }),
+            made: List.of<DeliveriesVersion>(version),
         };
+    }
+
+    /**
+     * Keeps the location a driver's app sent, said at the time it arrives, as the driver's latest.
+     * A location from a driver there is no record of changes nothing (FND-90).
+     */
+    static receiveLocation(
+        state: DeliveriesState,
+        drivers: DriversState,
+        at: IInstant,
+        driverId: DriverId,
+        coordinates: Coordinates,
+        madeBy: Maker,
+    ): ILocationReceived {
+        const location = DriverLocation.create({ coordinates, deviceTime: at });
+        const located = DriversState.locate(drivers, driverId, location, madeBy);
+        const made =
+            located.version === null ? List<DriverLocationVersion>() : List.of(located.version);
+        return { ...noStep(state), drivers: located.state, made };
+    }
+
+    /**
+     * The locations every app due at one moment sent, kept as each driver's latest, in the order
+     * given; a driver Deliveries does not know is passed over (FND-90).
+     */
+    static receiveLocations(
+        state: DeliveriesState,
+        drivers: DriversState,
+        at: IInstant,
+        sends: List<ISentLocation>,
+        madeBy: Maker,
+    ): ILocationReceived {
+        const received = sends.reduce(
+            (soFar, send) => {
+                const location = DriverLocation.create({
+                    coordinates: send.coordinates,
+                    deviceTime: at,
+                });
+                const located = DriversState.locate(
+                    soFar.drivers,
+                    send.driverId,
+                    location,
+                    madeBy,
+                );
+                const made =
+                    located.version === null ? soFar.made : soFar.made.push(located.version);
+                return { drivers: located.state, made };
+            },
+            { drivers, made: List<DriverLocationVersion>() },
+        );
+        return { ...noStep(state), ...received };
     }
 
     /** The first valid acceptance wins. Any eligible driver may accept, notified or not. */
@@ -282,6 +365,7 @@ export class DeliveriesState {
         orderId: OrderId,
         driverId: DriverId,
         values: DriversRules,
+        madeBy: Maker,
     ): DriverCommandResult {
         const delivery = state.deliveryVersions.get(orderId);
         const place = state.deliveries.get(orderId);
@@ -291,7 +375,7 @@ export class DeliveriesState {
         if (delivery.state !== DeliveryState.Requested) {
             return { isOk: false, refusal: DriverRefusalCode.NoOpenRequest };
         }
-        const driver = drivers.versionOf(driverId);
+        const driver = drivers.viewOf(driverId);
         if (driver === undefined) {
             return { isOk: false, refusal: DriverRefusalCode.UnknownDriver };
         }
@@ -299,7 +383,7 @@ export class DeliveriesState {
         if (reason !== null) {
             return { isOk: false, refusal: reason };
         }
-        const accepted = delivery.next({ state: DeliveryState.Assigned, driverId });
+        const accepted = delivery.next({ state: DeliveryState.Assigned, driverId }, madeBy);
         const saved = DeliveriesState.saveDelivery(state, drivers, accepted);
         const call = {
             delivery: accepted,
@@ -317,6 +401,7 @@ export class DeliveriesState {
             drivers: saved.drivers,
             reports: recorded.reports,
             followUps: List(),
+            made: List.of<DeliveriesVersion>(accepted),
             event: recorded.event,
         };
     }
@@ -355,13 +440,14 @@ export class DeliveriesState {
         drivers: DriversState,
         call: ICallOrders,
         answer: OrdersAnswer,
+        madeBy: Maker,
     ): DriverCommandResult {
         if (!answer.isOk) {
             return { isOk: false, refusal: { orders: answer.refusal } };
         }
         const deliveryVersion = state.deliveryVersions.get(call.orderId);
         const delivery = required(deliveryVersion, `the delivery of ${call.orderId}`);
-        const changed = delivery.next({ state: STATE_AFTER[call.eventKind] });
+        const changed = delivery.next({ state: STATE_AFTER[call.eventKind] }, madeBy);
         const saved = DeliveriesState.saveDelivery(state, drivers, changed);
         const eventCall = {
             delivery: changed,
@@ -379,6 +465,7 @@ export class DeliveriesState {
             drivers: saved.drivers,
             reports: recorded.reports,
             followUps: List(),
+            made: List.of<DeliveriesVersion>(changed),
             event: recorded.event,
         };
     }
@@ -386,7 +473,7 @@ export class DeliveriesState {
     /**
      * What the deliveries inbox job has still to read of the orders outbox, which the engine
      * passes in. An event for an order with no delivery yet is read once it has one. Retries
-     * arrive with the Faults, races, and verification stage.
+     * arrive with I04.
      */
     static dueOrdersEvents(
         state: DeliveriesState,
@@ -412,10 +499,17 @@ export class DeliveriesState {
         drivers: DriversState,
         now: IInstant,
         event: OrdersOutboxEvent,
+        madeBy: Maker,
     ): IDeliveriesAndDriversStep {
         const deliveryVersion = state.deliveryVersions.get(event.orderId);
         const delivery = required(deliveryVersion, `the delivery of ${event.orderId}`);
-        const applied = DeliveriesState.applyOrdersEvent({ state, drivers }, now, event, delivery);
+        const applied = DeliveriesState.applyOrdersEvent(
+            { state, drivers },
+            now,
+            event,
+            delivery,
+            madeBy,
+        );
         return {
             ...noStep(applied.state),
             drivers: applied.drivers,
@@ -425,6 +519,7 @@ export class DeliveriesState {
                 event,
                 caused: applied.reports,
             }),
+            made: applied.made,
         };
     }
 
@@ -460,22 +555,22 @@ export class DeliveriesState {
 
     private static ineligible(
         drivers: DriversState,
-        driver: DriverVersion,
+        driver: IDriverView,
         restaurant: RestaurantPlace,
         now: IInstant,
         values: DriversRules,
     ): IneligibleReason | null {
-        const location = driver.location;
+        const { location } = driver;
         return ineligibleReason(
             {
-                isInRestaurantsArea: driver.areaId === restaurant.areaId,
+                isInRestaurantsArea: driver.version.areaId === restaurant.areaId,
                 isOnline: driver.availability !== null,
                 locationAgeMs: location === null ? null : now.since(location.deviceTime),
                 distanceMetres:
                     location === null
                         ? null
                         : location.coordinates.straightLineMetresTo(restaurant.coordinates),
-                pickedUpOrders: drivers.pickedUpOrdersOf(driver.driverId),
+                pickedUpOrders: drivers.pickedUpOrdersOf(driver.version.driverId),
             },
             values,
         );
@@ -488,9 +583,13 @@ export class DeliveriesState {
         values: DriversRules,
     ): List<IRankedDriver> {
         return drivers.driverVersions
-            .valueSeq()
+            .keySeq()
             .toList()
-            .flatMap((driver) => {
+            .flatMap((driverId) => {
+                const driver = drivers.viewOf(driverId);
+                if (driver === undefined) {
+                    return [];
+                }
                 const { location, availability } = driver;
                 if (
                     location === null ||
@@ -500,10 +599,10 @@ export class DeliveriesState {
                     return [];
                 }
                 const distance = location.coordinates.straightLineMetresTo(restaurant.coordinates);
-                const held = drivers.heldOrdersOf(driver.driverId);
+                const held = drivers.heldOrdersOf(driverId);
                 return [
                     {
-                        driverId: driver.driverId,
+                        driverId,
                         score: rankScore(distance, held, availability, values),
                     },
                 ];
@@ -578,19 +677,25 @@ export class DeliveriesState {
         now: IInstant,
         event: OrdersOutboxEvent,
         delivery: OrderDeliveryVersion,
+        madeBy: Maker,
     ): IDeliveriesAndDriversStep {
-        const orderCopy = delivery.orderCopy.withEvent(
+        const copy = state.orderCopies.get(event.orderId);
+        const known = required(copy, `Deliveries' copy of ${event.orderId}`);
+        const orderCopy = known.withEvent(
             event.eventId,
             event.orderVersion,
             event.orderStatus,
+            madeBy,
         );
-        const updated = delivery.next({ orderCopy });
-        const withCopy = state.withDeliveryVersion(updated);
+        const withCopy = state.with({
+            orderCopies: state.orderCopies.set(event.orderId, orderCopy),
+        });
         const isRecorded = withCopy
             .eventsOf(event.orderId)
             .some((own) => withCopy.ordersEventOf(own) === event.eventId);
+        const madeCopy = List.of<DeliveriesVersion>(orderCopy);
         if (isRecorded) {
-            return { ...noStep(withCopy), drivers };
+            return { ...noStep(withCopy), drivers, made: madeCopy };
         }
         if (event.startedEventId !== null) {
             const linked = withCopy.withOrdersEventLink(
@@ -598,14 +703,15 @@ export class DeliveriesState {
                 event.startedEventId,
                 event.eventId,
             );
-            return { ...noStep(linked), drivers };
+            return { ...noStep(linked), drivers, made: madeCopy };
         }
         if (event.kind !== DeliveryEventKind.OrderReady && !changesState(event.kind)) {
             throw new Error(`Deliveries does not handle ${event.kind} yet.`);
         }
+        // Only an event that moves the delivery on makes its next version (FND-81).
         const changed = changesState(event.kind)
-            ? updated.inState(STATE_AFTER[event.kind])
-            : updated.inState(updated.state);
+            ? delivery.next({ state: STATE_AFTER[event.kind] }, madeBy)
+            : delivery;
         const saved = DeliveriesState.saveDelivery(withCopy, drivers, changed);
         const call = { delivery: changed, kind: event.kind, at: now, driverId: event.driverId };
         const recorded = DeliveriesState.record(saved.state, call, {
@@ -617,6 +723,7 @@ export class DeliveriesState {
             drivers: saved.drivers,
             reports: recorded.reports,
             followUps: List(),
+            made: changed === delivery ? madeCopy : madeCopy.push(changed),
         };
     }
 
@@ -626,6 +733,8 @@ export class DeliveriesState {
         readonly deliveries: OrderedMap<OrderId, OrderDelivery>,
         /** Each delivery's latest version. */
         readonly deliveryVersions: OrderedMap<OrderId, OrderDeliveryVersion>,
+        /** The latest version of each order's copy, which Orders' events keep up to date. */
+        readonly orderCopies: OrderedMap<OrderId, OrderCopyVersion>,
         /** Each order's events, oldest first. */
         readonly eventsByOrder: OrderedMap<OrderId, List<DeliveryEventRecord>>,
         /**
@@ -653,6 +762,11 @@ export class DeliveriesState {
     /** The latest version of an order's delivery, if it has one. */
     deliveryVersionOf(orderId: OrderId): OrderDeliveryVersion | undefined {
         return this.deliveryVersions.get(orderId);
+    }
+
+    /** The latest version of Deliveries' copy of an order, if it has one. */
+    orderCopyOf(orderId: OrderId): OrderCopyVersion | undefined {
+        return this.orderCopies.get(orderId);
     }
 
     /** The events recorded for an order, oldest first. */
@@ -719,6 +833,7 @@ export class DeliveriesState {
         return {
             deliveries: this.deliveries,
             deliveryVersions: this.deliveryVersions,
+            orderCopies: this.orderCopies,
             eventsByOrder: this.eventsByOrder,
             ordersEventLinks: this.ordersEventLinks,
             outbox: this.outbox,
@@ -735,4 +850,5 @@ const noStep = (state: DeliveriesState): IDeliveriesStep => ({
     state,
     reports: List(),
     followUps: List(),
+    made: List(),
 });

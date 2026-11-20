@@ -17,12 +17,15 @@ import type { SimTime } from '../../domain/simulation-engine/sim-time';
 import { NO_COUNT, plusOne } from '../../domain/system/math/math';
 import { RUN_START } from '../../domain/simulation-engine/sim-time';
 import type { SessionId } from './session-id';
-import { toSessionId } from './session-id';
+import { sessionIdOf } from './session-id';
+import { Maker, toWorkId } from '../../domain/system/records/maker';
 
 /** A job run or API call under way, and the simulated time its commits happen at. */
 export interface IOpenSession {
     readonly id: SessionId;
     readonly at: SimTime;
+    /** What the versions made in it name as their maker, one for the whole session (FND-81). */
+    readonly maker: Maker;
 }
 
 /** A run's history: where it started, and every commit since, each keeping its main root. */
@@ -66,8 +69,10 @@ export const headAt = (line: ICommitLine): SimTime => headCommit(line)?.at ?? RU
  */
 export function openSession(line: ICommitLine, at: SimTime): ICommitLine {
     const sessionsOpened = plusOne(line.sessionsOpened);
-    const id = toSessionId(`session-${sessionsOpened}`);
-    return { ...line, session: { id, at }, sessionsOpened };
+    const id = sessionIdOf(sessionsOpened);
+    const workId = toWorkId(id);
+    const maker = Maker.work(workId);
+    return { ...line, session: { id, at, maker }, sessionsOpened };
 }
 
 /** Finishes the job run or API call under way. */

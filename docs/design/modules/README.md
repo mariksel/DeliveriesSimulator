@@ -1,15 +1,16 @@
 # Capability and Module Map
 
 Owns the list of capabilities and how they depend on each other. Each capability
-has its own page.
+has its own page, created from the [module template](_module-template.md).
 
 ## Version and status
 
 - **Design version:** `D0.6.0`.
 - **Status:** The capability list is approved in
-  [FND-8](../decisions/project-foundation.md#fnd-8--capability-list), as amended by
-  [FND-56](../decisions/project-foundation.md#fnd-56--module-boundaries). Part of it is
-  implemented: each module's page says how much. The
+  [FND-8](../decisions/project-foundation/purpose-and-scope.md#fnd-8--capability-list), as amended
+  by [FND-56](../decisions/project-foundation/architecture-and-code.md#fnd-56--module-boundaries).
+  Part
+  of it is implemented: each module's page says how much. The
   [implementation roadmap](../roadmap/implementation-roadmap.md) says which stage builds the rest.
 
 ## Modules
@@ -55,23 +56,27 @@ Which module owns each capability is in [capability ownership](capability-owners
 
 ## Dependency graph
 
-Each module, what it uses, and why. The graph is set in
-[FND-56](../decisions/project-foundation.md#fnd-56--module-boundaries), with the run
-files dependency in
-[FND-58](../decisions/project-foundation.md#fnd-58--stored-records-and-shared-files), and the
-commits and saved runs dependencies in
-[FND-81](../decisions/project-foundation.md#fnd-81--runs-as-a-tree-of-state-transitions), and
-Verification's run records dependency in
-[FND-82](../decisions/project-foundation.md#fnd-82--application-core-layer), and its order states
-and event kinds dependencies in [FND-72](../decisions/project-foundation.md#fnd-72--code-style).
-[FND-83](../decisions/project-foundation.md#fnd-83--types-owned-by-their-modules) adds System,
-which every module uses; makes Drivers the module that holds Deliveries, and Restaurants the one
+Each module, what it uses, and why. The user confirmed this graph on 2026-11-03, in I01-E03-006
+([FND-56](../decisions/project-foundation/architecture-and-code.md#fnd-56--module-boundaries)), and
+added the run files dependency in
+[FND-58](../decisions/project-foundation/architecture-and-code.md#fnd-58--stored-records-and-shared-files),
+and the commits and saved runs dependencies in
+[FND-81](../decisions/project-foundation/run-history.md#fnd-81--runs-as-a-tree-of-state-transitions),
+and Verification's run records dependency in
+[FND-82](../decisions/project-foundation/architecture-and-code.md#fnd-82--application-core-layer),
+and its order states and event kinds dependencies in
+[FND-72](../decisions/project-foundation/architecture-and-code.md#fnd-72--code-style).
+[FND-83](../decisions/project-foundation/architecture-and-code.md#fnd-83--types-owned-by-their-modules)
+adds System, which every module uses; makes Drivers the module that holds Deliveries, and
+Restaurants the one
 that holds Customers; and has Orders and Drivers use Restaurants, and Orders and Drivers use
 Business rules for its abstractions. A submodule sits in its module's folder and counts as part
-of it. [FND-84](../decisions/project-foundation.md#fnd-84--rule-abstractions) has the Simulation
-engine tune rules and Scenarios set them through Business rules, and Business rules read the
+of it. [FND-84](../decisions/project-foundation/architecture-and-code.md#fnd-84--rule-abstractions)
+has the Simulation engine tune rules and Scenarios set them through Business rules, and Business
+rules read the
 run's rules from the Simulation engine, for its Rules panel. FND-81 adds Run history's link to
-Scenarios, for the scenario version a saved run ran, on 2026-11-08.
+Scenarios, for the scenario version a saved run ran, on 2026-11-08, and its links to Orders and
+Drivers, for the records its queries name, on 2026-11-09.
 
 ```text
 Business view
@@ -121,6 +126,8 @@ Run history
   ──reads──> Event log
   ──commits──> Simulation engine
   ──the scenario a saved run ran──> Scenarios
+  ──the records its queries name──> Orders
+  ──the records its queries name──> Drivers
 Import and export
   ──scenario files──> Scenarios
   ──version files──> Versions
@@ -168,6 +175,6 @@ The graph describes known conceptual dependencies; exact runtime calls are in th
 linked source. Cross-cutting designs: [architecture layers](../architecture/layers.md),
 [UI](../ui/README.md), [data](../data/persistence.md),
 [integrations](../integrations/README.md). Any dependency not shown here does not exist; add
-it here before code relies on it. The architecture check reads this
+it here, with the user's approval, before code relies on it. The architecture check reads this
 graph, and fails on an import it does not show
-([FND-69](../decisions/project-foundation.md#fnd-69--module-jobs-and-the-module-graph-check)).
+([FND-69](../decisions/project-foundation/architecture-and-code.md#fnd-69--module-jobs-and-the-module-graph-check)).

@@ -8,6 +8,8 @@ const CREATE = {
     actor: 'restaurant-1',
     command: 'create-order',
     order: 'A',
+    customer: 'customer-1',
+    address: 'address-1',
 };
 const IGNORED = {
     at: 'h00:m00:s45:ms00',
@@ -32,11 +34,26 @@ function withSteps(...steps: readonly Record<string, unknown>[]): unknown {
         version: 'V1.0.0',
         seed: 42,
         runUntil: 'h00:m05:s00:ms00',
+        city: {
+            origin: { latitude: 10.325, longitude: 20.815 },
+            widthKm: 2,
+            heightKm: 2,
+            across: 2,
+            down: 2,
+            seed: 7,
+        },
         restaurants: [
             {
                 id: 'restaurant-1',
                 area: 'area-1',
                 location: { latitude: 10.33, longitude: 20.82 },
+            },
+        ],
+        customers: [
+            {
+                id: 'customer-1',
+                restaurant: 'restaurant-1',
+                addresses: [{ id: 'address-1', area: 'area-1' }],
             },
         ],
         drivers: [{ id: 'driver-1', area: 'area-1', availability: 'Available' }],
@@ -142,6 +159,45 @@ describe('an indirect step', () => {
         expect(problems).toEqual([
             'steps[1].after: "later" is not the label of an earlier indirect step',
             'steps[3].label: repeats "ignored"',
+        ]);
+    });
+});
+
+describe('a rules step that follows from an indirect step', () => {
+    const lag = {
+        rule: 'drivers.dispatch-pass',
+        parameter: 'interval',
+        value: 'h00:m00:s10:ms00',
+    };
+
+    it('reads its label, as an action does', () => {
+        const following = { at: 'h00:m01:s00:ms00', set: [lag], after: 'ignored' };
+        const value = withSteps(IGNORED, following);
+
+        const scenario = read(value);
+
+        const steps = scenario.steps.toArray();
+        expect(steps[2]).toMatchObject({ at: 60_000, after: 'ignored' });
+    });
+
+    it('reads one with no label, which follows nothing', () => {
+        const plain = { at: 'h00:m01:s00:ms00', set: [lag] };
+        const value = withSteps(IGNORED, plain);
+
+        const scenario = read(value);
+
+        const steps = scenario.steps.toArray();
+        expect(steps[2]).not.toHaveProperty('after');
+    });
+
+    it('refuses a label no earlier indirect step gave', () => {
+        const tooEarly = { at: 'h00:m00:s30:ms00', set: [lag], after: 'ignored' };
+        const value = withSteps(tooEarly, IGNORED);
+
+        const problems = problemsOf(value);
+
+        expect(problems).toEqual([
+            'steps[1].after: "ignored" is not the label of an earlier indirect step',
         ]);
     });
 });

@@ -1,18 +1,10 @@
 import type { FieldsOf } from '../system/classes/fields-of';
-import type { DriverId } from '../drivers/driver';
 import type { RestaurantId } from '../restaurants/restaurant-place';
+import type { CustomerId } from '../restaurants/customers/customer';
+import type { AddressId } from '../restaurants/customers/delivery-address';
 import type { IVersion } from '../system/records/version-chain';
+import type { Maker } from '../system/records/maker';
 import { assertVersionLink, FIRST_VERSION } from '../system/records/version-chain';
-import { Check } from '../business-rules/check';
-import { OrderRefusal } from './order-refusal';
-import { OrderStatus } from './order-status';
-import {
-    ACCEPT_DELIVERY_REQUEST,
-    DELIVER,
-    MARK_READY,
-    PICK_UP,
-    REQUEST_DELIVERY,
-} from './orders-rule-definitions';
 import type { VersionNumber } from '../system/records/version-chain';
 import { nextVersionNumber } from '../system/records/version-chain';
 
@@ -21,45 +13,11 @@ export type OrderId = string & { readonly brand: 'OrderId' };
 /** Marks text as an order's ID. */
 export const toOrderId = (value: string): OrderId => value as OrderId;
 
-const READY_FROM: readonly OrderStatus[] = [
-    OrderStatus.Created,
-    OrderStatus.DeliveryRequested,
-    OrderStatus.DriverAssigned,
-];
-
-/** A transition of the lifecycle: allowed from some statuses. It takes no values. */
-type TransitionCheck = Check<OrderStatus, null>;
-
-const REQUEST_DELIVERY_CHECK: TransitionCheck = Check.create({
-    rule: REQUEST_DELIVERY,
-    passes: (status: OrderStatus) => status === OrderStatus.Created,
-});
-
-const MARK_READY_CHECK: TransitionCheck = Check.create({
-    rule: MARK_READY,
-    passes: (status: OrderStatus) => READY_FROM.includes(status),
-});
-
-const ACCEPT_CHECK: TransitionCheck = Check.create({
-    rule: ACCEPT_DELIVERY_REQUEST,
-    passes: (status: OrderStatus) => status === OrderStatus.DeliveryRequested,
-});
-
-const PICK_UP_CHECK: TransitionCheck = Check.create({
-    rule: PICK_UP,
-    passes: (status: OrderStatus) => status === OrderStatus.DriverAssigned,
-});
-
-const DELIVER_CHECK: TransitionCheck = Check.create({
-    rule: DELIVER,
-    passes: (status: OrderStatus) => status === OrderStatus.PickedUp,
-});
-
 /** The part of an order that never changes. */
 export class Order {
-    /** An order, from the restaurant it is for. */
+    /** An order, from the restaurant that places it, for a customer at one of their addresses. */
     static create(fields: FieldsOf<Order>): Order {
-        return new Order(fields.id, fields.restaurantId);
+        return new Order(fields.id, fields.restaurantId, fields.customerId, fields.addressId);
     }
 
     declare private readonly brand: never;
@@ -67,35 +25,29 @@ export class Order {
     private constructor(
         readonly id: OrderId,
         readonly restaurantId: RestaurantId,
+        /** The customer it is for, of its restaurant (FND-90). */
+        readonly customerId: CustomerId,
+        /** Which of the customer's stored addresses it goes to. */
+        readonly addressId: AddressId,
     ) {
         Object.freeze(this);
     }
 }
 
-/** What a change to an order comes to: its new version, or a refusal. */
-export type OrderChange =
-    | { readonly isAllowed: true; readonly version: OrderVersion }
-    | { readonly isAllowed: false; readonly refusal: OrderRefusal };
-
-const refuse = (refusal: OrderRefusal): OrderChange => ({ isAllowed: false, refusal });
-
-/** The fields a change to an order may set. */
-type OrderVersionChanges = Partial<
-    Pick<OrderVersion, 'status' | 'isDeliveryRequestPending' | 'isReady' | 'driverId'>
->;
-
-/** One state of an order. A change adds a new one, and its number is the order's version. */
+/**
+ * One version of an order: whether a delivery request is pending, which no event records. Every
+ * change to the order makes the next one, so its number is the order's version; the order's
+ * status, driver, and whether it is ready are read from its events (FND-73, FND-81).
+ */
 export class OrderVersion implements IVersion<OrderVersion> {
-    /** A new order's first version, as Created. */
-    static createNew(orderId: OrderId): OrderVersion {
+    /** A new order's first version, with no request pending. */
+    static createNew(orderId: OrderId, madeBy: Maker): OrderVersion {
         return OrderVersion.create({
             orderId,
-            status: OrderStatus.Created,
             isDeliveryRequestPending: false,
-            isReady: false,
-            driverId: null,
             number: FIRST_VERSION,
             previous: null,
+            madeBy,
         });
     }
 
@@ -104,12 +56,10 @@ export class OrderVersion implements IVersion<OrderVersion> {
         assertVersionLink(`order ${fields.orderId}`, fields.number, fields.previous);
         return new OrderVersion(
             fields.orderId,
-            fields.status,
             fields.isDeliveryRequestPending,
-            fields.isReady,
-            fields.driverId,
             fields.number,
             fields.previous,
+            fields.madeBy,
         );
     }
 
@@ -117,98 +67,24 @@ export class OrderVersion implements IVersion<OrderVersion> {
 
     private constructor(
         readonly orderId: OrderId,
-        readonly status: OrderStatus,
         /** A delivery request is saved, and deliveries has not acknowledged it yet. */
         readonly isDeliveryRequestPending: boolean,
-        readonly isReady: boolean,
-        readonly driverId: DriverId | null,
         readonly number: VersionNumber,
         readonly previous: OrderVersion | null,
+        /** The job run or API call that made this version, or the run's start (FND-81). */
+        readonly madeBy: Maker,
     ) {
         Object.freeze(this);
     }
 
-    /** Saves the request as pending. The status changes when deliveries acknowledges it. */
-    requestDelivery(): OrderChange {
-        if (this.isDeliveryRequestPending) {
-            return refuse(OrderRefusal.DeliveryRequestPending);
-        }
-        if (!REQUEST_DELIVERY_CHECK.isPassedBy(this.status, null)) {
-            return refuse(OrderRefusal.NotAllowedFromStatus);
-        }
-        return this.changed({ isDeliveryRequestPending: true });
-    }
-
-    /** Records that deliveries acknowledged the request, which changes the status. */
-    completeDeliveryRequest(): OrderChange {
-        if (!this.isDeliveryRequestPending) {
-            return refuse(OrderRefusal.NoPendingDeliveryRequest);
-        }
-        return this.changed({
-            isDeliveryRequestPending: false,
-            status: OrderStatus.DeliveryRequested,
-        });
-    }
-
-    /**
-     * Records that the order is ready. It can be recorded only once, and leaves the status
-     * unchanged.
-     */
-    markReady(): OrderChange {
-        if (this.isReady) {
-            return refuse(OrderRefusal.AlreadyReady);
-        }
-        if (!MARK_READY_CHECK.isPassedBy(this.status, null)) {
-            return refuse(OrderRefusal.NotAllowedFromStatus);
-        }
-        return this.changed({ isReady: true });
-    }
-
-    /** Assigns the order to the driver who accepted its open request. */
-    acceptDeliveryRequest(driverId: DriverId): OrderChange {
-        if (!ACCEPT_CHECK.isPassedBy(this.status, null)) {
-            return refuse(OrderRefusal.NotAllowedFromStatus);
-        }
-        return this.changed({ status: OrderStatus.DriverAssigned, driverId });
-    }
-
-    /** Records that the assigned driver picked up the ready order. */
-    pickUp(driverId: DriverId): OrderChange {
-        if (!PICK_UP_CHECK.isPassedBy(this.status, null)) {
-            return refuse(OrderRefusal.NotAllowedFromStatus);
-        }
-        if (this.driverId !== driverId) {
-            return refuse(OrderRefusal.NotTheAssignedDriver);
-        }
-        if (!this.isReady) {
-            return refuse(OrderRefusal.NotReady);
-        }
-        return this.changed({ status: OrderStatus.PickedUp });
-    }
-
-    /** Records that the assigned driver delivered the order, which is final. */
-    deliver(driverId: DriverId): OrderChange {
-        if (!DELIVER_CHECK.isPassedBy(this.status, null)) {
-            return refuse(OrderRefusal.NotAllowedFromStatus);
-        }
-        if (this.driverId !== driverId) {
-            return refuse(OrderRefusal.NotTheAssignedDriver);
-        }
-        return this.changed({ status: OrderStatus.Delivered });
-    }
-
-    /** The next version, with these changes, linked to this one. */
-    private changed(changes: OrderVersionChanges): OrderChange {
-        const version = OrderVersion.create({
+    /** The next version, with whether a request is pending, linked to this one. */
+    next(isDeliveryRequestPending: boolean, madeBy: Maker): OrderVersion {
+        return OrderVersion.create({
             orderId: this.orderId,
-            status: changes.status ?? this.status,
-            isDeliveryRequestPending:
-                changes.isDeliveryRequestPending ?? this.isDeliveryRequestPending,
-            isReady: changes.isReady ?? this.isReady,
-            driverId: changes.driverId === undefined ? this.driverId : changes.driverId,
+            isDeliveryRequestPending,
             number: nextVersionNumber(this.number),
             previous: this,
+            madeBy,
         });
-        return { isAllowed: true, version };
     }
 }

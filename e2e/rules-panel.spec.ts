@@ -73,3 +73,18 @@ test('the Rules panel says why it cannot use a typed value', async ({ page }) =>
     const value = interval.getByTestId('parameter-value');
     await expect(value).toHaveText('h00:m00:s30:ms00');
 });
+
+test("the Rules panel lists each module's state functions with the version in use", async ({
+    page,
+}) => {
+    await openedRules(page);
+
+    const pickUp = page.locator('[data-testid="function"][data-function="orders.pick-up"]');
+    const tables = page.getByTestId('functions');
+    const inUse = pickUp.getByTestId('function-version');
+    const versions = pickUp.getByTestId('function-versions').locator('option');
+    await expect(tables).toHaveCount(2);
+    await expect(pickUp).toContainText('Pick up');
+    await expect(inUse).toHaveText('1');
+    await expect(versions).toHaveText(['1']);
+});

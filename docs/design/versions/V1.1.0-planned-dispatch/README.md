@@ -3,10 +3,13 @@
 ## Version and status
 
 - **Version:** `V1.1.0-planned-dispatch`, an approved design
-  ([FND-40](../../decisions/project-foundation.md#fnd-40--kinds-of-version)), based on
+  ([FND-40](../../decisions/project-foundation/versions.md#fnd-40--kinds-of-version)), based on
   [`V1.0.0`](../V1.0.0/README.md).
 - **Sources:** the real service's approved requirements for dispatch notifications and for
   driver reads, and its dispatch design records. None of these changes is built yet.
+- **Status:** confirmed by the user on 2026-11-03.
+  [I01-E02-001](../../../backlogs/Initiatives/Archive/Done/I01-requirements-and-backlog-creation/Archive/Done/I01-E02-delivery-domain-inventory/Archive/Done/High/I01-E02-001-flows-states-actors-and-events.md)
+  recorded the confirmation.
 
 ## What this version is
 
@@ -30,7 +33,8 @@ contents on 2026-11-03.
 ## Undecided in this version
 
 These are open in the real service's documents, so the simulator models their options with
-option switches ([FND-37](../../decisions/project-foundation.md#fnd-37--inventory-coverage)):
+option switches
+([FND-37](../../decisions/project-foundation/capabilities-and-inventory.md#fnd-37--inventory-coverage)):
 
 - what each notification contains;
 - what delivery and retry guarantees each notification has.

@@ -1,3 +1,4 @@
+import { TESTING_FUNCTIONS } from '../../application-core/simulation-engine/function-lookup.testing';
 import { DeliveriesState } from '../../domain/drivers/deliveries/deliveries-state';
 import { DeliveriesOutboxEvent } from '../../domain/drivers/deliveries/deliveries-outbox-event';
 import { DeliveryEventKind } from '../../domain/drivers/deliveries/delivery-event-kind';
@@ -18,7 +19,7 @@ import { toDeliveriesOutboxEventId } from '../../domain/drivers/deliveries/deliv
  * which the first read trips on.
  */
 export function liveRunWithABug(scenario: IScenario, wall: WallClock): LiveScenarioRun {
-    const run = createRun({ seed: scenario.seed });
+    const run = createRun({ functions: TESTING_FUNCTIONS, seed: scenario.seed });
     const start = scheduleScenario(run, scenario.start, scenario.steps);
     const bad = DeliveriesOutboxEvent.create({
         id: toDeliveriesOutboxEventId('bad'),
@@ -35,6 +36,7 @@ export function liveRunWithABug(scenario: IScenario, wall: WallClock): LiveScena
     const withBad = DeliveriesState.create({
         deliveries: deliveries.deliveries,
         deliveryVersions: deliveries.deliveryVersions,
+        orderCopies: deliveries.orderCopies,
         eventsByOrder: deliveries.eventsByOrder,
         ordersEventLinks: deliveries.ordersEventLinks,
         outbox,
@@ -44,7 +46,7 @@ export function liveRunWithABug(scenario: IScenario, wall: WallClock): LiveScena
         notificationVersions: deliveries.notificationVersions,
         nextDelivery: deliveries.nextDelivery,
     });
-    return new LiveScenarioRun(scenario, wall, {
+    return new LiveScenarioRun(scenario, wall, TESTING_FUNCTIONS, {
         ...start,
         root: withDeliveries(start.root, withBad),
     });

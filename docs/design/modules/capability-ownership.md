@@ -3,17 +3,19 @@
 ## Version and status
 
 - **Design version:** `D0.6.0`.
-- **Status:** Approved group by group in
-  [FND-56](../decisions/project-foundation.md#fnd-56--module-boundaries), with Deliveries and
-  Customers and restaurants renamed to Drivers and Restaurants in
-  [FND-83](../decisions/project-foundation.md#fnd-83--types-owned-by-their-modules).
+- **Status:** Approved by the user on 2026-11-03, group by group, in I01-E03-006
+  ([FND-56](../decisions/project-foundation/architecture-and-code.md#fnd-56--module-boundaries)),
+  with Deliveries and Customers and restaurants renamed to Drivers and Restaurants in
+  [FND-83](../decisions/project-foundation/architecture-and-code.md#fnd-83--types-owned-by-their-modules).
   Order timeline, Order replay, and Driver timelines moved to Run history on 2026-11-08
-  ([FND-81](../decisions/project-foundation.md#fnd-81--runs-as-a-tree-of-state-transitions)).
+  ([FND-81](../decisions/project-foundation/run-history.md#fnd-81--runs-as-a-tree-of-state-transitions));
+  the timeline's views by order and by driver built them on 2026-11-09, the driver states aside.
   Partly implemented: each module's page says how much.
 
-Every capability in [FND-34](../decisions/project-foundation.md#fnd-34--required-capabilities)
-and [FND-35](../decisions/project-foundation.md#fnd-35--later-capabilities) has one owner,
-listed here. "(later)" marks an FND-35 capability. The workspace features belong to the
+Every capability in
+[FND-34](../decisions/project-foundation/capabilities-and-inventory.md#fnd-34--required-capabilities)
+and [FND-35](../decisions/project-foundation/purpose-and-scope.md#fnd-35--later-capabilities) has
+one owner, listed here. "(later)" marks an FND-35 capability. The workspace features belong to the
 [UI section](../ui/README.md), not a module.
 
 | Group | Owner | Capabilities |

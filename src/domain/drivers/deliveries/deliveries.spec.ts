@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import { deliveryAddressOf } from '../../restaurants/customers/delivery-address.testing';
 
 import { V1_DELIVERIES_RULES } from './deliveries-rules';
 import { V1_DRIVERS_RULES as VALUES } from '../drivers-rules';
@@ -26,6 +27,7 @@ import { toDegrees } from '../../map-and-routing/numbers';
 import { toVersionNumber } from '../../system/records/version-chain';
 import { instantAt } from '../../system/time/instant.testing';
 import { toOrdersOutboxEventId } from '../../orders/orders-outbox-event';
+import { TEST_MAKER } from '../../system/records/maker.testing';
 
 const RESTAURANT = Coordinates.create({ latitude: toDegrees(10.33), longitude: toDegrees(20.82) });
 /** About 111 metres per 0.001 degrees of latitude. */
@@ -44,6 +46,7 @@ function handoff(orderId = toOrderId('order-1')): DeliveryHandoff {
             areaId: toAreaId('area-1'),
             coordinates: RESTAURANT,
         }),
+        destination: deliveryAddressOf().coordinates,
         requestEventId: toOrderEventId(`${orderId}:2`),
         orderVersion: toVersionNumber(2),
         orderStatus: 'Created',
@@ -181,6 +184,7 @@ describe('DeliveriesModule', () => {
             id: deliveries.delivery(orderId)?.orderDeliveryId,
             orderId: 'order-1',
             restaurant: handoff().restaurant,
+            destination: handoff().destination,
         });
     });
 
@@ -209,7 +213,10 @@ describe('DeliveriesModule', () => {
         const second = deliveries.driverVersion(driverId);
         expect(second?.number).toBe(2);
         expect(second?.previous).toBe(driverVersion);
-        expect(second?.location).toEqual(driver('driver-1', 2).location);
+        const location = deliveries.driverLocation(driverId);
+        const sent = driver('driver-1', 2).location;
+        expect(location?.coordinates).toEqual(sent?.coordinates);
+        expect(location?.number).toBe(2);
     });
 
     it('keeps each notification outstanding in its own version', () => {
@@ -223,6 +230,7 @@ describe('DeliveriesModule', () => {
             isOutstanding: true,
             number: 1,
             previous: null,
+            madeBy: TEST_MAKER,
         });
     });
 
@@ -656,7 +664,7 @@ describe('DeliveriesModule', () => {
             deliveries.receiveDeliveryRequest(0, deliveryHandoff);
 
             const id = toOrderId('order-1');
-            const copy = deliveries.delivery(id)?.orderCopy;
+            const copy = deliveries.orderCopy(id);
 
             expect(copy).toMatchObject({ status: 'Created', version: 2 });
             const eventIds = copy?.eventIds.toArray();
@@ -676,7 +684,7 @@ describe('DeliveriesModule', () => {
             deliveries.readOrdersOutbox(5);
 
             const id = toOrderId('order-1');
-            expect(deliveries.delivery(id)?.orderCopy.status).toBe('Created');
+            expect(deliveries.orderCopy(id)?.status).toBe('Created');
         });
 
         it("measures a location's age back from now, by its device time", () => {
@@ -758,7 +766,8 @@ describe('DeliveriesModule', () => {
             deliveries.readOrdersOutbox(5);
 
             const id = toOrderId('order-1');
-            expect(deliveries.delivery(id)?.orderCopy).toMatchObject({
+            const copy = deliveries.orderCopy(id);
+            expect(copy).toMatchObject({
                 status: 'DeliveryRequested',
                 version: 4,
             });
@@ -782,7 +791,8 @@ describe('DeliveriesModule', () => {
             deliveries.readOrdersOutbox(10);
 
             const id = toOrderId('order-1');
-            expect(deliveries.delivery(id)?.orderCopy).toMatchObject({
+            const copy = deliveries.orderCopy(id);
+            expect(copy).toMatchObject({
                 status: 'DeliveryRequested',
                 version: 4,
             });
@@ -820,7 +830,7 @@ describe('DeliveriesModule', () => {
             const events = deliveries.eventsOf(orderId);
             expect(events).toHaveLength(before);
             const secondOrderId = toOrderId('order-1');
-            expect(deliveries.delivery(secondOrderId)?.orderCopy.eventIds).toContain('order-1:2');
+            expect(deliveries.orderCopy(secondOrderId)?.eventIds).toContain('order-1:2');
         });
 
         it('links the first event it recorded, too', () => {

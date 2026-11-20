@@ -1,6 +1,12 @@
+import { TESTING_FUNCTIONS } from '../../application-core/simulation-engine/function-lookup.testing';
 import type { List } from 'immutable';
 import { List as ImmutableList } from 'immutable';
 import { describe, expect, it } from 'vitest';
+import {
+    TEST_ADDRESS,
+    TEST_CUSTOMER,
+    toTestAddress,
+} from '../../application-core/simulation-engine/run-customers.testing';
 
 import type { IRunInput } from '../../application-core/simulation-engine/run-input';
 import {
@@ -65,6 +71,8 @@ import { toSimTime } from '../../domain/simulation-engine/sim-time';
 import { V1_DELIVERIES_RULES } from '../../domain/drivers/deliveries/deliveries-rules';
 import { V1_ORDERS_RULES } from '../../domain/orders/orders-rules';
 import { toOrdersOutboxEventId } from '../../domain/orders/orders-outbox-event';
+import { TEST_MAKER } from '../../domain/system/records/maker.testing';
+import { orderFacts } from '../../domain/orders/order-facts.testing';
 
 const ID = toOrderId('order-1');
 const COORDINATES = Coordinates.create({
@@ -100,15 +108,18 @@ const NEAR_DRIVER = driverAt('driver-1', 10.331);
 const CLOSEST_DRIVER = driverAt('c', 10.33);
 const START = {
     restaurants: ImmutableList.of(RESTAURANT),
+    customers: ImmutableList.of(TEST_CUSTOMER),
+    addresses: ImmutableList.of(TEST_ADDRESS),
     drivers: ImmutableList.of(NEAR_DRIVER, CLOSEST_DRIVER),
 };
 
-const restaurant = (at: number, command: IRunInput['command'], order = 'A'): IRunInput => ({
-    at: toSimTime(at),
-    actor: toInputActor('restaurant-1'),
-    command,
-    order: toInputOrderName(order),
-});
+const restaurant = (at: number, command: IRunInput['command'], order = 'A'): IRunInput =>
+    toTestAddress({
+        at: toSimTime(at),
+        actor: toInputActor('restaurant-1'),
+        command,
+        order: toInputOrderName(order),
+    });
 const driver = (at: number, command: IRunInput['command'], actor = 'driver-1'): IRunInput => ({
     at: toSimTime(at),
     actor: toInputActor(actor),
@@ -130,7 +141,7 @@ const ONLY_ONE_DRIVER = { ...START, drivers: ImmutableList.of(ONLY_DRIVER) };
 
 function started(
     steps: List<IRunInput>,
-    settings: IRunSettings = { seed: toSeed(1) },
+    settings: IRunSettings = { functions: TESTING_FUNCTIONS, seed: toSeed(1) },
     start: Parameters<typeof scheduleInputs>[1] = ONLY_ONE_DRIVER,
 ): SimulationRun {
     const run = createRun(settings);
@@ -140,7 +151,7 @@ function started(
 
 /** One order on the V1.0.0 happy path, through both modules and their jobs. */
 function happyPath(seed = 1): SimulationRun {
-    const run = started(HAPPY_PATH, { seed: toSeed(seed) });
+    const run = started(HAPPY_PATH, { functions: TESTING_FUNCTIONS, seed: toSeed(seed) });
     const time = toSimTime(300 * SECOND);
     run.advanceTo(time);
     return run;
@@ -186,7 +197,9 @@ describe('one order through both modules', () => {
     it('reaches Delivered in orders, at version 7', () => {
         const { state } = happyPath();
 
-        const orderVersion = state.root.state.orders.orderVersionOf(ID);
+        const view = state.root.state.orders.viewOf(ID);
+
+        const orderVersion = orderFacts(view);
         expect(orderVersion).toMatchObject({
             status: 'Delivered',
             number: 7,
@@ -202,23 +215,31 @@ describe('one order through both modules', () => {
         ]);
 
         it('does not reach orders at once', () => {
-            const run = started(acceptedAt1000, { seed: toSeed(1) }, START);
+            const run = started(
+                acceptedAt1000,
+                { functions: TESTING_FUNCTIONS, seed: toSeed(1) },
+                START,
+            );
 
             const time = toSimTime(1000);
             run.advanceTo(time);
 
-            expect(run.state.root.state.orders.orderVersionOf(ID)?.status).toBe(
-                'DeliveryRequested',
-            );
+            expect(run.state.root.state.orders.viewOf(ID)?.status).toBe('DeliveryRequested');
         });
 
         it('reaches orders through the inbox', () => {
-            const run = started(acceptedAt1000, { seed: toSeed(1) }, START);
+            const run = started(
+                acceptedAt1000,
+                { functions: TESTING_FUNCTIONS, seed: toSeed(1) },
+                START,
+            );
 
             const time = toSimTime(5000);
             run.advanceTo(time);
 
-            const orderVersion = run.state.root.state.orders.orderVersionOf(ID);
+            const view = run.state.root.state.orders.viewOf(ID);
+
+            const orderVersion = orderFacts(view);
             expect(orderVersion).toMatchObject({
                 status: 'DriverAssigned',
                 driverId: 'c',
@@ -287,15 +308,16 @@ describe('one order through both modules', () => {
 
     it('leaves the modules agreeing once events stop', () => {
         const { state } = happyPath();
-        const order = state.root.state.orders.orderVersionOf(ID);
+        const order = state.root.state.orders.viewOf(ID);
         const delivery = state.root.state.deliveries.deliveryVersionOf(ID);
         const copy = state.root.state.orders.deliveryCopyVersionOf(ID);
 
         expect(delivery?.state).toBe('Delivered');
         expect(delivery?.driverId).toBe(order?.driverId);
-        expect(delivery?.orderCopy).toMatchObject({
+        const orderCopy = state.root.state.deliveries.orderCopyOf(ID);
+        expect(orderCopy).toMatchObject({
             status: order?.status,
-            version: order?.number,
+            version: order?.version.number,
         });
         expect(state.root.state.orders.deliveryCopyOf(ID)?.orderDeliveryId).toBe(
             state.root.state.deliveries.deliveryOf(ID)?.id,
@@ -344,7 +366,12 @@ describe('one order through both modules', () => {
             const time = toSimTime(1);
             run.advanceTo(time);
             const at = toSimTime(1);
-            const requested = OrdersState.requestDelivery(run.state.root.state.orders, at, ID);
+            const requested = OrdersState.requestDelivery(
+                run.state.root.state.orders,
+                at,
+                ID,
+                TEST_MAKER,
+            );
             const orders = requested.isOk ? requested.state : run.state.root.state.orders;
             return new SimulationRun({ ...run.state, root: withOrders(run.state.root, orders) });
         }
@@ -352,7 +379,9 @@ describe('one order through both modules', () => {
         it('stays pending, with nothing in the outbox', () => {
             const { state } = requestedWithFailedHandoff();
 
-            const orderVersion = state.root.state.orders.orderVersionOf(ID);
+            const view = state.root.state.orders.viewOf(ID);
+
+            const orderVersion = orderFacts(view);
             expect(orderVersion).toMatchObject({
                 status: 'Created',
                 isDeliveryRequestPending: true,
@@ -367,9 +396,7 @@ describe('one order through both modules', () => {
             const time = toSimTime(4000);
             run.advanceTo(time);
 
-            expect(run.state.root.state.orders.orderVersionOf(ID)?.isDeliveryRequestPending).toBe(
-                true,
-            );
+            expect(run.state.root.state.orders.viewOf(ID)?.isDeliveryRequestPending).toBe(true);
         });
 
         it('completes on the next retry', () => {
@@ -378,7 +405,9 @@ describe('one order through both modules', () => {
             const time = toSimTime(5000);
             run.advanceTo(time);
 
-            const orderVersion = run.state.root.state.orders.orderVersionOf(ID);
+            const view = run.state.root.state.orders.viewOf(ID);
+
+            const orderVersion = orderFacts(view);
             expect(orderVersion).toMatchObject({
                 status: 'DeliveryRequested',
                 isDeliveryRequestPending: false,
@@ -427,7 +456,7 @@ describe('tuned values', () => {
     }
 
     it('use the V1.0.0 values by default', () => {
-        const secondNotifiedAt = notifiedAt({ seed: toSeed(1) });
+        const secondNotifiedAt = notifiedAt({ functions: TESTING_FUNCTIONS, seed: toSeed(1) });
         expect(secondNotifiedAt).toEqual([30_000]);
     });
 
@@ -439,7 +468,11 @@ describe('tuned values', () => {
             7000,
         );
 
-        const secondNotifiedAt = notifiedAt({ seed: toSeed(1), driversRules: values });
+        const secondNotifiedAt = notifiedAt({
+            functions: TESTING_FUNCTIONS,
+            seed: toSeed(1),
+            driversRules: values,
+        });
         expect(secondNotifiedAt).toEqual([7000]);
     });
 
@@ -454,6 +487,7 @@ describe('tuned values', () => {
             const run = started(
                 steps,
                 {
+                    functions: TESTING_FUNCTIONS,
                     seed: toSeed(1),
                     ordersRules: tunedOrdersRules(
                         V1_ORDERS_RULES,
@@ -478,7 +512,7 @@ describe('tuned values', () => {
         it('so nothing crosses before the job is due', () => {
             const state = runOnTunedInbox(1999);
 
-            expect(state.root.state.orders.orderVersionOf(ID)?.status).toBe('DeliveryRequested');
+            expect(state.root.state.orders.viewOf(ID)?.status).toBe('DeliveryRequested');
             const secondDeliveryKinds = deliveryKinds(state);
             expect(secondDeliveryKinds).not.toContain('OrderReady');
         });
@@ -486,7 +520,7 @@ describe('tuned values', () => {
         it('so both directions cross when it is due', () => {
             const state = runOnTunedInbox(2000);
 
-            expect(state.root.state.orders.orderVersionOf(ID)?.status).toBe('DriverAssigned');
+            expect(state.root.state.orders.viewOf(ID)?.status).toBe('DriverAssigned');
             const secondDeliveryKinds = deliveryKinds(state);
             expect(secondDeliveryKinds).toContain('OrderReady');
         });
@@ -546,8 +580,8 @@ describe('the commits of a run', () => {
         run.advanceTo(time);
 
         const secondCommitsAt = commitsAt(run, 2 * SECOND).map((commit) => [
-            commit.root.state.orders.orderVersionOf(ID)?.status,
-            commit.root.state.orders.orderVersionOf(ID)?.isDeliveryRequestPending,
+            commit.root.state.orders.viewOf(ID)?.status,
+            commit.root.state.orders.viewOf(ID)?.isDeliveryRequestPending,
             commit.root.state.deliveries.deliveryVersionOf(ID)?.state,
         ]);
         expect(secondCommitsAt).toEqual([
@@ -600,7 +634,7 @@ describe('the commits of a run', () => {
         run.advanceTo(time);
 
         const secondCommitsAt = commitsAt(run, 121 * SECOND).map((commit) => [
-            commit.root.state.orders.orderVersionOf(ID)?.status,
+            commit.root.state.orders.viewOf(ID)?.status,
             commit.root.state.deliveries.deliveryVersionOf(ID)?.state,
         ]);
         expect(secondCommitsAt).toEqual([
@@ -625,7 +659,7 @@ describe('the commits of a run', () => {
             [5 * SECOND, RunJob.OrdersInbox],
             [5 * SECOND, RunJob.HandoffRetry],
             [5 * SECOND, RunJob.DeliveriesInbox],
-        ].map(([at, job]) => ({ kind: EffectKind.Job, at, job, stateCommits: 0 }));
+        ].map(([at, job]) => ({ kind: EffectKind.Job, at, job, stateCommits: 0, reads: [] }));
         expect(commits).toEqual(expected);
     });
 
@@ -675,6 +709,8 @@ describe('the commits of a run', () => {
             order: toInputOrderName('A'),
             response: { isOk: true, orderId: ID },
             followsFrom: null,
+            isOnArrival: false,
+            reads: [],
         });
     });
 
@@ -753,7 +789,7 @@ describe('the commits of a run', () => {
         const run = happyPath();
 
         const statuses = stateCommitsOf(run).map(
-            (commit) => commit.root.state.orders.orderVersionOf(ID)?.status,
+            (commit) => commit.root.state.orders.viewOf(ID)?.status,
         );
 
         expect(statuses[0]).toBe('Created');
@@ -783,7 +819,7 @@ describe('the commits of a run', () => {
     });
 
     it('starts from the root the run started with', () => {
-        const run = createRun({ seed: toSeed(1) });
+        const run = createRun({ functions: TESTING_FUNCTIONS, seed: toSeed(1) });
         const start = scheduleInputs(run, ONLY_ONE_DRIVER, HAPPY_PATH);
 
         expect(new SimulationRun(start).line.start).toBe(start.root);
@@ -933,11 +969,11 @@ describe('a step of a run', () => {
         expect(text).toEqual(before);
     });
 
-    it('holds no waiting work: only the script, its branches, its line of commits, its root, and the cache', () => {
+    it('holds no waiting work: only the script, its branches, its line of commits, its root, the cache, and the functions it calls', () => {
         const { state } = started(HAPPY_PATH);
 
         const fields = Object.keys(state);
-        expect(fields).toEqual(['script', 'history', 'line', 'root', 'cache']);
+        expect(fields).toEqual(['script', 'history', 'line', 'root', 'cache', 'functions']);
     });
 
     it('works the next work out as a record', () => {
@@ -1022,7 +1058,7 @@ describe('a step of a run', () => {
     });
 
     it('refuses a step at a part millisecond, which a run cannot schedule', () => {
-        const run = createRun({ seed: toSeed(1) });
+        const run = createRun({ functions: TESTING_FUNCTIONS, seed: toSeed(1) });
         const step = restaurant(0.5, 'create-order');
         const steps = ImmutableList.of(step);
 

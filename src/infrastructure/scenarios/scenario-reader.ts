@@ -80,10 +80,14 @@ export function readClockTime(fields: Fields, path: string, key: string): IReadi
 const isWithin = (value: unknown, limit: number): value is number =>
     typeof value === 'number' && Number.isFinite(value) && Math.abs(value) <= limit;
 
-/** Reads a location field, which must have a latitude and a longitude. */
-export function readCoordinates(fields: Fields, path: string): IReading<Coordinates> {
-    const value = fields['location'];
-    const at = `${path}location`;
+/** Reads a location field, or another place, which must have a latitude and a longitude. */
+export function readCoordinates(
+    fields: Fields,
+    path: string,
+    key = 'location',
+): IReading<Coordinates> {
+    const value = fields[key];
+    const at = `${path}${key}`;
     if (!isFields(value)) {
         return failed(
             at,
@@ -112,24 +116,36 @@ export function readCoordinates(fields: Fields, path: string): IReading<Coordina
     };
 }
 
-/** Reads a field that must be a list of entries with fields. */
-export function readList(fields: Fields, key: string): IListReading {
+/** The largest seed, the largest number 32 bits hold. */
+const MAX_SEED = 4294967295;
+
+/** Reads a seed, which must be a whole number from 0 to 4294967295. */
+export function readSeed(fields: Fields, path: string): IReading<number> {
+    const seed = fields['seed'];
+    return typeof seed === 'number' && Number.isInteger(seed) && seed >= 0 && seed <= MAX_SEED
+        ? { value: seed, problems: List() }
+        : failed(`${path}seed`, `must be a whole number from 0 to ${MAX_SEED}`);
+}
+
+/** Reads a field that must be a list of entries with fields, inside a path if it is nested. */
+export function readList(fields: Fields, key: string, path = ''): IListReading {
     const value = fields[key];
+    const at = `${path}${key}`;
     if (!Array.isArray(value)) {
         return {
             entries: List(),
-            problems: problemAt(key, value === undefined ? 'is missing' : 'must be a list'),
+            problems: problemAt(at, value === undefined ? 'is missing' : 'must be a list'),
         };
     }
     const items = List<unknown>(value);
     return {
         entries: items.flatMap((entry, index) =>
-            isFields(entry) ? [[entry, `${key}[${index}].`] as const] : [],
+            isFields(entry) ? [[entry, `${at}[${index}].`] as const] : [],
         ),
         problems: items.flatMap((entry, index) =>
             isFields(entry)
                 ? List<IScenarioProblem>()
-                : problemAt(`${key}[${index}]`, 'must have fields'),
+                : problemAt(`${at}[${index}]`, 'must have fields'),
         ),
     };
 }

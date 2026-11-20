@@ -1,0 +1,6 @@
+# Done — Critical — I03-E09
+
+Done items of Critical priority in the City and map epic are listed here,
+sorted by last update date (descending), then stable ID.
+
+- No done Critical-priority items have been archived.

@@ -11,7 +11,8 @@ import type { OrderId } from './order';
 import type { DeliveriesOutboxEvent } from '../drivers/deliveries/deliveries-outbox-event';
 import type { DeliveriesEventCopy } from './deliveries-event-copy';
 import type { DeliveryCopyVersion } from './delivery-copy';
-import type { Order, OrderVersion } from './order';
+import type { Order } from './order';
+import type { OrderView } from './order-view';
 import type { OrderEventRecord } from './order-event-record';
 import type { OrdersOutboxEvent } from './orders-outbox-event';
 import type { OrdersReport } from './orders-report';
@@ -19,11 +20,14 @@ import { OrdersReportKind } from './orders-report';
 import { OrdersState } from './orders-state';
 import type { IOrdersStep, OrderCommandResult } from './orders-state';
 import { instantAt } from '../system/time/instant.testing';
+import { TEST_MAKER } from '../system/records/maker.testing';
+import type { DeliveryAddress } from '../restaurants/customers/delivery-address';
+import { deliveryAddressOf } from '../restaurants/customers/delivery-address.testing';
 
 /** Keeps what orders reports, for a test to look at. */
 export class RecordingOrdersReports {
-    readonly created: { at: number; order: Order; version: OrderVersion }[] = [];
-    readonly recorded: { event: OrderEventRecord; version: OrderVersion }[] = [];
+    readonly created: { at: number; order: Order; view: OrderView }[] = [];
+    readonly recorded: { event: OrderEventRecord; view: OrderView }[] = [];
     readonly written: OrdersOutboxEvent[] = [];
     readonly read: { at: number; id: string }[] = [];
 
@@ -38,10 +42,10 @@ export class RecordingOrdersReports {
             this.created.push({
                 at: report.at.sinceStart.milliseconds,
                 order: report.order,
-                version: report.version,
+                view: report.view,
             });
         } else if (report.kind === OrdersReportKind.EventRecorded) {
-            this.recorded.push({ event: report.event, version: report.version });
+            this.recorded.push({ event: report.event, view: report.view });
         } else if (report.kind === OrdersReportKind.OutboxWritten) {
             this.written.push(report.event);
         } else {
@@ -78,8 +82,8 @@ export class OrdersHarness {
         this.state = OrdersState.createNew();
     }
 
-    order(id: OrderId): OrderVersion | undefined {
-        return this.state.orderVersionOf(id);
+    order(id: OrderId): OrderView | undefined {
+        return this.state.viewOf(id);
     }
 
     eventsOf(id: OrderId): OrderEventRecord[] {
@@ -108,10 +112,14 @@ export class OrdersHarness {
         return this.state.latestEventOf(id);
     }
 
-    createOrder(at: number, restaurant: RestaurantPlace): Order {
+    createOrder(
+        at: number,
+        restaurant: RestaurantPlace,
+        address: DeliveryAddress = deliveryAddressOf(),
+    ): Order {
         const state = deepFrozen(this.state);
         const secondAt = instantAt(at);
-        const created = OrdersState.createOrder(state, secondAt, restaurant);
+        const created = OrdersState.createOrder(state, secondAt, restaurant, address, TEST_MAKER);
         this.take(created, at);
         return created.order;
     }
@@ -119,28 +127,28 @@ export class OrdersHarness {
     requestDelivery(at: number, id: OrderId): OrderCommandResult {
         const state = deepFrozen(this.state);
         const secondAt = instantAt(at);
-        const requestDelivery = OrdersState.requestDelivery(state, secondAt, id);
+        const requestDelivery = OrdersState.requestDelivery(state, secondAt, id, TEST_MAKER);
         return this.finish(requestDelivery, at, id);
     }
 
     markReady(at: number, id: OrderId): OrderCommandResult {
         const state = deepFrozen(this.state);
         const secondAt = instantAt(at);
-        const markReady = OrdersState.markReady(state, secondAt, id);
+        const markReady = OrdersState.markReady(state, secondAt, id, TEST_MAKER);
         return this.finish(markReady, at, id);
     }
 
     pickUp(at: number, id: OrderId, driverId: DriverId): OrderCommandResult {
         const state = deepFrozen(this.state);
         const secondAt = instantAt(at);
-        const pickUp = OrdersState.pickUp(state, secondAt, id, driverId);
+        const pickUp = OrdersState.pickUp(state, secondAt, id, driverId, TEST_MAKER);
         return this.finish(pickUp, at, id);
     }
 
     deliver(at: number, id: OrderId, driverId: DriverId): OrderCommandResult {
         const state = deepFrozen(this.state);
         const secondAt = instantAt(at);
-        const deliver = OrdersState.deliver(state, secondAt, id, driverId);
+        const deliver = OrdersState.deliver(state, secondAt, id, driverId, TEST_MAKER);
         return this.finish(deliver, at, id);
     }
 
@@ -157,7 +165,7 @@ export class OrdersHarness {
         OrdersState.dueDeliveriesEvents(state, outbox, this.values).forEach((event) => {
             const state = deepFrozen(this.state);
             const time = instantAt(now);
-            const step = OrdersState.readDeliveriesEvent(state, time, event);
+            const step = OrdersState.readDeliveriesEvent(state, time, event, TEST_MAKER);
             this.take(step, time.sinceStart.milliseconds);
             const ordersState = deepFrozen(this.state);
             const recordDeliveriesEventRead = OrdersState.recordDeliveriesEventRead(
@@ -182,6 +190,7 @@ export class OrdersHarness {
                 time,
                 followUp.handoff.orderId,
                 this.deliveries.answer,
+                TEST_MAKER,
             );
             this.state = answered.state;
             this.reports.note(answered.reports);
@@ -193,6 +202,6 @@ export class OrdersHarness {
             return result;
         }
         this.take(result, at);
-        return { ...result, version: this.order(orderId) ?? result.version };
+        return { ...result, version: this.order(orderId)?.version ?? result.version };
     }
 }

@@ -162,6 +162,12 @@
     min-height: 0;
 }
 
+/* The selected order's versions sit above the outbox and inbox tables, never taking them over. */
+.versions {
+    flex: none;
+    max-height: 40%;
+}
+
 .detail {
     grid-area: detail;
     overflow: auto;
@@ -397,5 +403,11 @@
 }
 
 .repeat.is-same {
+    color: var(--color-pass);
+}
+
+/* Says the run was saved, under which name, once the form closes. */
+.saved {
+    align-self: center;
     color: var(--color-pass);
 }

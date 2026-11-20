@@ -24,11 +24,14 @@ import type { DeliveryHandoff } from './delivery-handoff';
 import type { DriverCommandResult } from './deliveries-state';
 import type { DriverVersion, NewDriver } from '../driver';
 import { DriversState } from '../drivers-state';
+import type { DriverLocationVersion } from '../driver-location';
+import type { OrderCopyVersion } from './order-copy';
 import type { Notification, NotificationVersion } from './notification';
 import type { OrderDelivery, OrderDeliveryVersion } from './order-delivery';
 import type { OrdersAnswer } from './orders-answer';
 import type { OrdersOutboxEvent } from '../../orders/orders-outbox-event';
 import { instantAt } from '../../system/time/instant.testing';
+import { TEST_MAKER } from '../../system/records/maker.testing';
 
 /** Keeps what deliveries reports, for a test to look at. */
 export class RecordingDeliveriesReports {
@@ -120,12 +123,20 @@ export class DeliveriesHarness {
         return this.state.deliveryVersionOf(id);
     }
 
+    orderCopy(id: OrderId): OrderCopyVersion | undefined {
+        return this.state.orderCopyOf(id);
+    }
+
     deliveryPlace(id: OrderId): OrderDelivery | undefined {
         return this.state.deliveryOf(id);
     }
 
     driverVersion(id: DriverId): DriverVersion | undefined {
         return this.drivers.versionOf(id);
+    }
+
+    driverLocation(id: DriverId): DriverLocationVersion | undefined {
+        return this.drivers.locationOf(id);
     }
 
     notificationVersion(id: NotificationId): NotificationVersion | undefined {
@@ -154,13 +165,18 @@ export class DeliveriesHarness {
 
     addDriver(driver: NewDriver): void {
         const drivers = deepFrozen(this.drivers);
-        this.drivers = DriversState.addDriver(drivers, driver);
+        this.drivers = DriversState.addDriver(drivers, driver, TEST_MAKER);
     }
 
     receiveDeliveryRequest(at: number, handoff: DeliveryHandoff): OrderDeliveryId {
         const state = deepFrozen(this.state);
         const secondAt = instantAt(at);
-        const received = DeliveriesState.receiveDeliveryRequest(state, secondAt, handoff);
+        const received = DeliveriesState.receiveDeliveryRequest(
+            state,
+            secondAt,
+            handoff,
+            TEST_MAKER,
+        );
         this.take(received);
         return received.orderDeliveryId;
     }
@@ -177,6 +193,7 @@ export class DeliveriesHarness {
                 orderId,
                 time,
                 this.driversRules,
+                TEST_MAKER,
             );
             this.take(step);
         });
@@ -193,6 +210,7 @@ export class DeliveriesHarness {
             id,
             driverId,
             this.driversRules,
+            TEST_MAKER,
         );
         return this.finish(acceptRequest);
     }
@@ -219,7 +237,13 @@ export class DeliveriesHarness {
                 const state = deepFrozen(this.state);
                 const time = instantAt(now);
                 const drivers = deepFrozen(this.drivers);
-                const step = DeliveriesState.readOrdersEvent(state, drivers, time, event);
+                const step = DeliveriesState.readOrdersEvent(
+                    state,
+                    drivers,
+                    time,
+                    event,
+                    TEST_MAKER,
+                );
                 this.take(step);
                 const deliveriesState = deepFrozen(this.state);
                 const recordOrdersEventRead = DeliveriesState.recordOrdersEventRead(
@@ -252,6 +276,7 @@ export class DeliveriesHarness {
             drivers,
             call,
             this.orders.answer,
+            TEST_MAKER,
         );
         return this.finish(answerFromOrders);
     }

@@ -1,5 +1,8 @@
+import { TESTING_FUNCTIONS } from './function-lookup.testing';
+import { newestVersions } from './function-lookup';
 import { List } from 'immutable';
 import { describe, expect, it } from 'vitest';
+import { deliveryAddressOf } from '../../domain/restaurants/customers/delivery-address.testing';
 
 import {
     DISPATCH_PASS,
@@ -39,6 +42,7 @@ import { toCount } from '../../domain/system/math/math';
 import { toSimTime } from '../../domain/simulation-engine/sim-time';
 import { V1_DELIVERIES_RULES } from '../../domain/drivers/deliveries/deliveries-rules';
 import { V1_ORDERS_RULES } from '../../domain/orders/orders-rules';
+import { TEST_MAKER } from '../../domain/system/records/maker.testing';
 
 const NO_ENTRIES = List<RunLogEntry>();
 const CALL: IStateCall = { fn: (state: OrdersState): OrdersState => state, args: [] };
@@ -53,6 +57,7 @@ const JOB_RUN: DirectEffect = {
     at: toSimTime(0),
     job: RunJob.OrdersInbox,
     stateCommits: toCount(0),
+    reads: [],
 };
 
 function startRoot(): IMainRoot {
@@ -63,13 +68,21 @@ function startRoot(): IMainRoot {
     };
     const seed = toSeed(1);
     const randomness = SeededRandom.createNew(seed);
-    return createMainRoot(state, VALUES, randomness);
+    const versions = newestVersions(TESTING_FUNCTIONS);
+    return createMainRoot(state, VALUES, randomness, versions);
 }
 /** A root whose orders hold one more order. */
 function changedState(root: IMainRoot): IMainRoot {
     const restaurant = restaurantPlaceOf();
     const at = toSimTime(0);
-    const { state } = OrdersState.createOrder(root.state.orders, at, restaurant);
+    const address = deliveryAddressOf();
+    const { state } = OrdersState.createOrder(
+        root.state.orders,
+        at,
+        restaurant,
+        address,
+        TEST_MAKER,
+    );
     return withOrders(root, state);
 }
 /** A state commit in a session of its own, or the same line when there is none. */
@@ -261,6 +274,8 @@ describe('an effect commit', () => {
                 order: toInputOrderName('A'),
                 response: { isOk: true, orderId: null },
                 followsFrom: null,
+                isOnArrival: false,
+                reads: [],
             },
             CommitKind.Input,
         ],
@@ -272,6 +287,7 @@ describe('an effect commit', () => {
                 isScripted: false,
                 before: VALUES,
                 after: VALUES,
+                followsFrom: null,
             },
             CommitKind.ConfigChange,
         ],
@@ -406,6 +422,7 @@ describe('a main root', () => {
             isScripted: false,
             before: VALUES,
             after,
+            followsFrom: null,
         });
 
         expect(start.effects.direct.values).toBe(VALUES);

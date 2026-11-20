@@ -3,6 +3,7 @@ import type { OrderStatus } from '../../orders/order-status';
 import type { OrderEventId } from '../../orders/order-event-id';
 import type { OrderId } from '../../orders/order';
 import type { RestaurantPlace } from '../../restaurants/restaurant-place';
+import type { Coordinates } from '../../map-and-routing/coordinates';
 import type { VersionNumber } from '../../system/records/version-chain';
 
 /** What orders hands over with a delivery request. */
@@ -12,6 +13,7 @@ export class DeliveryHandoff {
         return new DeliveryHandoff(
             fields.orderId,
             fields.restaurant,
+            fields.destination,
             fields.requestEventId,
             fields.orderVersion,
             fields.orderStatus,
@@ -23,6 +25,8 @@ export class DeliveryHandoff {
     private constructor(
         readonly orderId: OrderId,
         readonly restaurant: RestaurantPlace,
+        /** Where the order goes: its address's point, so the driver knows (FND-90). */
+        readonly destination: Coordinates,
         readonly requestEventId: OrderEventId,
         readonly orderVersion: VersionNumber,
         readonly orderStatus: OrderStatus,

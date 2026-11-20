@@ -1,5 +1,20 @@
 <div class="rules-panel" data-testid="rules-panel">
-    @for (module of modules(); track module.name) {
+    @if (labels().length > 0) {
+    <label class="follows-from">
+        Changes follow from
+        <select
+            #followsFrom
+            data-testid="rules-follows-from"
+            appTooltip="The scenario's indirect effect a change made here follows from, if any"
+            (change)="after.set(followsFrom.value)"
+        >
+            <option value="" [selected]="after() === ''">Nothing</option>
+            @for (label of labels(); track label) {
+            <option [value]="label" [selected]="after() === label">{{ label }}</option>
+            }
+        </select>
+    </label>
+    } @for (module of modules(); track module.name) {
     <section class="module" [attr.aria-label]="module.name + ' rules'">
         <h2>{{ module.name }}</h2>
         @for (rule of module.rules; track rule.id) {
@@ -74,6 +89,55 @@
                 </tbody>
             </table>
             }
+        </article>
+        } @if (module.functions.length > 0) {
+        <article class="functions" data-testid="functions">
+            <h3>Functions</h3>
+            <p>
+                The version of each state function in use. Switching one makes an implementation
+                change commit, and every later call goes through the version chosen.
+            </p>
+            <table>
+                <thead>
+                    <tr>
+                        <th scope="col">Function</th>
+                        <th scope="col">In use</th>
+                        <th scope="col">Version</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (fn of module.functions; track fn.name) {
+                    <tr data-testid="function" [attr.data-function]="fn.name">
+                        <th scope="row">{{ fn.label }} <code>{{ fn.name }}</code></th>
+                        <td data-testid="function-version">{{ fn.inUse }}</td>
+                        <td>
+                            <div class="input-group">
+                                <select
+                                    #chosen
+                                    data-testid="function-versions"
+                                    [attr.aria-label]="'Version of ' + fn.label"
+                                    appTooltip="Choose a version of this function"
+                                >
+                                    @for (version of fn.versions; track version) {
+                                    <option [value]="version" [selected]="version === fn.inUse">
+                                        {{ version }}
+                                    </option>
+                                    }
+                                </select>
+                                <button
+                                    type="button"
+                                    data-testid="function-use"
+                                    [appTooltip]="'Use the version chosen for ' + fn.label"
+                                    (click)="useVersion(fn, chosen.value)"
+                                >
+                                    Use
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
         </article>
         }
     </section>

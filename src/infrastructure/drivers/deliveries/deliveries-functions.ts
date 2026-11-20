@@ -2,7 +2,8 @@ import { List } from 'immutable';
 
 import { DeliveriesState } from '../../../domain/drivers/deliveries/deliveries-state';
 import type { IRegisteredFunction } from '../../system/functions/registered-function';
-import { ArgumentKind, StateModule } from '../../system/functions/registered-function';
+import { ArgumentKind, registered, StateModule } from '../../system/functions/registered-function';
+import { FIRST_VERSION } from '../../../domain/system/records/version-chain';
 
 const {
     Value,
@@ -13,6 +14,9 @@ const {
     DriversState,
     Instant,
     CallOrders,
+    Coordinates,
+    SentLocations,
+    Maker,
 } = ArgumentKind;
 const DELIVERIES = StateModule.Deliveries;
 
@@ -21,41 +25,60 @@ const DELIVERIES = StateModule.Deliveries;
  * are not here: they change no state, as the call to orders they ask for makes the commits.
  */
 export const DELIVERIES_FUNCTIONS = List<IRegisteredFunction>([
-    {
-        id: 'drivers.deliveries.receive-delivery-request@1',
+    registered({
+        name: 'drivers.deliveries.receive-delivery-request',
+        version: FIRST_VERSION,
         fn: DeliveriesState.receiveDeliveryRequest,
         module: DELIVERIES,
-        args: [Instant, ArgumentKind.DeliveryHandoff],
-    },
-    {
-        id: 'drivers.deliveries.answer-from-orders@1',
+        args: [Instant, ArgumentKind.DeliveryHandoff, Maker],
+    }),
+    registered({
+        name: 'drivers.deliveries.answer-from-orders',
+        version: FIRST_VERSION,
         fn: DeliveriesState.answerFromOrders,
         module: DELIVERIES,
-        args: [DriversState, CallOrders, Value],
-    },
-    {
-        id: 'drivers.deliveries.accept-request@1',
+        args: [DriversState, CallOrders, Value, Maker],
+    }),
+    registered({
+        name: 'drivers.deliveries.accept-request',
+        version: FIRST_VERSION,
         fn: DeliveriesState.acceptRequest,
         module: DELIVERIES,
-        args: [DriversState, Instant, Value, Value, DriversRules],
-    },
-
-    {
-        id: 'drivers.deliveries.notify-next-driver@1',
+        args: [DriversState, Instant, Value, Value, DriversRules, Maker],
+    }),
+    registered({
+        name: 'drivers.deliveries.notify-next-driver',
+        version: FIRST_VERSION,
         fn: DeliveriesState.notifyNextDriver,
         module: DELIVERIES,
-        args: [DriversState, Value, Instant, DriversRules],
-    },
-    {
-        id: 'drivers.deliveries.read-orders-event@1',
+        args: [DriversState, Value, Instant, DriversRules, Maker],
+    }),
+    registered({
+        name: 'drivers.deliveries.read-orders-event',
+        version: FIRST_VERSION,
         fn: DeliveriesState.readOrdersEvent,
         module: DELIVERIES,
-        args: [DriversState, Instant, OrdersOutboxEvent],
-    },
-    {
-        id: 'drivers.deliveries.record-orders-event-read@1',
+        args: [DriversState, Instant, OrdersOutboxEvent, Maker],
+    }),
+    registered({
+        name: 'drivers.deliveries.record-orders-event-read',
+        version: FIRST_VERSION,
         fn: DeliveriesState.recordOrdersEventRead,
         module: DELIVERIES,
         args: [OrdersOutboxEvent, OrdersOutbox, DeliveriesRules],
-    },
+    }),
+    registered({
+        name: 'drivers.deliveries.receive-location',
+        version: FIRST_VERSION,
+        fn: DeliveriesState.receiveLocation,
+        module: DELIVERIES,
+        args: [DriversState, Instant, Value, Coordinates, Maker],
+    }),
+    registered({
+        name: 'drivers.deliveries.receive-locations',
+        version: FIRST_VERSION,
+        fn: DeliveriesState.receiveLocations,
+        module: DELIVERIES,
+        args: [DriversState, Instant, SentLocations, Maker],
+    }),
 ]);

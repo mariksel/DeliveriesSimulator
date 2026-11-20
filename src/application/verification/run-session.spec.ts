@@ -1,3 +1,4 @@
+import { TESTING_FUNCTIONS } from '../../application-core/simulation-engine/function-lookup.testing';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { ONE_ORDER_SCENARIO } from '../../application-core/scenarios/one-order.testing';
@@ -15,7 +16,14 @@ import type { OpenResult } from './run-session';
 import { RunSession } from './run-session';
 import { toBuiltInScenarioId } from '../../application-core/scenarios/built-in-scenarios';
 import { toVersionId } from '../../domain/versions/version-id';
-import { toWallTime } from '../../domain/simulation-engine/numbers';
+import { toCalendarTime, toWallTime } from '../../domain/simulation-engine/numbers';
+import type { ISavedRunStores } from '../run-history/saved-runs';
+import type { ILoadProgress, SaveOutcome } from '../../application-core/run-history/saved-run';
+import { RunLevel, toSavedRunId } from '../../application-core/run-history/saved-run';
+import {
+    MemoryRunRepository,
+    MemoryScenarioRepository,
+} from '../../application-core/run-history/run-stores.testing';
 import type { WallTime } from '../../domain/simulation-engine/numbers';
 
 const ONE_ORDER_BUILT_IN = toBuiltInScenarioId('one-order');
@@ -40,16 +48,22 @@ class FakeTicker extends Ticker {
 const messageOf = (result: OpenResult): string | undefined =>
     result.isOk ? undefined : result.problems.first()?.message;
 
+const SAVED_AT = toCalendarTime(1);
+
 describe('the run session', () => {
     let ticker: FakeTicker;
     let changes: number;
     let session: RunSession;
+    let stores: ISavedRunStores;
 
     beforeEach(() => {
         ticker = new FakeTicker();
         changes = 0;
+        stores = { runs: new MemoryRunRepository(), scenarios: new MemoryScenarioRepository() };
         session = new RunSession({
+            stores,
             wallClock: new FakeWallClock(),
+            functions: TESTING_FUNCTIONS,
             ticker,
             files: new FilesForTest(),
             builtIns: new BuiltInsForTest(),
@@ -138,5 +152,65 @@ describe('the run session', () => {
         session.runAgain();
 
         expect(session.run).toBeNull();
+    });
+
+    describe('with saved runs', () => {
+        /** Opens the one-order scenario, steps it, and saves it. */
+        async function savedAfterSteps(steps: number): Promise<SaveOutcome> {
+            session.openBuiltIn(ONE_ORDER_BUILT_IN);
+            const run = session.run!;
+            Array.from({ length: steps }).forEach(() => {
+                run.step();
+            });
+            return run.save(stores, 'stepped', RunLevel.Everything, SAVED_AT);
+        }
+
+        it('counts a run with commits as unsaved until it is saved', async () => {
+            session.openBuiltIn(ONE_ORDER_BUILT_IN);
+            const isUnsavedAtStart = session.isUnsaved;
+            session.run!.step();
+            const isUnsavedAfterStep = session.isUnsaved;
+
+            await session.run!.save(stores, 'saved', RunLevel.Everything, SAVED_AT);
+
+            expect([isUnsavedAtStart, isUnsavedAfterStep, session.isUnsaved]).toEqual([
+                false,
+                true,
+                false,
+            ]);
+        });
+
+        it('opens a saved run paused at its latest commit, telling its progress', async () => {
+            const saved = await savedAfterSteps(3);
+            const id = saved.isOk ? saved.saved.id : toSavedRunId('none');
+            const savedPlace = session.run!.status.latestPlace;
+            session.openBuiltIn(ONE_ORDER_BUILT_IN);
+            const told: ILoadProgress[] = [];
+
+            const opened = await session.openSaved(id, (progress) => {
+                told.push(progress);
+            });
+
+            const status = session.run!.status;
+            expect(opened).toEqual({ isOk: true });
+            expect(status.state).toBe(LiveRunState.Paused);
+            expect(status.latestPlace).toBe(savedPlace);
+            expect(session.isUnsaved).toBe(false);
+            expect(told.length).toBeGreaterThan(0);
+        });
+
+        it('says when a saved run is gone, and leaves the run being watched', async () => {
+            session.openBuiltIn(ONE_ORDER_BUILT_IN);
+            const watched = session.run;
+
+            const missing = toSavedRunId('saved-run-9');
+
+            const opened = await session.openSaved(missing, () => undefined);
+
+            const message = opened.isOk ? '' : opened.message;
+            expect(opened.isOk).toBe(false);
+            expect(message).toContain('gone');
+            expect(session.run).toBe(watched);
+        });
     });
 });

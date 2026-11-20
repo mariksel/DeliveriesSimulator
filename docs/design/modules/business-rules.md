@@ -4,27 +4,32 @@
 
 - **Design version:** `D0.6.0`.
 - **Status:** Approved as a capability in
-  [FND-8](../decisions/project-foundation.md#fnd-8--capability-list), and made a module of rule
-  abstractions in [FND-83](../decisions/project-foundation.md#fnd-83--types-owned-by-their-modules).
-  Its abstractions are built in the Full V1.0.0 lifecycle and rules stage. Drivers, Deliveries, and
-  Orders write their rules with them, each in its own folder. The [implementation
-  roadmap](../roadmap/implementation-roadmap.md) says which stage builds the rest.
+  [FND-8](../decisions/project-foundation/purpose-and-scope.md#fnd-8--capability-list), and made a
+  module of rule abstractions in
+  [FND-83](../decisions/project-foundation/architecture-and-code.md#fnd-83--types-owned-by-their-modules).
+  [I03-E04-012](../../backlogs/Initiatives/I03-full-v1-0-0-lifecycle-and-rules/I03-E04-business-rules/Archive/Done/High/I03-E04-012-rule-abstractions.md)
+  builds the abstractions. Drivers, Deliveries, and Orders write their rules with them, each in
+  its own folder. The
+  [implementation roadmap](../roadmap/implementation-roadmap.md) says which stage builds the rest.
 
 ## Current and approved responsibilities
 
-The abstractions every module writes its own rules with. It knows no other module's rules: each
-module builds its own rules with the Business rules abstractions
-([FND-83](../decisions/project-foundation.md#fnd-83--types-owned-by-their-modules)). A rule
-written this way is visible in the UI, and can be changed by hand or by the simulator, so that
+The abstractions every module writes its own rules with. It knows no other module's rules: in
+the user's words, "the specific modules should build their rules using the busines rules
+abstractions"
+([FND-83](../decisions/project-foundation/architecture-and-code.md#fnd-83--types-owned-by-their-modules)).
+A rule written this way is visible in the UI, and can be changed by hand or by the simulator, so
+that
 runs can simulate different scenarios
-([FND-54](../decisions/project-foundation.md#fnd-54--tunability)). The tools that work on any
-module's rules, such as the rule editor, rule traceability, and the decision explainer, belong
+([FND-54](../decisions/project-foundation/simulation-model.md#fnd-54--tunability)). The tools that
+work on any module's rules, such as the rule editor, rule traceability, and the decision explainer,
+belong
 here, as [capability ownership](capability-ownership.md) lists.
 
 ## The abstractions
 
 The user chose these in
-[FND-84](../decisions/project-foundation.md#fnd-84--rule-abstractions):
+[FND-84](../decisions/project-foundation/architecture-and-code.md#fnd-84--rule-abstractions):
 
 - **A rule** is named, with parameters: an ID, a name, what it says, the decision or rules page
   it comes from, its kind, and its parameters in order. Its ID is `<module>.<rule-name>`, such as
@@ -36,7 +41,7 @@ The user chose these in
 - **Usable values and the valid range:** a run refuses only a value it cannot use: one not of its
   parameter's kind, or, for a job's interval, one that is not a whole number above 0. A value
   outside the valid range is used, and the Rules panel and scenario reading warn about it
-  ([FND-54](../decisions/project-foundation.md#fnd-54--tunability)).
+  ([FND-54](../decisions/project-foundation/simulation-model.md#fnd-54--tunability)).
 - **A rule set** holds a module's rules in order with the values in use. It changes values by
   rule and parameter ID, refusing an unknown rule or parameter and an unusable value, and lists
   each value in use and those outside their range.
@@ -55,57 +60,67 @@ Deliveries' rules, each module's in the order it applies them: what each says, i
 kind, and its parameters' values in use, defaults, and valid ranges. It marks a value changed
 from its default and one outside its range, and says that a rule with no parameters is shown but
 not tuned
-([FND-84](../decisions/project-foundation.md#fnd-84--rule-abstractions)).
+([FND-84](../decisions/project-foundation/architecture-and-code.md#fnd-84--rule-abstractions)).
 
 A person can type a new value while the run is paused or running, written as a scenario file
 writes it: a duration as a time like `h00:m00:s30:ms00`, anything else as a number. A value the
 run can use, even outside its range, becomes a config change commit at the run's current time,
 and its `ConfigChanged` entry shows in the log; one it cannot use is refused beside the
 parameter, with the reason. Which rule decided what is the Rule evaluation log's and the
-Decision explainer's, planned in the Full V1.0.0 lifecycle and rules stage.
+Decision explainer's, in `I03-E04-007` and `I03-E04-008`.
 
-Planned in the Run history work: a change can name a scenario's labelled indirect effect it
-follows from, picked from a list; and the panel lists each module's functions and their versions
-beside its rules, read through the Simulation engine, and switches one
-([FND-81](../decisions/project-foundation.md#fnd-81--runs-as-a-tree-of-state-transitions),
-[FND-89](../decisions/project-foundation.md#fnd-89--indirect-effects-stated-by-hand)).
+Once the scenario's labelled indirect effects have happened by the commit shown, a Changes
+follow from list at the top of the panel offers them, starting at Nothing. A change made with
+one picked records the indirect commit it follows from. Labels given by hand are not offered:
+only Manual mode's actions name those
+([FND-89](../decisions/project-foundation/run-history.md#fnd-89--indirect-effects-stated-by-hand)).
+
+Below each module's rules, the panel lists its state functions: Orders' and Deliveries', each
+with its name in words and as stored, the version in use at the commit shown, and every version
+the run's lookup holds. Choosing another version and Use makes an implementation change commit
+at the run's current time, forking first when an earlier commit is shown, and every later call
+goes through that version; it follows from the indirect effect picked in Changes follow from,
+as a rule change does. Repeat from here makes a switch made by hand again
+([FND-81](../decisions/project-foundation/run-history.md#fnd-81--runs-as-a-tree-of-state-transitions)).
 
 Each module owns its own rules: [Orders](orders.md) the order rules, and [Drivers](drivers.md)
 the driver rules. Each pricing rule goes to the module that owns it in the real service, when it
 is built
-([FND-83](../decisions/project-foundation.md#fnd-83--types-owned-by-their-modules)).
+([FND-83](../decisions/project-foundation/architecture-and-code.md#fnd-83--types-owned-by-their-modules)).
 
 ## Key approved business rules
 
 - Each version's rules are in its pages, starting with
   [V1.0.0 business rules](../versions/V1.0.0/business-rules.md)
-  ([FND-36](../decisions/project-foundation.md#fnd-36--inventory-per-version)).
+  ([FND-36](../decisions/project-foundation/capabilities-and-inventory.md#fnd-36--inventory-per-version)).
 - Each undecided option of the real service is an option switch
-  ([FND-37](../decisions/project-foundation.md#fnd-37--inventory-coverage)).
+  ([FND-37](../decisions/project-foundation/capabilities-and-inventory.md#fnd-37--inventory-coverage)).
 - Rules, values, and identifiers may be recorded, described generically
-  ([FND-23](../decisions/project-foundation.md#fnd-23--safe-to-publish)).
+  ([FND-23](../decisions/project-foundation/stages-and-process.md#fnd-23--safe-to-publish)).
 - The user decides conflicts between sources, one at a time
-  ([FND-9](../decisions/project-foundation.md#fnd-9--sources-of-business-rules),
-  [FND-39](../decisions/project-foundation.md#fnd-39--source-conflicts-resolved)).
+  ([FND-9](../decisions/project-foundation/purpose-and-scope.md#fnd-9--sources-of-business-rules),
+  [FND-39](../decisions/project-foundation/capabilities-and-inventory.md#fnd-39--source-conflicts-resolved)).
 
 ## Dependencies
 
 From the confirmed [dependency graph](README.md#dependency-graph)
-([FND-56](../decisions/project-foundation.md#fnd-56--module-boundaries),
-[FND-83](../decisions/project-foundation.md#fnd-83--types-owned-by-their-modules)):
+([FND-56](../decisions/project-foundation/architecture-and-code.md#fnd-56--module-boundaries),
+[FND-83](../decisions/project-foundation/architecture-and-code.md#fnd-83--types-owned-by-their-modules)):
 
 - **Uses:** [System](system.md), and the [Simulation engine](simulation-engine.md) (the run's
   rules, for the Rules panel,
-  [FND-84](../decisions/project-foundation.md#fnd-84--rule-abstractions)). Its abstractions in
-  Domain use System only.
+  [FND-84](../decisions/project-foundation/architecture-and-code.md#fnd-84--rule-abstractions)). Its
+  abstractions in Domain use System only.
 - **Used by:** [Verification](verification.md) (criteria), [Versions](versions.md) (rules per
   version), [Orders](orders.md) and [Drivers](drivers.md) (rule abstractions),
   [Payments](payments.md) (pricing rules), the [Simulation engine](simulation-engine.md) (tunes
   rules), and [Scenarios](scenarios.md) (sets rules).
 - Rules come from the real service's documentation, code, and people who know it
-  ([FND-9](../decisions/project-foundation.md#fnd-9--sources-of-business-rules)). Its name and
-  location are not recorded
-  ([FND-2](../decisions/project-foundation.md#fnd-2--real-service-not-named)).
+  ([FND-9](../decisions/project-foundation/purpose-and-scope.md#fnd-9--sources-of-business-rules)).
+  Its name and location are not recorded
+  ([FND-2](../decisions/project-foundation/purpose-and-scope.md#fnd-2--real-service-not-named)); the
+  user states the rules and reviews the simulation
+  ([FND-52](../decisions/project-foundation/simulation-model.md#fnd-52--conformance-exchange)).
 
 ## Code map
 

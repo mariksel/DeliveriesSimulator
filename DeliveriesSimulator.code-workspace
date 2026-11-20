@@ -1,0 +1,28 @@
+{
+    "folders": [
+        {
+            "path": ".",
+        },
+    ],
+    "settings": {
+        "jestrunner.enableTestExplorer": true,
+        "explorer.fileNesting.enabled": true,
+        "explorer.fileNesting.expand": false,
+        "explorer.fileNesting.patterns": {
+            "*.ts": "${capture}.spec.ts",
+        },
+        "workbench.colorCustomizations": {
+            "titleBar.activeBackground": "#1E3A8A",
+            "titleBar.activeForeground": "#FFFFFF",
+            "titleBar.inactiveBackground": "#1E3A8A",
+            "titleBar.inactiveForeground": "#CCCCCC",
+            "activityBar.background": "#1E3A8A",
+            "activityBar.foreground": "#FFFFFF",
+            "activityBar.inactiveForeground": "#AAB4D4",
+            "statusBar.background": "#1E3A8A",
+            "statusBar.foreground": "#FFFFFF",
+            "statusBar.noFolderBackground": "#1E3A8A",
+            "statusBar.debuggingBackground": "#1E3A8A",
+        },
+    },
+}

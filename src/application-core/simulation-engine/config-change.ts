@@ -1,5 +1,8 @@
 import { LogSource, TechnicalLogKind } from '../../domain/event-log/log-vocabulary';
+import type { IConfigChangeEffect } from './direct-effect';
 import { EffectKind } from './direct-effect';
+import type { CommitId } from './commit-id';
+import { labelledCommit } from './run-cache';
 import { nextWork } from './due-work';
 import { NO_CAUSE, writeEntry } from './run-log';
 import type { IRulesInput } from './run-input';
@@ -24,30 +27,48 @@ export const changeConfig = (
     run: IRunState,
     at: SimTime,
     changes: List<ParameterChange>,
-): IRunState => configChange(run, at, changes, false);
+    followsFrom: CommitId | null = null,
+): IRunState => configChange(run, at, changes, { isScripted: false, followsFrom });
 
-/** A script's step that changes rules, as a config change commit that counts as a step. */
-export const performRulesInput = (run: IRunState, input: IRulesInput): IRunState =>
-    configChange(run, input.at, input.changes, true);
+/**
+ * A script's step that changes rules, as a config change commit that counts as a step, recording
+ * the indirect commit its `after` names (FND-89).
+ */
+export function performRulesInput(run: IRunState, input: IRulesInput): IRunState {
+    const followsFrom = labelledCommit(run.cache, input.after);
+    return configChange(run, input.at, input.changes, { isScripted: true, followsFrom });
+}
 
-function configChange(
-    run: IRunState,
-    at: SimTime,
-    changes: List<ParameterChange>,
-    isScripted: boolean,
-): IRunState {
+/** Whether a script made a config change, and the indirect commit it follows from, if any. */
+type ChangeMade = Pick<IConfigChangeEffect, 'isScripted' | 'followsFrom'>;
+
+/**
+ * Refuses a change the run cannot make at a time: one before its latest commit, at a time that
+ * is not whole milliseconds, or after work that is due first. A config change and an
+ * implementation change both keep to this.
+ */
+export function checkedChangeTime(run: IRunState, at: SimTime, what: string): void {
     const latest = headAt(run.line);
     if (!Number.isInteger(at.milliseconds) || at.isBefore(latest)) {
         throw new RangeError(
-            `Cannot change the config at ${at.milliseconds}: the latest commit is at ${latest.milliseconds}.`,
+            `Cannot ${what} at ${at.milliseconds}: the latest commit is at ${latest.milliseconds}.`,
         );
     }
     const due = nextWork(run);
     if (due.at.isBefore(at)) {
         throw new RangeError(
-            `Cannot change the config at ${at.milliseconds}: work is due at ${due.at.milliseconds}.`,
+            `Cannot ${what} at ${at.milliseconds}: work is due at ${due.at.milliseconds}.`,
         );
     }
+}
+
+function configChange(
+    run: IRunState,
+    at: SimTime,
+    changes: List<ParameterChange>,
+    made: ChangeMade,
+): IRunState {
+    checkedChangeTime(run, at, 'change the config');
     const before = run.root.effects.direct.values;
     const { values, changed } = changedValues(before, changes);
     const record: RunLogRecord = {
@@ -60,8 +81,9 @@ function configChange(
     return commitEffect(logged, {
         kind: EffectKind.ConfigChange,
         at,
-        isScripted,
+        isScripted: made.isScripted,
         before,
         after: values,
+        followsFrom: made.followsFrom,
     });
 }

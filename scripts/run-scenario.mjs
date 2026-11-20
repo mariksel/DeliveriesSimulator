@@ -42,7 +42,10 @@ try {
     const { BundledScenarios } = await load('/src/infrastructure/scenarios/bundled-scenarios.ts');
     const library = new BundledScenarios();
     const read = builtInId === undefined ? parseScenarioText(text) : library.scenario(builtInId);
-    const result = checkScenario(read);
+    const { REGISTERED_FUNCTIONS } = await load(
+        '/src/infrastructure/simulation-engine/function-registry.ts',
+    );
+    const result = checkScenario(read, REGISTERED_FUNCTIONS);
     if (result.isOk) {
         const { run, check, isPassed } = result.checked;
         const stateJson = JSON.stringify(

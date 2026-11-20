@@ -1,4 +1,4 @@
-import type { List } from 'immutable';
+import { List } from 'immutable';
 
 import type { JsonValue } from '../system/json/json-value';
 import { required } from '../../domain/system/validation/required';
@@ -6,6 +6,18 @@ import { unreachable } from '../../domain/system/validation/unreachable';
 import type { IMainRoot } from '../../application-core/simulation-engine/main-root';
 import type { IStateCall } from '../../application-core/simulation-engine/state-call';
 import { RestaurantPlace } from '../../domain/restaurants/restaurant-place';
+import { DeliveryAddress } from '../../domain/restaurants/customers/delivery-address';
+import { Coordinates } from '../../domain/map-and-routing/coordinates';
+import type { IPersistedCoordinates } from '../map-and-routing/persisted-coordinates';
+import {
+    fromPersistedCoordinates,
+    toPersistedCoordinates,
+} from '../map-and-routing/persisted-coordinates';
+import type { IPersistedDeliveryAddress } from '../restaurants/customers/persisted-customer';
+import {
+    fromPersistedDeliveryAddress,
+    toPersistedDeliveryAddress,
+} from '../restaurants/customers/persisted-customer';
 import { DELIVERIES_FUNCTIONS } from '../drivers/deliveries/deliveries-functions';
 import { DeliveryHandoff } from '../../domain/drivers/deliveries/delivery-handoff';
 import type { IPersistedDeliveryHandoff } from '../drivers/deliveries/persisted-deliveries-state';
@@ -19,11 +31,15 @@ import {
     toPersistedRestaurantPlace,
 } from '../restaurants/persisted-restaurant-place';
 import { isJsonData } from '../system/json/json-data';
+import type { IPersistedMaker } from '../system/records/persisted-maker';
+import { fromPersistedMaker, toPersistedMaker } from '../system/records/persisted-maker';
+import { Maker } from '../../domain/system/records/maker';
 import { ORDERS_FUNCTIONS } from '../orders/orders-functions';
 import type { IRegisteredFunction } from '../system/functions/registered-function';
 import { ArgumentKind } from '../system/functions/registered-function';
 import type { ICallOrders, OrdersDecidedEvent } from '../../domain/drivers/deliveries/call-orders';
 import { FollowUpKind } from '../../domain/drivers/deliveries/follow-up-kind';
+import type { ISentLocation } from '../../domain/drivers/deliveries/sent-location';
 import { toDriverId } from '../../domain/drivers/driver';
 import { toOrderId } from '../../domain/orders/order';
 import { SimTime, toSimTime } from '../../domain/simulation-engine/sim-time';
@@ -44,10 +60,28 @@ export interface IPersistedRestaurantPlaceArgument {
     readonly place: IPersistedRestaurantPlace;
 }
 
+/** A stored delivery address passed in, persisted through its own mapping (FND-90). */
+export interface IPersistedDeliveryAddressArgument {
+    readonly kind: typeof ArgumentKind.DeliveryAddress;
+    readonly address: IPersistedDeliveryAddress;
+}
+
+/** A point on the map passed in, persisted as its latitude and longitude (FND-90). */
+export interface IPersistedCoordinatesArgument {
+    readonly kind: typeof ArgumentKind.Coordinates;
+    readonly coordinates: IPersistedCoordinates;
+}
+
 /** A handoff passed in, persisted through its own mapping. */
 export interface IPersistedDeliveryHandoffArgument {
     readonly kind: typeof ArgumentKind.DeliveryHandoff;
     readonly handoff: IPersistedDeliveryHandoff;
+}
+
+/** What made the versions a call makes, persisted through its own mapping (FND-81). */
+export interface IPersistedMakerArgument {
+    readonly kind: typeof ArgumentKind.Maker;
+    readonly maker: IPersistedMaker;
 }
 
 /** A moment passed in, persisted as its milliseconds. */
@@ -68,9 +102,25 @@ export interface IPersistedCallOrdersArgument {
 /** An argument that holds a moment. */
 export type PersistedTimedArgument = IPersistedInstantArgument | IPersistedCallOrdersArgument;
 
+/** One location an app sent, persisted with its driver (FND-90). */
+export interface IPersistedSentLocation {
+    readonly driverId: string;
+    readonly coordinates: IPersistedCoordinates;
+}
+
+/** The locations the apps due at one moment sent, persisted in order (FND-90). */
+export interface IPersistedSentLocationsArgument {
+    readonly kind: typeof ArgumentKind.SentLocations;
+    readonly sends: readonly IPersistedSentLocation[];
+}
+
 /** A Domain instance passed in, persisted through the mapping of its class. */
 export type PersistedRecordArgument =
-    IPersistedRestaurantPlaceArgument | IPersistedDeliveryHandoffArgument;
+    | IPersistedRestaurantPlaceArgument
+    | IPersistedDeliveryAddressArgument
+    | IPersistedCoordinatesArgument
+    | IPersistedSentLocationsArgument
+    | IPersistedDeliveryHandoffArgument;
 
 /** An argument persisted as one event of an outbox in the parent root, found by its ID. */
 export interface IPersistedOutboxEventArgument {
@@ -93,6 +143,7 @@ export interface IPersistedPlaceArgument {
 /** One of a state commit's arguments, persisted. */
 export type PersistedArgument =
     | IPersistedValueArgument
+    | IPersistedMakerArgument
     | PersistedTimedArgument
     | PersistedRecordArgument
     | IPersistedOutboxEventArgument
@@ -110,8 +161,14 @@ function assertSame(value: unknown, expected: unknown, kind: ArgumentKind): void
     }
 }
 
+/*
+ * An outbox holds every event it was ever given, and a call reads one of its latest, so each is
+ * looked for from the end: from the start, saving or loading a run took time growing with the
+ * outbox's size times its calls (FND-81).
+ */
+
 function outboxEventId(value: unknown, outbox: List<{ readonly id: string }>): string {
-    const event = outbox.find((candidate) => candidate === value);
+    const event = outbox.findLast((candidate) => candidate === value);
     return required(event, "an event of the parent root's outbox").id;
 }
 
@@ -120,6 +177,51 @@ function plainData(value: unknown): JsonValue {
         throw new Error('A Value argument must be plain data.');
     }
     return value;
+}
+
+function makerOf(value: unknown): Maker {
+    if (!(value instanceof Maker)) {
+        throw new Error('A Maker argument must be a maker.');
+    }
+    return value;
+}
+
+/** Whether a value is one location an app sent, with its driver. */
+function isSentLocation(value: unknown): value is ISentLocation {
+    return (
+        typeof value === 'object' &&
+        value !== null &&
+        'driverId' in value &&
+        typeof value.driverId === 'string' &&
+        'coordinates' in value &&
+        value.coordinates instanceof Coordinates
+    );
+}
+
+/** The locations the apps due at one moment sent, persisted in order. */
+function toPersistedSends(value: unknown): readonly IPersistedSentLocation[] {
+    if (!List.isList(value)) {
+        throw new Error('A SentLocations argument must be a list of locations sent by drivers.');
+    }
+    const sends = List(value).filter(isSentLocation);
+    if (sends.size !== value.size) {
+        throw new Error('A SentLocations argument must be a list of locations sent by drivers.');
+    }
+    return sends
+        .map((send) => ({
+            driverId: send.driverId,
+            coordinates: toPersistedCoordinates(send.coordinates),
+        }))
+        .toArray();
+}
+
+/** The locations the apps due at one moment sent, from their persisted form. */
+function fromPersistedSends(sends: readonly IPersistedSentLocation[]): List<ISentLocation> {
+    const sent = sends.map((send): ISentLocation => ({
+        driverId: toDriverId(send.driverId),
+        coordinates: fromPersistedCoordinates(send.coordinates),
+    }));
+    return List(sent);
 }
 
 /** A Domain instance passed in, persisted through its class's mapping, once its class is known. */
@@ -132,6 +234,21 @@ function toPersistedRecordArgument(
             throw new Error('A RestaurantPlace argument must be a restaurant place.');
         }
         return { kind, place: toPersistedRestaurantPlace(value) };
+    }
+    if (kind === ArgumentKind.Coordinates) {
+        if (!(value instanceof Coordinates)) {
+            throw new Error('A Coordinates argument must be a point on the map.');
+        }
+        return { kind, coordinates: toPersistedCoordinates(value) };
+    }
+    if (kind === ArgumentKind.SentLocations) {
+        return { kind, sends: toPersistedSends(value) };
+    }
+    if (kind === ArgumentKind.DeliveryAddress) {
+        if (!(value instanceof DeliveryAddress)) {
+            throw new Error('A DeliveryAddress argument must be a stored delivery address.');
+        }
+        return { kind, address: toPersistedDeliveryAddress(value) };
     }
     if (!(value instanceof DeliveryHandoff)) {
         throw new Error('A DeliveryHandoff argument must be a handoff.');
@@ -243,13 +360,17 @@ function toPersistedArgument(
         assertSame(value, place, kind);
         return { kind };
     }
+    if (isRecordKind(kind)) {
+        return toPersistedRecordArgument(kind, value);
+    }
     const { orders, deliveries } = parent.state;
     switch (kind) {
         case ArgumentKind.Value:
             return { kind, value: plainData(value) };
-        case ArgumentKind.RestaurantPlace:
-        case ArgumentKind.DeliveryHandoff:
-            return toPersistedRecordArgument(kind, value);
+        case ArgumentKind.Maker: {
+            const maker = makerOf(value);
+            return { kind, maker: toPersistedMaker(maker) };
+        }
         case ArgumentKind.OrdersOutboxEvent:
             return { kind, id: outboxEventId(value, orders.outbox) };
         case ArgumentKind.DeliveriesOutboxEvent:
@@ -259,11 +380,44 @@ function toPersistedArgument(
     }
 }
 
+const RECORD_KINDS: readonly ArgumentKind[] = [
+    ArgumentKind.RestaurantPlace,
+    ArgumentKind.DeliveryAddress,
+    ArgumentKind.Coordinates,
+    ArgumentKind.SentLocations,
+    ArgumentKind.DeliveryHandoff,
+];
+
+/** Whether an argument is a Domain instance, persisted through its class's mapping. */
+const isRecordKind = (kind: ArgumentKind): kind is PersistedRecordArgument['kind'] =>
+    RECORD_KINDS.includes(kind);
+
+const isRecordArgument = (argument: PersistedArgument): argument is PersistedRecordArgument =>
+    RECORD_KINDS.includes(argument.kind);
+
+/** A Domain instance passed in, from its persisted form. */
+function fromPersistedRecordArgument(argument: PersistedRecordArgument): unknown {
+    switch (argument.kind) {
+        case ArgumentKind.RestaurantPlace:
+            return fromPersistedRestaurantPlace(argument.place);
+        case ArgumentKind.DeliveryAddress:
+            return fromPersistedDeliveryAddress(argument.address);
+        case ArgumentKind.Coordinates:
+            return fromPersistedCoordinates(argument.coordinates);
+        case ArgumentKind.SentLocations:
+            return fromPersistedSends(argument.sends);
+        case ArgumentKind.DeliveryHandoff:
+            return fromPersistedDeliveryHandoff(argument.handoff);
+        default:
+            return unreachable(argument);
+    }
+}
+
 function eventOf<TEvent extends { readonly id: string }>(
     outbox: List<TEvent>,
     id: string,
 ): TEvent {
-    const event = outbox.find((candidate) => candidate.id === id);
+    const event = outbox.findLast((candidate) => candidate.id === id);
     return required(event, `outbox event ${id} in the parent root`);
 }
 
@@ -274,14 +428,15 @@ function fromPersistedArgument(argument: PersistedArgument, parent: IMainRoot): 
     if (isPlaceArgument(argument)) {
         return placeOf(argument.kind, parent);
     }
+    if (isRecordArgument(argument)) {
+        return fromPersistedRecordArgument(argument);
+    }
     const { orders, deliveries } = parent.state;
     switch (argument.kind) {
         case ArgumentKind.Value:
             return argument.value;
-        case ArgumentKind.RestaurantPlace:
-            return fromPersistedRestaurantPlace(argument.place);
-        case ArgumentKind.DeliveryHandoff:
-            return fromPersistedDeliveryHandoff(argument.handoff);
+        case ArgumentKind.Maker:
+            return fromPersistedMaker(argument.maker);
         case ArgumentKind.OrdersOutboxEvent:
             return eventOf(orders.outbox, argument.id);
         case ArgumentKind.DeliveriesOutboxEvent:

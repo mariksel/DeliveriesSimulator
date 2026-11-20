@@ -20,8 +20,9 @@ boundary and is not named in these documents.
 It simulates the real service's delivery algorithms and flows, not the service as a running
 system, and everything runs in the frontend. Its goal is the business and technical correctness
 of the delivery flow, especially the event communication between the orders and deliveries
-modules ([FND-24](../decisions/project-foundation.md#fnd-24--goal-is-correctness)). What it must
-do is summarised in the [requirements](../requirements.md).
+modules
+([FND-24](../decisions/project-foundation/purpose-and-scope.md#fnd-24--goal-is-correctness)). What
+it must do is summarised in the [requirements](../requirements.md).
 
 ## Actors and external surfaces
 
@@ -38,26 +39,27 @@ This outline follows from the approved records. The real service's own flow is s
 version, in [versions](../versions/README.md).
 
 1. A [scenario](../modules/scenarios.md) sets the starting state, the steps, and the version and
-   its option switches ([FND-49](../decisions/project-foundation.md#fnd-49--scenarios)).
+   its option switches
+   ([FND-49](../decisions/project-foundation/simulation-model.md#fnd-49--scenarios)).
 2. The [simulation engine](../modules/simulation-engine.md) runs it in virtual time, repeatably
-   ([FND-48](../decisions/project-foundation.md#fnd-48--simulation-model)), and
+   ([FND-48](../decisions/project-foundation/simulation-model.md#fnd-48--simulation-model)), and
    [fault injection](../modules/fault-injection.md) can break any step
-   ([FND-47](../decisions/project-foundation.md#fnd-47--failures)).
+   ([FND-47](../decisions/project-foundation/simulation-model.md#fnd-47--failures)).
 3. The [event log](../modules/event-log.md) records everything, and the
    [business view](../modules/business-view.md) and
    [technical view](../modules/technical-view.md) show it
-   ([FND-53](../decisions/project-foundation.md#fnd-53--ui-organisation)).
+   ([FND-53](../decisions/project-foundation/ui.md#fnd-53--ui-organisation)).
 4. [Verification](../modules/verification.md) checks the run against the correctness criteria
-   ([FND-29](../decisions/project-foundation.md#fnd-29--business-correctness),
-   [FND-30](../decisions/project-foundation.md#fnd-30--technical-correctness)).
+   ([FND-29](../decisions/project-foundation/correctness-and-success.md#fnd-29--business-correctness),
+   [FND-30](../decisions/project-foundation/correctness-and-success.md#fnd-30--technical-correctness)).
 5. [Versions](../modules/versions.md) compares runs of different versions side by side
-   ([FND-51](../decisions/project-foundation.md#fnd-51--comparison)), and
+   ([FND-51](../decisions/project-foundation/simulation-model.md#fnd-51--comparison)), and
    [analysis](../modules/analysis.md) works across many runs
-   ([FND-55](../decisions/project-foundation.md#fnd-55--offline-dispatch-model)).
+   ([FND-55](../decisions/project-foundation/simulation-model.md#fnd-55--offline-dispatch-model)).
 6. [Run history](../modules/run-history.md) keeps runs,
    [import and export](../modules/import-and-export.md) shares files, and the conformance
    exchange checks versions against the real service
-   ([FND-52](../decisions/project-foundation.md#fnd-52--conformance-exchange)).
+   ([FND-52](../decisions/project-foundation/simulation-model.md#fnd-52--conformance-exchange)).
 
 ## Capability map
 

@@ -1,0 +1,273 @@
+<div class="toolbar">
+    <div class="button-group" role="group" aria-label="Order views shown">
+        @for (choice of switches; track choice.layer) {
+        <button
+            type="button"
+            [attr.data-testid]="'map-layer-' + choice.layer"
+            [appTooltip]="choice.tooltip"
+            [attr.aria-pressed]="layers().has(choice.layer)"
+            [class.is-selected]="layers().has(choice.layer)"
+            (click)="toggleLayer.emit(choice.layer)"
+        >
+            {{ choice.label }}
+        </button>
+        }
+    </div>
+    <button
+        type="button"
+        data-testid="map-fit"
+        appTooltip="Bring the whole city back into view"
+        [disabled]="view() === null"
+        (click)="fit()"
+    >
+        Fit
+    </button>
+</div>
+@if (drawing(); as view) {
+<div class="surface">
+    <svg
+        class="map"
+        data-testid="map"
+        role="img"
+        aria-label="The city, its restaurants, drivers, and orders"
+        preserveAspectRatio="xMidYMid meet"
+        [attr.viewBox]="view.viewBox"
+        [class.is-panning]="panStart() !== null"
+        (wheel)="zoom($event)"
+        (pointerdown)="startPan($event)"
+        (pointermove)="pan($event)"
+        (pointerup)="endPan()"
+        (pointerleave)="endPan()"
+    >
+        <defs>
+            <!-- A rider on a bike with a delivery box, and a restaurant front with its awning. -->
+            <symbol id="map-rider" viewBox="0 0 24 24">
+                <g
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                >
+                    <circle cx="5.5" cy="17.5" r="3.5" />
+                    <circle cx="18.5" cy="17.5" r="3.5" />
+                    <path d="M5.5 17.5L9 11h6l3.5 6.5M9 11l3 6.5 3-6.5M14 8h2.5l-1.5 3" />
+                    <path d="M12.5 5.5L10 10l3 2" />
+                </g>
+                <circle cx="13.5" cy="3.5" r="2" fill="currentColor" />
+                <rect x="1.5" y="6.5" width="5.5" height="4.5" rx="0.8" fill="currentColor" />
+            </symbol>
+            <!-- A house in a map pin, whose point is at the address. -->
+            <symbol id="map-pin" viewBox="0 0 24 24">
+                <path
+                    d="M12 23.5C6 16.5 3 12.5 3 9a9 9 0 0 1 18 0c0 3.5-3 7.5-9 14.5z"
+                    fill="currentColor"
+                />
+                <path d="M7.5 9.5L12 5.5l4.5 4v4.5h-9z" class="pin-house" />
+            </symbol>
+            <symbol id="map-restaurant" viewBox="0 0 24 24">
+                <path d="M3 9.5L5 4h14l2 5.5z" fill="currentColor" />
+                <path
+                    d="M3 9.5a2.25 2.25 0 0 0 4.5 0a2.25 2.25 0 0 0 4.5 0a2.25 2.25 0 0 0 4.5 0a2.25 2.25 0 0 0 4.5 0"
+                    fill="currentColor"
+                />
+                <path d="M4.5 12v8.5h15V12" fill="none" stroke="currentColor" stroke-width="1.8" />
+                <rect x="10" y="14.5" width="4" height="6" fill="currentColor" />
+            </symbol>
+        </defs>
+        @for (area of view.areas; track area.id) {
+        <rect
+            class="area"
+            data-testid="map-area"
+            [attr.x]="area.x"
+            [attr.y]="area.y"
+            [attr.width]="area.side"
+            [attr.height]="area.side"
+        />
+        <text
+            class="area-name"
+            [attr.x]="area.x + view.unit * 0.3"
+            [attr.y]="area.y + view.unit * 0.6"
+            [attr.font-size]="view.unit * 0.42"
+        >
+            {{ area.id }}
+        </text>
+        }
+        <path
+            class="street"
+            data-testid="map-streets-local"
+            [attr.d]="view.streets.local"
+            [attr.stroke-width]="view.unit * 0.16"
+        />
+        <path
+            class="street main"
+            data-testid="map-streets-main"
+            [attr.d]="view.streets.main"
+            [attr.stroke-width]="view.unit * 0.3"
+        />
+        @for (point of view.waitingPoints; track point.key) {
+        <circle
+            class="waiting-point"
+            data-testid="map-waiting-point"
+            [attr.cx]="point.x"
+            [attr.cy]="point.y"
+            [attr.r]="view.unit * 0.3"
+            [attr.stroke-width]="view.unit / 10"
+            [attr.stroke-dasharray]="view.unit / 8 + ' ' + view.unit / 10"
+            [appTooltip]="point.tooltip"
+        />
+        } @for (track of view.tracks; track track.key) {
+        <polyline
+            class="track"
+            data-testid="map-track"
+            [class.is-dimmed]="track.isDimmed"
+            [attr.points]="track.points"
+            [attr.stroke-width]="view.unit / 8"
+        />
+        } @for (route of view.routes; track route.key) {
+        <polyline
+            class="route"
+            data-testid="map-route"
+            [class.is-dimmed]="route.isDimmed"
+            [attr.points]="route.points"
+            [attr.stroke-width]="view.unit / 7"
+            [attr.stroke-dasharray]="view.unit / 3 + ' ' + view.unit / 5"
+            [appTooltip]="route.tooltip"
+        />
+        } @for (mark of view.marks; track mark.key) {
+        <g
+            class="mark"
+            [attr.data-testid]="'map-' + mark.kind"
+            [attr.data-key]="mark.key"
+            [class.is-selected]="mark.isSelected"
+            [class.is-dimmed]="mark.isDimmed"
+            [class.is-choosable]="mark.choice !== null"
+            [attr.role]="mark.choice === null ? null : 'button'"
+            [attr.tabindex]="mark.choice === null ? null : 0"
+            [attr.aria-pressed]="mark.choice === null ? null : mark.isSelected"
+            [attr.aria-label]="mark.tooltip"
+            [attr.stroke-width]="view.unit / 14"
+            [appTooltip]="mark.tooltip"
+            (click)="chooseMark(mark)"
+            (keydown.enter)="chooseMark(mark)"
+        >
+            @if (mark.isSelected) {
+            <circle
+                class="halo"
+                [attr.cx]="mark.x"
+                [attr.cy]="mark.kind === kinds.Pin ? mark.y - half(mark) : mark.y"
+                [attr.r]="half(mark) * 1.35"
+                [attr.stroke-width]="view.unit / 7"
+            />
+            } @switch (mark.kind) { @case (kinds.Restaurant) {
+            <circle
+                class="disc restaurant"
+                [attr.cx]="mark.x"
+                [attr.cy]="mark.y"
+                [attr.r]="half(mark)"
+            />
+            <use
+                class="icon restaurant"
+                href="#map-restaurant"
+                [attr.x]="mark.x - mark.size * 0.35"
+                [attr.y]="mark.y - mark.size * 0.37"
+                [attr.width]="mark.size * 0.7"
+                [attr.height]="mark.size * 0.7"
+            />
+            } @case (kinds.Driver) {
+            <circle
+                class="disc driver"
+                [attr.cx]="mark.x"
+                [attr.cy]="mark.y"
+                [attr.r]="half(mark)"
+            />
+            <use
+                class="icon driver"
+                href="#map-rider"
+                [attr.x]="mark.x - mark.size * 0.36"
+                [attr.y]="mark.y - mark.size * 0.36"
+                [attr.width]="mark.size * 0.72"
+                [attr.height]="mark.size * 0.72"
+            />
+            } @case (kinds.RestaurantOrder) {
+            <rect
+                class="restaurant-order"
+                [attr.x]="mark.x - half(mark)"
+                [attr.y]="mark.y - half(mark)"
+                [attr.width]="mark.size"
+                [attr.height]="mark.size"
+            />
+            } @case (kinds.Notified) {
+            <circle class="notified" [attr.cx]="mark.x" [attr.cy]="mark.y" [attr.r]="half(mark)" />
+            } @case (kinds.Accepted) {
+            <circle class="accepted" [attr.cx]="mark.x" [attr.cy]="mark.y" [attr.r]="half(mark)" />
+            } @case (kinds.Pin) {
+            <use
+                class="pin"
+                href="#map-pin"
+                [attr.x]="mark.x - half(mark)"
+                [attr.y]="mark.y - mark.size"
+                [attr.width]="mark.size"
+                [attr.height]="mark.size"
+            />
+            } @case (kinds.Delivered) {
+            <polygon class="parcel delivered" [attr.points]="diamond(mark)" />
+            } @default {
+            <polygon class="parcel" [attr.points]="diamond(mark)" />
+            } }
+        </g>
+        } @for (badge of view.badges; track badge.key) {
+        <g
+            class="badge"
+            data-testid="map-badge"
+            [class.is-dimmed]="badge.isDimmed"
+            role="button"
+            tabindex="0"
+            [attr.aria-expanded]="badgeList()?.key === badge.key"
+            [attr.aria-label]="badge.tooltip"
+            [appTooltip]="badge.tooltip"
+            (click)="toggleBadge(badge)"
+            (keydown.enter)="toggleBadge(badge)"
+        >
+            <rect
+                [attr.x]="badge.x - badgeWidth(badge) / 2"
+                [attr.y]="badge.y - half(badge)"
+                [attr.width]="badgeWidth(badge)"
+                [attr.height]="badge.size"
+                [attr.rx]="half(badge)"
+            />
+            <text
+                [attr.x]="badge.x"
+                [attr.y]="badge.y"
+                [attr.font-size]="badge.size * 0.72"
+                dominant-baseline="central"
+                text-anchor="middle"
+            >
+                {{ badge.count }}
+            </text>
+        </g>
+        }
+    </svg>
+    @if (badgeList(); as open) {
+    <div class="badge-list" data-testid="map-badge-list" role="list">
+        @for (item of open.items; track item.id) {
+        <button
+            type="button"
+            role="listitem"
+            data-testid="map-badge-item"
+            appTooltip="Select this order, as the timeline's views do"
+            (click)="chooseItem(item.choice)"
+        >
+            {{ item.label }}
+        </button>
+        }
+    </div>
+    }
+</div>
+@if (view.unplaced.length > 0) {
+<p class="unplaced" data-testid="map-unplaced">
+    Not on the map, with no location sent yet: {{ view.unplaced.join(', ') }}
+</p>
+} } @else {
+<p class="empty" data-testid="map-empty">This run has no city to draw.</p>
+}

@@ -17,7 +17,7 @@ async function ranToTheEnd(page: Page): Promise<void> {
 /** Forks at an earlier commit. */
 async function forkedEarlier(page: Page): Promise<void> {
     await ranToTheEnd(page);
-    await page.getByTestId('place-slider').fill('40');
+    await page.getByTestId('place-slider').fill('42');
     await page.getByTestId('fork-here').click();
 }
 
@@ -83,7 +83,7 @@ test("choosing a commit in another branch's column watches that branch there", a
     // Named by its place: the rows move as the timeline follows, so a first would change.
     const mainCommit = page
         .locator('[data-testid="commit-cell"][data-branch-id="main"]')
-        .filter({ hasText: 'commit #38 ' });
+        .filter({ hasText: 'commit #40 ' });
 
     await mainCommit.click();
 
@@ -95,22 +95,22 @@ test('a fork point carries a fork icon, which starts a branch after that commit'
     page,
 }) => {
     await ranToTheEnd(page);
-    // Commit 40 ends a job run, so a fork can start after it.
-    await page.getByTestId('place-slider').fill('40');
+    // Commit 42 ends a job run, so a fork can start after it.
+    await page.getByTestId('place-slider').fill('42');
     const forkPoint = page.locator('[data-testid="commit-cell"].is-fork-point.is-shown');
 
     await forkPoint.getByTestId('commit-fork').click();
 
     const fork = page.locator('[data-testid="branch-heading"].is-current');
-    await expect(fork).toContainText('From Main at commit 40');
+    await expect(fork).toContainText('From Main at commit 42');
     const state = page.getByTestId('status-state');
     await expect(state).toHaveText('Paused');
 });
 
 test('a commit inside a job run or API call has no fork icon', async ({ page }) => {
     await ranToTheEnd(page);
-    // Commit 38 is a state change inside an API call.
-    await page.getByTestId('place-slider').fill('38');
+    // Commit 40 is a state change inside an API call.
+    await page.getByTestId('place-slider').fill('40');
 
     const inside = page.locator('[data-testid="commit-cell"]:not(.is-fork-point)').first();
 
@@ -124,7 +124,7 @@ test('scrolling sideways keeps the time column in place and the headings over th
 }) => {
     await ranToTheEnd(page);
     // Each fork is of the one before, so each starts earlier.
-    for (const place of ['80', '60', '40']) {
+    for (const place of ['82', '61', '42']) {
         await page.getByTestId('place-slider').fill(place);
         await page.getByTestId('fork-here').click();
     }

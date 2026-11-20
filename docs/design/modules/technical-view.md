@@ -4,11 +4,11 @@
 
 - **Design version:** `D0.6.0`.
 - **Status:** Approved as a capability in
-  [FND-8](../decisions/project-foundation.md#fnd-8--capability-list). Partly implemented: the event
-  list, the Payload viewer, the Outbox and inbox inspector
-  ([FND-77](../decisions/project-foundation.md#fnd-77--event-list-and-payload-viewer)), and
+  [FND-8](../decisions/project-foundation/purpose-and-scope.md#fnd-8--capability-list). Partly
+  implemented: the event list, the Payload viewer, the Outbox and inbox inspector
+  ([FND-77](../decisions/project-foundation/ui.md#fnd-77--event-list-and-payload-viewer)), and
   Cross-module event tracing
-  ([FND-79](../decisions/project-foundation.md#fnd-79--cross-module-event-tracing)). The
+  ([FND-79](../decisions/project-foundation/ui.md#fnd-79--cross-module-event-tracing)). The
   [implementation roadmap](../roadmap/implementation-roadmap.md) says which stage builds the rest.
 
 ## Current and approved responsibilities
@@ -20,16 +20,16 @@ jobs, and service instances. Its capabilities are listed in
 ## Key approved business rules
 
 - A view of its own; the detail-level switch moves to the business view for the same run,
-  moment, and selection ([FND-53](../decisions/project-foundation.md#fnd-53--ui-organisation)).
+  moment, and selection ([FND-53](../decisions/project-foundation/ui.md#fnd-53--ui-organisation)).
 - The technical correctness criteria
-  ([FND-30](../decisions/project-foundation.md#fnd-30--technical-correctness)).
+  ([FND-30](../decisions/project-foundation/correctness-and-success.md#fnd-30--technical-correctness)).
 - Full technical detail is visible
-  ([FND-46](../decisions/project-foundation.md#fnd-46--simulation-detail)).
+  ([FND-46](../decisions/project-foundation/simulation-model.md#fnd-46--simulation-detail)).
 
 ## Dependencies
 
 From the confirmed [dependency graph](README.md#dependency-graph)
-([FND-56](../decisions/project-foundation.md#fnd-56--module-boundaries)):
+([FND-56](../decisions/project-foundation/architecture-and-code.md#fnd-56--module-boundaries)):
 
 - **Uses:** [Event log](event-log.md) (reads), and [Simulation engine](simulation-engine.md)
   (instances and jobs).
@@ -40,7 +40,7 @@ From the confirmed [dependency graph](README.md#dependency-graph)
 
 | Path | Purpose |
 | --- | --- |
-| `src/ui/technical-view/event-list/` | The event list, from the log alone, each event with a dot that pauses the run at its kind ([FND-88](../decisions/project-foundation.md#fnd-88--step-debugger)) |
+| `src/ui/technical-view/event-list/` | The event list, from the log alone, each event with a dot that pauses the run at its kind ([FND-88](../decisions/project-foundation/run-history.md#fnd-88--step-debugger)) |
 | `src/ui/technical-view/payload-viewer/` | The Payload viewer |
 | `src/ui/technical-view/outbox-inbox-inspector/` | The Outbox and inbox inspector, from the log alone |
 | `src/ui/technical-view/inspector-table/` | One of its tables |

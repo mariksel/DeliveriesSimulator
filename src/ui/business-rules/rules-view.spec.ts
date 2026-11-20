@@ -8,12 +8,14 @@ import { toParameterValue } from '../../domain/business-rules/numbers';
 import { toParameterId } from '../../domain/business-rules/parameter';
 import { ParameterChange } from '../../domain/business-rules/parameter-change';
 import { toRuleId } from '../../domain/business-rules/rule';
-import { toSeed } from '../../domain/simulation-engine/numbers';
+import { newestVersions } from '../../application-core/simulation-engine/function-lookup';
+import { TESTING_FUNCTIONS } from '../../application-core/simulation-engine/function-lookup.testing';
+import { FunctionName } from '../../application-core/simulation-engine/function-name';
+import type { VersionNumber } from '../../domain/system/records/version-chain';
 import type { IRuleEdit } from './rules-view';
 import { ruleEditResult, rulesPanelView } from './rules-view';
 
-const SEED = toSeed(1);
-const V1 = startingValues({ seed: SEED });
+const V1 = startingValues({});
 
 const PASS = 'drivers.dispatch-pass';
 const NEAR = 'drivers.near-restaurant';
@@ -156,5 +158,36 @@ describe('a value typed into the Rules panel', () => {
         const result = ruleEditResult(V1, typed);
 
         expect(result.isOk).toBe(true);
+    });
+});
+
+function versionsOf(name: FunctionName): readonly VersionNumber[] {
+    return TESTING_FUNCTIONS.versionsOf(name);
+}
+
+const VERSIONS = newestVersions(TESTING_FUNCTIONS);
+const IN_USE = { functionVersions: VERSIONS, versionsOfFunction: versionsOf };
+
+describe("the Rules panel's functions", () => {
+    it("lists each module's state functions under it, with the version in use", () => {
+        const modules = rulesPanelView(V1, IN_USE);
+
+        const counts = modules.map((module) => module.functions.length);
+        const [orders] = modules;
+        const pickUp = orders?.functions.find((fn) => fn.name === FunctionName.OrdersPickUp);
+        expect(counts).toEqual([9, 0, 10]);
+        expect(pickUp).toEqual({
+            name: FunctionName.OrdersPickUp,
+            label: 'Pick up',
+            inUse: 1,
+            versions: [1],
+        });
+    });
+
+    it('lists no functions when it is not told them', () => {
+        const modules = rulesPanelView(V1);
+
+        const counts = modules.map((module) => module.functions.length);
+        expect(counts).toEqual([0, 0, 0]);
     });
 });

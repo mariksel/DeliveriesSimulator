@@ -4,6 +4,7 @@ import type { FieldsOf } from '../system/classes/fields-of';
 import type { OrderDeliveryId } from '../drivers/deliveries/order-delivery';
 import type { OrderId } from './order';
 import type { IVersion } from '../system/records/version-chain';
+import type { Maker } from '../system/records/maker';
 import { assertVersionLink, FIRST_VERSION } from '../system/records/version-chain';
 import type { DeliveriesEventCopy } from './deliveries-event-copy';
 import type { VersionNumber } from '../system/records/version-chain';
@@ -32,13 +33,14 @@ export class DeliveryCopy {
  */
 export class DeliveryCopyVersion implements IVersion<DeliveryCopyVersion> {
     /** A new copy's first version, with no events yet. */
-    static createNew(orderId: OrderId): DeliveryCopyVersion {
+    static createNew(orderId: OrderId, madeBy: Maker): DeliveryCopyVersion {
         const events = List<DeliveriesEventCopy>();
         return DeliveryCopyVersion.create({
             orderId,
             events,
             number: FIRST_VERSION,
             previous: null,
+            madeBy,
         });
     }
 
@@ -54,6 +56,7 @@ export class DeliveryCopyVersion implements IVersion<DeliveryCopyVersion> {
             fields.events,
             fields.number,
             fields.previous,
+            fields.madeBy,
         );
     }
 
@@ -64,18 +67,21 @@ export class DeliveryCopyVersion implements IVersion<DeliveryCopyVersion> {
         readonly events: List<DeliveriesEventCopy>,
         readonly number: VersionNumber,
         readonly previous: DeliveryCopyVersion | null,
+        /** The job run or API call that made this version, or the run's start (FND-81). */
+        readonly madeBy: Maker,
     ) {
         Object.freeze(this);
     }
 
     /** The next version, with one more event read from deliveries. */
-    withEvent(event: DeliveriesEventCopy): DeliveryCopyVersion {
+    withEvent(event: DeliveriesEventCopy, madeBy: Maker): DeliveryCopyVersion {
         const events = this.events.push(event);
         return DeliveryCopyVersion.create({
             orderId: this.orderId,
             events,
             number: nextVersionNumber(this.number),
             previous: this,
+            madeBy,
         });
     }
 }

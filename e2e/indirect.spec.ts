@@ -114,3 +114,43 @@ test("a scenario's indirect step shows how long the service was unaware", async 
     await scrolledDownTo(page, time, false);
     await expect(time).toHaveText('Unaware for h00:m00:s25:ms00');
 });
+
+/** Opens the scenario with a labelled indirect step, and runs it to its end. */
+async function openedLabelled(page: Page): Promise<void> {
+    await page.goto('/');
+    const fileInput = page.getByLabel('Open a scenario file');
+    await fileInput.setInputFiles('e2e/fixtures/indirect-effects.json');
+    await ranToTheEnd(page);
+}
+
+test('a label given by hand is refused when the scenario already uses it', async ({ page }) => {
+    await openedLabelled(page);
+    await page.getByTestId('state-indirect').click();
+    const form = page.getByTestId('indirect-form');
+
+    await form.getByTestId('indirect-label').fill('ignored');
+    await form.getByTestId('indirect-state').click();
+
+    const problem = form.getByTestId('indirect-problem');
+    await expect(problem).toHaveText('The label "ignored" is already used in this run.');
+    await form.getByTestId('indirect-label').fill('by-hand');
+    await form.getByTestId('indirect-state').click();
+    await expect(form).toHaveCount(0);
+});
+
+test("a rule change can follow from the scenario's labelled indirect effect", async ({ page }) => {
+    await openedLabelled(page);
+    await page.getByTestId('rules-tab').click();
+
+    const followsFrom = page.getByTestId('rules-follows-from');
+    await followsFrom.selectOption('ignored');
+    const rule = page.locator('[data-rule-id="drivers.dispatch-pass"]');
+    const interval = rule.locator('[data-parameter-id="interval"]');
+    await interval.getByTestId('parameter-input').fill('h00:m00:s10:ms00');
+    await interval.getByRole('button', { name: 'Set' }).click();
+
+    const value = interval.getByTestId('parameter-value');
+    await expect(value).toHaveText('h00:m00:s10:ms00');
+    const options = followsFrom.locator('option');
+    await expect(options).toHaveText(['Nothing', 'ignored']);
+});

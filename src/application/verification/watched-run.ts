@@ -1,7 +1,13 @@
+import type { FunctionVersions } from '../../application-core/simulation-engine/function-lookup';
+import type { FunctionName } from '../../application-core/simulation-engine/function-name';
+import type { IFunctionUse } from '../../application-core/simulation-engine/run-input';
+import type { VersionNumber } from '../../domain/system/records/version-chain';
 import type { List } from 'immutable';
 import type { IScenarioNames } from '../../application-core/scenarios/scenario-names';
 import { scenarioNames } from '../../application-core/scenarios/scenario-names';
 import type { IndirectStatement } from '../../application-core/simulation-engine/indirect-effect';
+import type { IRide } from '../../application-core/simulation-engine/ride';
+import { latestRides } from '../../application-core/simulation-engine/riding';
 import { Map as ImmutableMap } from 'immutable';
 
 import type { ICriterionResult } from '../../domain/verification/check-run';
@@ -28,6 +34,19 @@ import type { Seed } from '../../domain/simulation-engine/numbers';
 import type { Count } from '../../domain/system/math/math';
 import type { SimTime } from '../../domain/simulation-engine/sim-time';
 import { toCount } from '../../domain/system/math/math';
+import type { IndirectLabel } from '../../application-core/simulation-engine/run-input';
+import type { IMadeVersion, RecordRef } from '../../application-core/run-history/run-query';
+import { versionsAt } from '../../application-core/run-history/run-query';
+import type {
+    RunLevel,
+    SaveOutcome,
+    SavedRunId,
+} from '../../application-core/run-history/saved-run';
+import type { CalendarTime } from '../../domain/simulation-engine/numbers';
+import type { ISavedRunStores } from '../run-history/saved-runs';
+import type { IRunScript, IRunState } from '../../application-core/simulation-engine/run-state';
+import { saveRun } from '../run-history/saved-runs';
+import type { IStateRoot } from '../../application-core/simulation-engine/main-root';
 
 /**
  * How a run came out, as it stood at the time its scenario states it ends, or when a bug stopped
@@ -58,6 +77,10 @@ export interface IWatchedRunStatus {
     readonly verdict: IRunVerdict | null;
     /** Each module's rules, with the values in use at the place shown. */
     readonly rules: IRunValues;
+    /** The version of each state function in use at the commit shown (FND-81). */
+    readonly functionVersions: FunctionVersions;
+    /** Every version of each state function the run's lookup holds, oldest first. */
+    readonly versionsOfFunction: (name: FunctionName) => readonly VersionNumber[];
     /** The place shown: how many of the run's commits are shown (FND-86). */
     readonly place: Position;
     /** The latest place: every commit so far. */
@@ -78,6 +101,28 @@ export interface IWatchedRunStatus {
     readonly currentBranch: BranchId;
     /** The drivers, restaurants, and orders the scenario names, which a hand-made step may use. */
     readonly names: IScenarioNames;
+    /**
+     * The scenario's labels whose indirect commit is made by the place shown, which a config
+     * change can follow from (FND-89).
+     */
+    readonly followableLabels: readonly IndirectLabel[];
+    /** Every label the run uses, scripted or given by hand, which a new one may not repeat. */
+    readonly usedLabels: readonly IndirectLabel[];
+    /** What the run holds at the commit shown, which the Map view draws (FND-90). */
+    readonly world: IShownWorld;
+}
+
+/**
+ * What a run holds at the commit shown, as the Map view needs it: the script, with the city and
+ * the restaurants, and every module's state at that commit (FND-90).
+ */
+export interface IShownWorld {
+    readonly script: IRunScript;
+    readonly state: IStateRoot;
+    /** The time of the commit shown. */
+    readonly at: SimTime;
+    /** Each riding driver's latest ride at the commit shown, by their name (FND-90). */
+    readonly rides: ImmutableMap<string, IRide>;
 }
 
 /**
@@ -90,6 +135,20 @@ export class WatchedRun {
     private wasRunningWhenLeft = false;
     private readonly names: IScenarioNames;
     private repeat: IRepeatResult | null = null;
+    /** The run as it was last saved or opened from a save, or null if it never was. */
+    private lastSaved: IRunState | null = null;
+    /** The saved run it was opened from or last saved as, which shares its branches (FND-81). */
+    private savedId: SavedRunId | null = null;
+    private readonly versionsOfFunction: (name: FunctionName) => readonly VersionNumber[];
+
+    /**
+     * Whether the run has changed since it was last saved or opened from a save: a run with no
+     * commits has nothing to lose, so it counts as saved.
+     */
+    get isUnsaved(): boolean {
+        const state = this.live.runState;
+        return state.line.commits.size > 0 && state !== this.lastSaved;
+    }
 
     get status(): IWatchedRunStatus {
         const { scenario, failure } = this.live;
@@ -110,6 +169,8 @@ export class WatchedRun {
             failureAt: failure?.at ?? null,
             verdict: this.verdicts.get(this.live.currentBranch) ?? null,
             rules: this.live.rules,
+            functionVersions: this.live.functionVersions,
+            versionsOfFunction: this.versionsOfFunction,
             place: this.live.place,
             latestPlace: this.live.latestPlace,
             isShowingLatest: this.live.isShowingLatest,
@@ -121,6 +182,9 @@ export class WatchedRun {
             lastHit: this.live.lastHit,
             currentBranch: this.live.currentBranch,
             names: this.names,
+            followableLabels: this.live.followableLabels(),
+            usedLabels: this.live.usedLabels(),
+            world: this.shownWorld(),
         };
     }
 
@@ -130,6 +194,37 @@ export class WatchedRun {
         private readonly onChange: () => void,
     ) {
         this.names = scenarioNames(live.scenario);
+        this.versionsOfFunction = (name): readonly VersionNumber[] =>
+            live.runState.functions.versionsOf(name);
+    }
+
+    /**
+     * Shows a run opened from a save, paused at its latest commit, or ended and judged if it had
+     * reached the scenario's end (FND-81).
+     */
+    openedFromSave(id: SavedRunId): void {
+        this.live.resumeAtLatest();
+        this.lastSaved = this.live.runState;
+        this.savedId = id;
+        this.changed();
+    }
+
+    /**
+     * Deletes a branch with no forks of its own, never Main, from the run and from the saved run
+     * it was opened from or last saved as, which is rewritten under its ID (FND-81). A run that
+     * was saved as it stood stays saved.
+     */
+    async deleteBranch(stores: ISavedRunStores, id: BranchId): Promise<void> {
+        const wasSaved = !this.isUnsaved;
+        this.live.deleteBranch(id);
+        this.changed();
+        if (this.savedId === null) {
+            return;
+        }
+        const outcome = await stores.runs.deleteBranch(this.savedId, id);
+        if (outcome?.isOk === true && wasSaved) {
+            this.lastSaved = this.live.runState;
+        }
     }
 
     start(): void {
@@ -248,9 +343,26 @@ export class WatchedRun {
         this.onChange();
     }
 
-    /** Changes rule parameters now, by rule ID, as a config change commit. */
-    changeRules(changes: List<ParameterChange>): void {
-        this.live.changeRules(changes);
+    /** A record's versions as they stood at the place shown, each with the commit that made it. */
+    versionsOf(record: RecordRef): readonly IMadeVersion[] {
+        return versionsAt(this.live.runState, record, this.live.place);
+    }
+
+    /**
+     * Changes rule parameters now, by rule ID, as a config change commit, following from a
+     * labelled indirect commit when one is named (FND-89).
+     */
+    changeRules(changes: List<ParameterChange>, after?: IndirectLabel): void {
+        this.live.changeRules(changes, after);
+        this.changed();
+    }
+
+    /**
+     * Switches state functions to other versions at the commit shown, as an implementation change
+     * commit, forking first from an earlier commit (FND-81).
+     */
+    switchVersions(uses: List<IFunctionUse>, after?: IndirectLabel): void {
+        this.live.switchVersions(uses, after);
         this.changed();
     }
 
@@ -263,6 +375,35 @@ export class WatchedRun {
     setSpeed(speed: ClockSpeed): void {
         this.live.setSpeed(speed);
         this.changed();
+    }
+
+    /**
+     * Saves the run at a level, with the scenario it ran (FND-81). A running run pauses while it
+     * is saved, and then goes on. A run that does not fit is not saved, and the outcome says why.
+     */
+    async save(
+        stores: ISavedRunStores,
+        name: string,
+        level: RunLevel,
+        savedAt: CalendarTime,
+    ): Promise<SaveOutcome> {
+        const wasRunning = this.live.state === LiveRunState.Running;
+        if (wasRunning) {
+            this.pause();
+        }
+        const { scenario, runState: run } = this.live;
+        try {
+            const outcome = await saveRun(stores, { name, level, scenario, savedAt, run });
+            if (outcome.isOk) {
+                this.lastSaved = run;
+                this.savedId = outcome.saved.id;
+            }
+            return outcome;
+        } finally {
+            if (wasRunning) {
+                this.start();
+            }
+        }
     }
 
     runOnPastTheEnd(): void {
@@ -343,5 +484,16 @@ export class WatchedRun {
             ordersJudged: check.ordersJudged,
         };
         this.verdicts = this.verdicts.set(id, verdict);
+    }
+
+    /** What the run holds at the commit shown: its script and its modules' state. */
+    private shownWorld(): IShownWorld {
+        const root = this.live.shownRoot;
+        return {
+            script: this.live.runState.script,
+            state: root.state,
+            at: this.live.shownAt,
+            rides: latestRides(root.effects.indirect.records),
+        };
     }
 }

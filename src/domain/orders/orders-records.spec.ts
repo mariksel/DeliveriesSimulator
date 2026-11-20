@@ -18,8 +18,12 @@ import { toCount } from '../system/math/math';
 import { instantAt } from '../system/time/instant.testing';
 import { toOrdersOutboxEventId } from './orders-outbox-event';
 import { toDeliveriesOutboxEventId } from '../drivers/deliveries/deliveries-outbox-event';
+import { TEST_MAKER } from '../system/records/maker.testing';
+import { OrderView } from './order-view';
+import { Maker, toWorkId } from '../system/records/maker';
 
 const ORDER = toOrderId('order-1');
+const LATER_WORK = toWorkId('session-9');
 
 const event = (at: number): OrderEventRecord =>
     OrderEventRecord.create({
@@ -60,7 +64,7 @@ describe("orders' records", () => {
         const records = [
             event(0),
             outbox(1),
-            OrderVersion.createNew(ORDER),
+            OrderVersion.createNew(ORDER, TEST_MAKER),
             OrdersState.createNew(),
         ];
 
@@ -93,19 +97,23 @@ describe("orders' records", () => {
 
 describe("an order's versions", () => {
     it('starts at version 1, with nothing before it', () => {
-        const first = OrderVersion.createNew(ORDER);
+        const first = OrderVersion.createNew(ORDER, TEST_MAKER);
 
-        expect(first).toMatchObject({ number: 1, previous: null, status: 'Created' });
+        expect(first).toMatchObject({
+            number: 1,
+            previous: null,
+            isDeliveryRequestPending: false,
+        });
     });
 
     it('links each change to the version before it', () => {
-        const first = OrderVersion.createNew(ORDER);
-        const change = first.markReady();
+        const first = OrderVersion.createNew(ORDER, TEST_MAKER);
 
-        const next = change.isAllowed ? change.version : null;
-        expect(next).toMatchObject({ number: 2, isReady: true });
-        expect(next?.previous).toBe(first);
-        expect(first.isReady).toBe(false);
+        const next = first.next(true, TEST_MAKER);
+
+        expect(next).toMatchObject({ number: 2, isDeliveryRequestPending: true });
+        expect(next.previous).toBe(first);
+        expect(first.isDeliveryRequestPending).toBe(false);
     });
 
     it.each<[string, number, boolean]>([
@@ -113,17 +121,15 @@ describe("an order's versions", () => {
         ['a later version that does not follow the one before', 3, true],
         ['a version in part', 1.5, false],
     ])('refuses %s', (_name, number, hasPrevious) => {
-        const previous = hasPrevious ? OrderVersion.createNew(ORDER) : null;
+        const previous = hasPrevious ? OrderVersion.createNew(ORDER, TEST_MAKER) : null;
 
         expect(() =>
             OrderVersion.create({
                 orderId: ORDER,
-                status: 'Created',
                 isDeliveryRequestPending: false,
-                isReady: false,
-                driverId: null,
                 number: toVersionNumber(number),
                 previous,
+                madeBy: TEST_MAKER,
             }),
         ).toThrow(RangeError);
     });
@@ -139,10 +145,10 @@ describe("orders' copy of a delivery", () => {
     });
 
     it('adds each event read as a new version', () => {
-        const first = DeliveryCopyVersion.createNew(ORDER);
+        const first = DeliveryCopyVersion.createNew(ORDER, TEST_MAKER);
         const copy = DeliveriesEventCopy.createNew(DELIVERIES_EVENT);
 
-        const next = first.withEvent(copy);
+        const next = first.withEvent(copy, TEST_MAKER);
 
         expect(next).toMatchObject({ number: 2, previous: first });
         const events = next.events.toArray();
@@ -158,6 +164,7 @@ describe("orders' state", () => {
                 orders: OrderedMap(),
                 orderVersions: OrderedMap(),
                 restaurants: OrderedMap(),
+                addresses: OrderedMap(),
                 eventsByOrder: OrderedMap(),
                 outbox: List(),
                 inbox: OrderedMap(),
@@ -174,5 +181,37 @@ describe("orders' state", () => {
 
         const progress = state.progress();
         expect(progress).toEqual({ finished: 0, total: 0 });
+    });
+});
+
+describe("the makers of orders' versions", () => {
+    const later = Maker.work(LATER_WORK);
+
+    it('keep the maker each first version was made with', () => {
+        const order = OrderVersion.createNew(ORDER, TEST_MAKER);
+        const copy = DeliveryCopyVersion.createNew(ORDER, TEST_MAKER);
+
+        const makers = [order.madeBy, copy.madeBy];
+
+        expect(makers).toEqual([TEST_MAKER, TEST_MAKER]);
+    });
+
+    it("give an order's changed version the maker of the change", () => {
+        const first = OrderVersion.createNew(ORDER, TEST_MAKER);
+
+        const noEvents = List<OrderEventRecord>();
+        const view = OrderView.of(first, noEvents);
+        const changed = view.markReady(later);
+
+        expect(changed).toMatchObject({ isAllowed: true, version: { madeBy: later } });
+    });
+
+    it("give the copy's next version the maker of the change", () => {
+        const first = DeliveryCopyVersion.createNew(ORDER, TEST_MAKER);
+        const copy = DeliveriesEventCopy.createNew(DELIVERIES_EVENT);
+
+        const next = first.withEvent(copy, later);
+
+        expect(next.madeBy).toBe(later);
     });
 });

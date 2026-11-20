@@ -1,4 +1,15 @@
+import { FunctionLookup } from '../../application-core/simulation-engine/function-lookup';
+import { TESTING_FUNCTIONS } from '../../application-core/simulation-engine/function-lookup.testing';
 import type { Provider } from '@angular/core';
+
+import { Calendar } from '../../application-core/run-history/calendar';
+import { RunRepository } from '../../application-core/run-history/run-repository';
+import {
+    ManualCalendar,
+    MemoryRunRepository,
+    MemoryScenarioRepository,
+} from '../../application-core/run-history/run-stores.testing';
+import { ScenarioRepository } from '../../application-core/scenarios/scenario-repository';
 
 import { BuiltInScenarios } from '../../application-core/scenarios/built-in-scenarios';
 import { ScenarioFiles } from '../../application-core/scenarios/scenario-files';
@@ -48,10 +59,21 @@ export class CopierForTest extends TextCopier {
     }
 }
 
-/** What the screens need from outside the core. */
-export function uiParts(wall: ManualWallClock, ticker: ManualTicker): Provider[] {
+/**
+ * What the screens need from outside the core: saved runs and scenario versions are kept in
+ * memory, in the run store given or a fresh one.
+ */
+export function uiParts(
+    wall: ManualWallClock,
+    ticker: ManualTicker,
+    runs: MemoryRunRepository = new MemoryRunRepository(),
+): Provider[] {
     return [
+        { provide: Calendar, useClass: ManualCalendar },
+        { provide: RunRepository, useValue: runs },
+        { provide: ScenarioRepository, useClass: MemoryScenarioRepository },
         { provide: WallClock, useValue: wall },
+        { provide: FunctionLookup, useValue: TESTING_FUNCTIONS },
         { provide: Ticker, useValue: ticker },
         { provide: ScenarioFiles, useClass: FilesForTest },
         { provide: BuiltInScenarios, useClass: BuiltInsForTest },

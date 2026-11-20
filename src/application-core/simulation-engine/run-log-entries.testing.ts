@@ -1,4 +1,7 @@
+import { FunctionName } from './function-name';
 import { List } from 'immutable';
+import { toCustomerId } from '../../domain/restaurants/customers/customer';
+import { toAddressId } from '../../domain/restaurants/customers/delivery-address';
 
 import { toParameterValue } from '../../domain/business-rules/numbers';
 import { ValueChanged } from '../../domain/business-rules/value-changed';
@@ -31,6 +34,7 @@ import type {
     ICommandIssuedLogRecord,
     ICommandRefusedLogRecord,
     IConfigChangedLogRecord,
+    IFunctionVersionSwitchedLogRecord,
     IDeliveriesEventLogRecord,
     IDeliveriesOutboxLogRecord,
     IIndirectEffectLogRecord,
@@ -89,6 +93,8 @@ export const orderCreated = (
     data: {
         id: toOrderId('A'),
         restaurantId: toRestaurantId('restaurant'),
+        customerId: toCustomerId('customer'),
+        addressId: toAddressId('address'),
         status: OrderStatus.Created,
         version: toVersionNumber(1),
         isDeliveryRequestPending: false,
@@ -264,6 +270,17 @@ export function configChanged(): IConfigChangedLogRecord {
         data: { changes: List([changed]) },
     };
 }
+
+/** Orders' mark ready switching from version 1 to version 2 (FND-81). */
+export const functionVersionSwitched = (): IFunctionVersionSwitchedLogRecord => ({
+    source: LogSource.SimulationEngine,
+    kind: TechnicalLogKind.FunctionVersionSwitched,
+    data: {
+        function: FunctionName.OrdersMarkReady,
+        before: toVersionNumber(1),
+        after: toVersionNumber(2),
+    },
+});
 
 /** The actors' log entry for an indirect effect, which the service did not see. */
 export const indirectEffectHappened = (data: IndirectEffect): IIndirectEffectLogRecord => ({

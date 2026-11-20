@@ -147,18 +147,20 @@ function writeOrdersReport(log: IRunLog, report: OrdersReport, cause: ICause): I
                 data: {
                     id: report.order.id,
                     restaurantId: report.order.restaurantId,
-                    status: report.version.status,
-                    version: report.version.number,
-                    isDeliveryRequestPending: report.version.isDeliveryRequestPending,
-                    isReady: report.version.isReady,
-                    driverId: report.version.driverId,
+                    customerId: report.order.customerId,
+                    addressId: report.order.addressId,
+                    status: report.view.status,
+                    version: report.view.version.number,
+                    isDeliveryRequestPending: report.view.isDeliveryRequestPending,
+                    isReady: report.view.isReady,
+                    driverId: report.view.driverId,
                 },
             };
             return writeEntry(log, report.at, record, undefined, cause);
         }
         case OrdersReportKind.EventRecorded: {
-            const { event, version } = report;
-            const data = { event, status: version.status, version: version.number };
+            const { event, view } = report;
+            const data = { event, status: view.status, version: view.version.number };
             const record = { source: ORDERS, kind: event.kind, data };
             const matchingEventId = event.deliveriesEventId;
             return writeEvent(log, { record, event, matchingEventId }, cause);

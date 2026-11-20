@@ -7,6 +7,8 @@ import { DeliveryHandoff } from '../drivers/deliveries/delivery-handoff';
 import type { DeliveriesOutboxEvent } from '../drivers/deliveries/deliveries-outbox-event';
 import { FollowUpKind } from '../drivers/deliveries/follow-up-kind';
 import type { RestaurantPlace } from '../restaurants/restaurant-place';
+import type { DeliveryAddress } from '../restaurants/customers/delivery-address';
+import type { Maker } from '../system/records/maker';
 import type { FieldsOf } from '../system/classes/fields-of';
 import type { DeliveryEventId } from '../drivers/deliveries/delivery-event-id';
 import type { DriverId } from '../drivers/driver';
@@ -18,8 +20,9 @@ import { InboxPosition } from '../system/messaging/inbox-position';
 import { required } from '../system/validation/required';
 import { DeliveriesEventCopy } from './deliveries-event-copy';
 import { DeliveryCopy, DeliveryCopyVersion } from './delivery-copy';
-import type { OrderChange } from './order';
 import { Order, OrderVersion } from './order';
+import type { OrderChange } from './order-view';
+import { OrderView } from './order-view';
 import { OrderEventKind } from './order-event-kind';
 import { OrderEventRecord } from './order-event-record';
 import { OrderRefusal } from './order-refusal';
@@ -40,7 +43,12 @@ export interface IOrdersStep {
     readonly state: OrdersState;
     readonly reports: List<OrdersReport>;
     readonly followUps: List<ISendHandoff>;
+    /** The versions the step made, the latest of each record it changed (FND-81). */
+    readonly made: List<OrdersVersion>;
 }
+
+/** A version of one of orders' records. */
+export type OrdersVersion = OrderVersion | DeliveryCopyVersion;
 
 /** A command on an order that went ahead: the step, and the order as it now stands. */
 export interface IOrderCommandDone extends IOrdersStep {
@@ -88,6 +96,7 @@ export class OrdersState {
             orders: OrderedMap(),
             orderVersions: OrderedMap(),
             restaurants: OrderedMap(),
+            addresses: OrderedMap(),
             eventsByOrder: OrderedMap(),
             outbox: List(),
             inbox: OrderedMap(),
@@ -107,6 +116,7 @@ export class OrdersState {
             fields.orders,
             fields.orderVersions,
             fields.restaurants,
+            fields.addresses,
             fields.eventsByOrder,
             fields.outbox,
             fields.inbox,
@@ -117,19 +127,32 @@ export class OrdersState {
         );
     }
 
-    /** Creates an order for a restaurant. */
+    /**
+     * Creates an order for a restaurant, to one of its customer's stored addresses (FND-90). Each
+     * state function takes last what makes it.
+     */
     static createOrder(
         state: OrdersState,
         at: IInstant,
         restaurant: RestaurantPlace,
+        address: DeliveryAddress,
+        madeBy: Maker,
     ): IOrderCreated {
         const id = toOrderId(`order-${state.nextOrder}`);
-        const order = Order.create({ id, restaurantId: restaurant.id });
-        const version = OrderVersion.createNew(order.id);
+        const order = Order.create({
+            id,
+            restaurantId: restaurant.id,
+            customerId: address.customerId,
+            addressId: address.id,
+        });
+        const version = OrderVersion.createNew(order.id, madeBy);
+        const noEvents = List<OrderEventRecord>();
+        const view = OrderView.of(version, noEvents);
         const created = state.with({
             orders: state.orders.set(order.id, order),
             orderVersions: state.orderVersions.set(order.id, version),
             restaurants: state.restaurants.set(order.id, restaurant),
+            addresses: state.addresses.set(order.id, address),
             nextOrder: plusOne(state.nextOrder),
         });
         return {
@@ -138,9 +161,10 @@ export class OrdersState {
                 kind: OrdersReportKind.OrderCreated,
                 at,
                 order,
-                version,
+                view,
             }),
             followUps: List(),
+            made: List.of<OrdersVersion>(version),
             order,
             version,
         };
@@ -154,12 +178,13 @@ export class OrdersState {
         state: OrdersState,
         at: IInstant,
         orderId: OrderId,
+        madeBy: Maker,
     ): OrderCommandResult {
         const call = { at, orderId, kind: OrderEventKind.OrderDeliveryRequest, driverId: null };
         const requested = OrdersState.applyChange(
             state,
             call,
-            (version) => version.requestDelivery(),
+            (view) => view.requestDelivery(madeBy),
             {
                 shouldWriteOutbox: false,
             },
@@ -167,7 +192,8 @@ export class OrdersState {
         if (!requested.isOk) {
             return requested;
         }
-        const handoff = OrdersState.handoffFor(requested.state, at, requested.version);
+        const requestedView = OrdersState.viewOf(requested.state, orderId);
+        const handoff = OrdersState.handoffFor(requested.state, at, requestedView);
         return { ...requested, followUps: List.of(handoff) };
     }
 
@@ -180,38 +206,43 @@ export class OrdersState {
         at: IInstant,
         orderId: OrderId,
         orderDeliveryId: OrderDeliveryId | null,
+        madeBy: Maker,
     ): IOrdersStep {
         if (orderDeliveryId === null) {
             return noStep(state);
         }
-        const orderVersion = state.orderVersions.get(orderId);
-        const version = required(orderVersion, `order ${orderId}`);
-        const completed = version.completeDeliveryRequest();
+        const view = OrdersState.viewOf(state, orderId);
+        const completed = view.completeDeliveryRequest(madeBy);
         if (!completed.isAllowed) {
             throw new Error(`Handoff of ${orderId} refused: ${completed.refusal}.`);
         }
         const requestEvent = OrdersState.requestEventOf(state, orderId);
         const copy = DeliveryCopy.create({ orderId, orderDeliveryId });
-        const copyVersion = DeliveryCopyVersion.createNew(orderId);
+        const copyVersion = DeliveryCopyVersion.createNew(orderId, madeBy);
         const handedOff = state.with({
             orderVersions: state.orderVersions.set(orderId, completed.version),
             copies: state.copies.set(orderId, copy),
             copyVersions: state.copyVersions.set(orderId, copyVersion),
         });
-        const written = OrdersState.writeOutbox(
-            handedOff,
-            at,
-            requestEvent,
-            completed.version,
-            null,
-        );
-        return { state: written.state, reports: List.of(written.report), followUps: List() };
+        const handedOffView = OrdersState.viewOf(handedOff, orderId);
+        const written = OrdersState.writeOutbox(handedOff, at, requestEvent, handedOffView, null);
+        return {
+            state: written.state,
+            reports: List.of(written.report),
+            followUps: List(),
+            made: List.of<OrdersVersion>(completed.version, copyVersion),
+        };
     }
 
     /** Records that an order is ready. */
-    static markReady(state: OrdersState, at: IInstant, orderId: OrderId): OrderCommandResult {
+    static markReady(
+        state: OrdersState,
+        at: IInstant,
+        orderId: OrderId,
+        madeBy: Maker,
+    ): OrderCommandResult {
         const call = { at, orderId, kind: OrderEventKind.OrderReady, driverId: null };
-        return OrdersState.applyChange(state, call, (version) => version.markReady());
+        return OrdersState.applyChange(state, call, (view) => view.markReady(madeBy));
     }
 
     /** A driver picks an order up. The engine calls this when deliveries asks. */
@@ -220,9 +251,10 @@ export class OrdersState {
         at: IInstant,
         orderId: OrderId,
         driverId: DriverId,
+        madeBy: Maker,
     ): OrderCommandResult {
         const call = { at, orderId, kind: OrderEventKind.OrderPickedUp, driverId };
-        return OrdersState.applyChange(state, call, (version) => version.pickUp(driverId));
+        return OrdersState.applyChange(state, call, (view) => view.pickUp(driverId, madeBy));
     }
 
     /** A driver delivers an order. The engine calls this when deliveries asks. */
@@ -231,9 +263,10 @@ export class OrdersState {
         at: IInstant,
         orderId: OrderId,
         driverId: DriverId,
+        madeBy: Maker,
     ): OrderCommandResult {
         const call = { at, orderId, kind: OrderEventKind.OrderDelivered, driverId };
-        return OrdersState.applyChange(state, call, (version) => version.deliver(driverId));
+        return OrdersState.applyChange(state, call, (view) => view.deliver(driverId, madeBy));
     }
 
     /** The job that retries every delivery request still pending, up to the limit in one run. */
@@ -248,7 +281,10 @@ export class OrdersState {
         return {
             ...noStep(state),
             followUps: pending
-                .map((version) => OrdersState.handoffFor(state, now, version))
+                .map((version) => {
+                    const view = OrdersState.viewOf(state, version.orderId);
+                    return OrdersState.handoffFor(state, now, view);
+                })
                 .toList(),
         };
     }
@@ -279,8 +315,9 @@ export class OrdersState {
         state: OrdersState,
         now: IInstant,
         event: DeliveriesOutboxEvent,
+        madeBy: Maker,
     ): IOrdersStep {
-        const applied = OrdersState.applyDeliveriesEvent(state, now, event);
+        const applied = OrdersState.applyDeliveriesEvent(state, now, event, madeBy);
         return {
             ...noStep(applied.state),
             reports: List.of<OrdersReport>({
@@ -289,6 +326,7 @@ export class OrdersState {
                 event,
                 caused: applied.reports,
             }),
+            made: applied.made,
         };
     }
 
@@ -313,7 +351,7 @@ export class OrdersState {
         state: OrdersState,
         at: IInstant,
         event: OrderEventRecord,
-        version: OrderVersion,
+        view: OrderView,
         startedEventId: DeliveryEventId | null,
     ): { readonly state: OrdersState; readonly report: OrdersReport } {
         const outboxEvent = OrdersOutboxEvent.create({
@@ -323,8 +361,8 @@ export class OrdersState {
             kind: event.kind,
             at,
             driverId: event.driverId,
-            orderVersion: version.number,
-            orderStatus: version.status,
+            orderVersion: view.version.number,
+            orderStatus: view.status,
             startedEventId,
         });
         return {
@@ -336,7 +374,7 @@ export class OrdersState {
     private static applyChange(
         state: OrdersState,
         call: IOrderChangeCall,
-        decide: (version: OrderVersion) => OrderChange,
+        decide: (view: OrderView) => OrderChange,
         options: IChangeOptions = {},
     ): OrderCommandResult {
         const { at, orderId } = call;
@@ -344,7 +382,9 @@ export class OrdersState {
         if (version === undefined) {
             return { isOk: false, refusal: OrderRefusal.UnknownOrder };
         }
-        const result = decide(version);
+        const eventsBefore = state.eventsOf(orderId);
+        const before = OrderView.of(version, eventsBefore);
+        const result = decide(before);
         if (!result.isAllowed) {
             return { isOk: false, refusal: result.refusal };
         }
@@ -361,30 +401,28 @@ export class OrdersState {
             orderVersions: state.orderVersions.set(orderId, result.version),
             eventsByOrder: state.eventsByOrder.set(orderId, events),
         });
-        const recorded: OrdersReport = {
-            kind: OrdersReportKind.EventRecorded,
-            event,
-            version: result.version,
-        };
+        const view = OrderView.of(result.version, events);
+        const recorded: OrdersReport = { kind: OrdersReportKind.EventRecorded, event, view };
         const done: IOrderCommandDone = {
             isOk: true,
             version: result.version,
             state: changed,
             reports: List.of(recorded),
             followUps: List(),
+            made: List.of<OrdersVersion>(result.version),
         };
         if (options.shouldWriteOutbox === false) {
             return done;
         }
         const startedEventId = options.deliveriesEventId ?? null;
-        const written = OrdersState.writeOutbox(
-            changed,
-            at,
-            event,
-            result.version,
-            startedEventId,
-        );
+        const written = OrdersState.writeOutbox(changed, at, event, view, startedEventId);
         return { ...done, state: written.state, reports: done.reports.push(written.report) };
+    }
+
+    /** An order's full view, which must exist. */
+    private static viewOf(state: OrdersState, orderId: OrderId): OrderView {
+        const view = state.viewOf(orderId);
+        return required(view, `order ${orderId}`);
     }
 
     private static requestEventOf(state: OrdersState, orderId: OrderId): OrderEventRecord {
@@ -394,18 +432,17 @@ export class OrdersState {
         return required(request, `the delivery request of ${orderId}`);
     }
 
-    private static handoffFor(
-        state: OrdersState,
-        at: IInstant,
-        version: OrderVersion,
-    ): ISendHandoff {
-        const restaurant = state.restaurants.get(version.orderId);
+    private static handoffFor(state: OrdersState, at: IInstant, view: OrderView): ISendHandoff {
+        const { orderId } = view.version;
+        const restaurant = state.restaurants.get(orderId);
+        const address = state.addresses.get(orderId);
         const handoff = DeliveryHandoff.create({
-            orderId: version.orderId,
-            restaurant: required(restaurant, `the restaurant of ${version.orderId}`),
-            requestEventId: OrdersState.requestEventOf(state, version.orderId).id,
-            orderVersion: version.number,
-            orderStatus: version.status,
+            orderId,
+            restaurant: required(restaurant, `the restaurant of ${orderId}`),
+            destination: required(address, `the address of ${orderId}`).coordinates,
+            requestEventId: OrdersState.requestEventOf(state, orderId).id,
+            orderVersion: view.version.number,
+            orderStatus: view.status,
         });
         return { kind: FollowUpKind.SendHandoff, at, handoff };
     }
@@ -414,18 +451,19 @@ export class OrdersState {
         state: OrdersState,
         now: IInstant,
         event: DeliveriesOutboxEvent,
+        madeBy: Maker,
     ): IOrdersStep {
         const copy = state.copyVersions.get(event.orderId);
         if (copy === undefined) {
             throw new Error(`No delivery copy for ${event.orderId}.`);
         }
         const copied = DeliveriesEventCopy.createNew(event);
-        const nextCopy = copy.withEvent(copied);
+        const nextCopy = copy.withEvent(copied, madeBy);
         const withCopy = state.with({
             copyVersions: state.copyVersions.set(event.orderId, nextCopy),
         });
         if (!event.wasStartedByDeliveries) {
-            return noStep(withCopy);
+            return { ...noStep(withCopy), made: List.of<OrdersVersion>(nextCopy) };
         }
         const driverId = event.driverId;
         if (event.kind !== OrderEventKind.OrderDeliveryRequestAccepted || driverId === null) {
@@ -440,15 +478,19 @@ export class OrdersState {
         const result = OrdersState.applyChange(
             withCopy,
             call,
-            (version) => version.acceptDeliveryRequest(driverId),
+            (view) => view.acceptDeliveryRequest(madeBy),
             { deliveriesEventId: event.eventId },
         );
-        // Refusals and retries are off the happy path, and arrive with the Faults, races, and
-        // verification stage.
+        // Refusals and retries are off the happy path, and arrive with I04.
         if (!result.isOk) {
             throw new Error(`Orders refused ${event.eventId}: ${result.refusal}.`);
         }
-        return { state: result.state, reports: result.reports, followUps: List() };
+        return {
+            state: result.state,
+            reports: result.reports,
+            followUps: List(),
+            made: List.of<OrdersVersion>(nextCopy, result.version),
+        };
     }
 
     declare private readonly brand: never;
@@ -458,6 +500,8 @@ export class OrdersState {
         /** Each order's latest version. */
         readonly orderVersions: OrderedMap<OrderId, OrderVersion>,
         readonly restaurants: OrderedMap<OrderId, RestaurantPlace>,
+        /** The stored address each order goes to, which never changes once used (FND-90). */
+        readonly addresses: OrderedMap<OrderId, DeliveryAddress>,
         /** Each order's events, oldest first. */
         readonly eventsByOrder: OrderedMap<OrderId, List<OrderEventRecord>>,
         readonly outbox: List<OrdersOutboxEvent>,
@@ -473,9 +517,10 @@ export class OrdersState {
 
     /** How far the run's orders have got. */
     progress(): IOrderProgress {
-        const finished = this.orderVersions
-            .valueSeq()
-            .count((version) => FINAL_ORDER_STATUSES.includes(version.status));
+        const finished = this.orderVersions.keySeq().count((orderId) => {
+            const status = this.viewOf(orderId)?.status;
+            return status !== undefined && FINAL_ORDER_STATUSES.includes(status);
+        });
         return { finished: toCount(finished), total: toCount(this.orderVersions.size) };
     }
 
@@ -487,6 +532,18 @@ export class OrdersState {
     /** An order's latest version, if it exists. */
     orderVersionOf(id: OrderId): OrderVersion | undefined {
         return this.orderVersions.get(id);
+    }
+
+    /**
+     * An order's full view, its version with what its events record, if it exists (FND-73).
+     */
+    viewOf(id: OrderId): OrderView | undefined {
+        const version = this.orderVersions.get(id);
+        if (version === undefined) {
+            return undefined;
+        }
+        const events = this.eventsOf(id);
+        return OrderView.of(version, events);
     }
 
     /** The events recorded for an order, oldest first. */
@@ -520,6 +577,7 @@ export class OrdersState {
             orders: this.orders,
             orderVersions: this.orderVersions,
             restaurants: this.restaurants,
+            addresses: this.addresses,
             eventsByOrder: this.eventsByOrder,
             outbox: this.outbox,
             inbox: this.inbox,
@@ -535,4 +593,5 @@ const noStep = (state: OrdersState): IOrdersStep => ({
     state,
     reports: List(),
     followUps: List(),
+    made: List(),
 });

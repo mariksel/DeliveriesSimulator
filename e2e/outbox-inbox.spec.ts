@@ -6,6 +6,8 @@ async function opened(page: Page): Promise<void> {
     await page.getByRole('button', { name: 'Open: One order, happy path' }).click();
     const scenarioName = page.getByTestId('scenario-name');
     await expect(scenarioName).toBeVisible();
+    // A run opens on the map; these tests look at the outbox and inbox inspector.
+    await page.getByRole('tab', { name: 'Outbox and inbox' }).click();
 }
 
 async function ranToTheEnd(page: Page): Promise<void> {

@@ -3,22 +3,46 @@ import { describe, expect, it } from 'vitest';
 import { List } from 'immutable';
 
 import type { ICommit } from '../../application-core/simulation-engine/commit';
+import { CommitKind } from '../../application-core/simulation-engine/commit';
+import type { IMainRoot } from '../../application-core/simulation-engine/main-root';
+import { withDirectEffect } from '../../application-core/simulation-engine/main-root';
 import type { IRunState } from '../../application-core/simulation-engine/run-state';
 import { startSession } from '../../application-core/simulation-engine/run-state';
 import type { IStateCall } from '../../application-core/simulation-engine/state-call';
 import { headAt } from '../../application-core/simulation-engine/commit-line';
 import { registeredFunctionOf } from './persisted-call';
+import type { IPersistedMaker } from '../system/records/persisted-maker';
+import { toPersistedMaker } from '../system/records/persisted-maker';
+import type { Maker } from '../../domain/system/records/maker';
+import type { IVersion } from '../../domain/system/records/version-chain';
+import { versionChain } from '../../domain/system/records/version-chain';
 import type { IPersistedCommit, IPersistedRun } from './persisted-run';
-import { fromPersistedRun, toPersistedRun } from './persisted-run';
+import {
+    atMinimum,
+    commitCount,
+    fromPersistedRun,
+    fromPersistedRunInChunks,
+    toPersistedRun,
+} from './persisted-run';
+import { REGISTERED_FUNCTIONS } from './function-registry';
+import type { IRestoreProgress } from './persisted-run';
 import {
     advance,
     forkedRun,
     forkedRunBackOnMain,
     indirectRun,
     oneOrderRun,
+    riddenOrderRun,
+    ridingRun,
+    SAMPLE_CITY,
     startedOneOrder,
     variedRun,
 } from './sample-runs.testing';
+
+/** A version of any record, with the maker every version names. */
+interface IMadeVersion extends IVersion<IMadeVersion> {
+    readonly madeBy: Maker;
+}
 
 const SECOND = 1000;
 /**
@@ -29,7 +53,7 @@ const WHOLE_RUN_TIMEOUT_MS = 30_000;
 
 /** Main's own commits, which are every commit of a run that never forked. */
 const mainCommits = (persisted: IPersistedRun): readonly IPersistedCommit[] =>
-    persisted.timelines[0]!.commits;
+    persisted.branches[0]!.commits;
 
 function commitWith(persisted: IPersistedRun, functionId: string): IPersistedCommit | undefined {
     const commits = mainCommits(persisted);
@@ -53,6 +77,62 @@ function withCallOf(
     return { ...run, line: { ...run.line, commits } };
 }
 
+/** Every version's maker on a run's current line, oldest version first, as plain values. */
+function makersOf(run: IRunState): readonly IPersistedMaker[] {
+    const { orders, drivers, deliveries } = run.root.state;
+    const latest: readonly IVersion<IMadeVersion>[] = [
+        ...orders.orderVersions.values(),
+        ...orders.copyVersions.values(),
+        ...drivers.driverVersions.values(),
+        ...deliveries.deliveryVersions.values(),
+        ...deliveries.notificationVersions.values(),
+    ];
+    return latest.flatMap((version) => {
+        const chain = versionChain(version as IMadeVersion);
+        return chain.map((each) => toPersistedMaker(each.madeBy)).toArray();
+    });
+}
+
+/** A persisted version, with the versions before it that were saved with it. */
+interface IChained {
+    readonly previous: IChained | null;
+}
+
+/** How many versions a persisted version holds: itself, and each saved before it. */
+const savedLength = (version: IChained): number =>
+    version.previous === null ? 1 : 1 + savedLength(version.previous);
+
+/** The sum of each record's latest version number, which counts every version it has had. */
+const versionCount = (versions: Iterable<{ readonly number: number }>): number =>
+    [...versions].reduce((sum, version) => sum + version.number, 0);
+
+/** Every commit's root, beside the root before it on the line. */
+function rootPairs(run: IRunState): readonly (readonly [IMainRoot, IMainRoot])[] {
+    const commits = run.line.commits.valueSeq().toArray();
+    const roots = [run.line.start, ...commits.map((commit) => commit.root)];
+    return commits.map((commit, index) => [roots[index]!, commit.root] as const);
+}
+
+/** Which parts each commit's root shares with the root before it. */
+const sharing = (run: IRunState): readonly (readonly boolean[])[] =>
+    rootPairs(run).map(([parent, child]) => [
+        child.state === parent.state,
+        child.state.orders === parent.state.orders,
+        child.state.drivers === parent.state.drivers,
+        child.state.deliveries === parent.state.deliveries,
+        child.effects === parent.effects,
+        child.effects.direct.values === parent.effects.direct.values,
+        child.effects.randomness === parent.effects.randomness,
+    ]);
+
+/** Whether each order version follows the very one the root before it holds, if it holds one. */
+const isChainedToParent = ([parent, child]: readonly [IMainRoot, IMainRoot]): boolean =>
+    child.state.orders.orderVersions.every((version, id) => {
+        const before = parent.state.orders.orderVersions.get(id);
+        const chain = versionChain(version);
+        return before === undefined || chain.some((each) => each === before);
+    });
+
 describe('a persisted run', () => {
     it.each<[string, () => IRunState]>([
         ['the one-order run', (): IRunState => oneOrderRun()],
@@ -60,6 +140,8 @@ describe('a persisted run', () => {
         ['a run with a fork, on the fork', forkedRun],
         ['a run with a fork, back on Main', forkedRunBackOnMain],
         ['a run with an indirect commit', indirectRun],
+        ["a run whose driver's app sends its location", ridingRun],
+        ['a run whose driver rides, and whose pick-up waits for them', riddenOrderRun],
     ])('maps back exactly, for %s', { timeout: WHOLE_RUN_TIMEOUT_MS }, (_name, make) => {
         const run = make();
 
@@ -69,12 +151,35 @@ describe('a persisted run', () => {
         expect(loaded).toEqual(run);
     });
 
+    it("keeps the city in the run's script, not in any commit", () => {
+        const run = oneOrderRun();
+
+        const persisted = toPersistedRun(run);
+        const loaded = fromPersistedRun(persisted);
+
+        expect(run.script.city).toBe(SAMPLE_CITY);
+        expect(persisted.script.city).toMatchObject({ across: 2, down: 2 });
+        expect(loaded.script.city).toEqual(SAMPLE_CITY);
+    });
+
+    it('has no city for a run saved before runs had cities', () => {
+        const run = oneOrderRun();
+        const persisted = toPersistedRun(run);
+        const fields = Object.entries(persisted.script).filter(([key]) => key !== 'city');
+        const withoutCity = Object.fromEntries(fields) as typeof persisted.script;
+        const older = { ...persisted, script: withoutCity };
+
+        const loaded = fromPersistedRun(older);
+
+        expect(loaded.script.city).toBeNull();
+    });
+
     it('keeps every commit once, each branch holding its own after its fork', () => {
         const run = forkedRun();
 
         const persisted = toPersistedRun(run);
 
-        const [main, fork] = persisted.timelines;
+        const [main, fork] = persisted.branches;
         const mainLength = main!.commits.length;
         const forkOwn = fork!.commits.length;
         expect(main).toMatchObject({ id: 'main', name: 'Main', forkedFrom: null, forkedAt: 0 });
@@ -84,6 +189,22 @@ describe('a persisted run', () => {
         expect(persisted.current).toBe('fork-1');
     });
 
+    it(
+        "keeps every version's maker through saving and loading",
+        { timeout: WHOLE_RUN_TIMEOUT_MS },
+        () => {
+            const run = forkedRun();
+
+            const persisted = toPersistedRun(run);
+            const loaded = fromPersistedRun(persisted);
+
+            const before = makersOf(run);
+            const after = makersOf(loaded);
+            expect(before.length).toBeGreaterThan(0);
+            expect(after).toEqual(before);
+        },
+    );
+
     it('gives the same persisted records when it is persisted again', () => {
         const run = variedRun();
         const persisted = toPersistedRun(run);
@@ -92,6 +213,80 @@ describe('a persisted run', () => {
         const again = toPersistedRun(loaded);
 
         expect(again).toEqual(persisted);
+    });
+
+    it('saves each version once, without the versions the root before it holds', () => {
+        const run = forkedRunBackOnMain();
+        const { orders, drivers } = run.root.state;
+        const start = run.line.start.state;
+        const latest = [...orders.orderVersions.values(), ...drivers.driverVersions.values()];
+        const atStart = [
+            ...start.orders.orderVersions.values(),
+            ...start.drivers.driverVersions.values(),
+        ];
+
+        const persisted = toPersistedRun(run);
+
+        const mainOwn = mainCommits(persisted);
+        const saved = mainOwn.flatMap((commit) => {
+            const orderSets = commit.change?.orders?.orderVersions?.set ?? [];
+            const driverSets = commit.change?.drivers?.driverVersions?.set ?? [];
+            return [...orderSets, ...driverSets].map(([, version]) => savedLength(version));
+        });
+        const total = saved.reduce((sum, length) => sum + length, 0);
+        const expected = versionCount(latest) - versionCount(atStart);
+        expect(total).toBe(expected);
+    });
+
+    it(
+        'shares between loaded roots every part the saved run shared, and versions with them',
+        { timeout: WHOLE_RUN_TIMEOUT_MS },
+        () => {
+            const run = forkedRun();
+            const persisted = toPersistedRun(run);
+
+            const loaded = fromPersistedRun(persisted);
+
+            const pairs = rootPairs(loaded);
+            const loadedSharing = sharing(loaded);
+            const savedSharing = sharing(run);
+            const lost = savedSharing.flatMap((parts, commit) =>
+                parts.flatMap((isShared, part) =>
+                    isShared && loadedSharing[commit]?.[part] !== true ? [[commit, part]] : [],
+                ),
+            );
+            const isChained = pairs.every(isChainedToParent);
+            expect(loadedSharing).toHaveLength(savedSharing.length);
+            expect(lost).toEqual([]);
+            expect(isChained).toBe(true);
+        },
+    );
+
+    it("puts a loaded effect commit's own effect in its root, not a copy", () => {
+        const run = variedRun();
+        const persisted = toPersistedRun(run);
+
+        const loaded = fromPersistedRun(persisted);
+
+        const commits = loaded.line.commits.valueSeq().toArray();
+        const withEffect = commits.filter((commit) => commit.effect !== null);
+        const isOwn = withEffect.every(
+            (commit) => commit.root.effects.direct.records.last() === commit.effect,
+        );
+        expect(withEffect.length).toBeGreaterThan(0);
+        expect(isOwn).toBe(true);
+    });
+
+    it("refuses a commit whose root holds effects other than its own and its parent's", () => {
+        const run = variedRun();
+        const commits = run.line.commits.valueSeq();
+        const stateCommit = commits.find((commit) => commit.kind === CommitKind.State)!;
+        const effect = commits.find((commit) => commit.effect !== null)!.effect!;
+        const root = withDirectEffect(stateCommit.root, effect);
+        const changed = run.line.commits.set(stateCommit.id, { ...stateCommit, root });
+        const tampered = { ...run, line: { ...run.line, commits: changed } };
+
+        expect(() => toPersistedRun(tampered)).toThrow('effects other than its own');
     });
 
     it('is plain data, which JSON keeps exactly', () => {
@@ -181,16 +376,16 @@ describe('a persisted run', () => {
     it('refuses a stored ID no function has', () => {
         const ran = oneOrderRun();
         const persisted = toPersistedRun(ran);
-        const main = persisted.timelines[0]!;
+        const main = persisted.branches[0]!;
         const commits = main.commits.map((commit) =>
             commit.call === null
                 ? commit
                 : { ...commit, call: { ...commit.call, functionId: 'orders.gone@9' } },
         );
 
-        const timelines = [{ ...main, commits }];
+        const branches = [{ ...main, commits }];
 
-        expect(() => fromPersistedRun({ ...persisted, timelines })).toThrow('orders.gone@9');
+        expect(() => fromPersistedRun({ ...persisted, branches })).toThrow('orders.gone@9');
     });
 
     it('refuses the wrong number of arguments', () => {
@@ -207,7 +402,7 @@ describe('a persisted run', () => {
         const state = oneOrderRun();
         const notPlain = withCallOf(state, 'orders.request-delivery@1', (call) => ({
             ...call,
-            args: [call.args[0], new Date(0)],
+            args: [call.args[0], new Date(0), call.args[2]],
         }));
 
         expect(() => toPersistedRun(notPlain)).toThrow('plain data');
@@ -217,6 +412,7 @@ describe('a persisted run', () => {
         ['a restaurant place', 'orders.create-order@1', 1],
         ['a handoff', 'drivers.deliveries.receive-delivery-request@1', 1],
         ['a moment', 'orders.create-order@1', 0],
+        ['a maker', 'orders.request-delivery@1', 2],
     ])('refuses %s argument that is not an instance of its class', (_name, functionId, index) => {
         const state = oneOrderRun();
         const plain = withCallOf(state, functionId, (call) => {
@@ -246,5 +442,112 @@ describe('a persisted run', () => {
         }));
 
         expect(() => toPersistedRun(elsewhere)).toThrow('outbox');
+    });
+});
+
+/** A run persisted at minimum: at everything, then moved down. */
+function minimumOf(run: IRunState): IPersistedRun {
+    const everything = toPersistedRun(run);
+    return { ...everything, branches: atMinimum(everything.branches) };
+}
+
+/** Every commit of a persisted run, branch after branch. */
+const everyCommit = (persisted: IPersistedRun): readonly IPersistedCommit[] =>
+    persisted.branches.flatMap((branch) => branch.commits);
+
+/** A persisted run with one commit's digest changed, as if its root had come out otherwise. */
+function withWrongDigest(persisted: IPersistedRun, at: number): IPersistedRun {
+    const [main, ...rest] = persisted.branches;
+    const commits = main!.commits.map((commit, index) =>
+        index === at ? { ...commit, digest: '0000000000000000' } : commit,
+    );
+    return { ...persisted, branches: [{ ...main!, commits }, ...rest] };
+}
+
+describe('a run persisted at minimum', () => {
+    it.each<[string, () => IRunState]>([
+        ['the one-order run', (): IRunState => oneOrderRun()],
+        ['a run with a refused call and a config change', variedRun],
+        ['a run with a fork, on the fork', forkedRun],
+        ['a run with a fork, back on Main', forkedRunBackOnMain],
+        ['a run with an indirect commit', indirectRun],
+    ])(
+        'works every root out again, to the same run, for %s',
+        { timeout: WHOLE_RUN_TIMEOUT_MS },
+        (_name, make) => {
+            const run = make();
+
+            const persisted = minimumOf(run);
+            const loaded = fromPersistedRun(persisted);
+
+            expect(loaded).toEqual(run);
+        },
+    );
+
+    it('keeps a digest in place of each change, and is smaller than at everything', () => {
+        const run = forkedRun();
+
+        const minimum = minimumOf(run);
+        const everything = toPersistedRun(run);
+
+        const commits = everyCommit(minimum);
+        const isDigestOnly = commits.every(
+            (commit) => commit.change === undefined && /^[0-9a-f]{16}$/.test(commit.digest ?? ''),
+        );
+        const minimumText = JSON.stringify(minimum);
+        const everythingText = JSON.stringify(everything);
+        expect(isDigestOnly).toBe(true);
+        expect(minimumText.length).toBeLessThan(everythingText.length);
+    });
+
+    it("chains a fork's digests on from the commit it forked after", () => {
+        const run = forkedRun();
+        const everything = toPersistedRun(run);
+
+        const minimum = minimumOf(run);
+
+        const [main, fork] = minimum.branches;
+        const [mainChanged, forkChanged] = everything.branches;
+        const place = fork!.forkedAt;
+        const isSameChange =
+            JSON.stringify(forkChanged!.commits[0]!.change) ===
+            JSON.stringify(mainChanged!.commits[place]!.change);
+        const isSameDigest = fork!.commits[0]!.digest === main!.commits[place]!.digest;
+        expect(place).toBeGreaterThan(0);
+        expect(isSameDigest).toBe(isSameChange);
+    });
+
+    it('stops at a commit whose root works out differently from when it was saved', () => {
+        const run = oneOrderRun();
+        const persisted = minimumOf(run);
+        const wrong = withWrongDigest(persisted, 3);
+
+        const loading = (): IRunState => fromPersistedRun(wrong);
+
+        expect(loading).toThrow('worked out differently from when it was saved');
+    });
+
+    it('tells its progress chunk by chunk, ending with every commit', async () => {
+        const run = variedRun();
+        const persisted = minimumOf(run);
+        const told: IRestoreProgress[] = [];
+
+        const loaded = await fromPersistedRunInChunks(
+            persisted,
+            REGISTERED_FUNCTIONS,
+            (progress) => {
+                told.push(progress);
+            },
+            10,
+        );
+
+        const total = commitCount(persisted);
+        const dones = told.map((progress) => progress.done);
+        const sorted = [...dones].sort((left, right) => left - right);
+        expect(loaded).toEqual(run);
+        expect(told.length).toBeGreaterThan(1);
+        expect(dones).toEqual(sorted);
+        const last = told.at(-1);
+        expect(last).toEqual({ done: total, total });
     });
 });

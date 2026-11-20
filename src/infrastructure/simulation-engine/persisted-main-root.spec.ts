@@ -1,3 +1,4 @@
+import { List } from 'immutable';
 import { describe, expect, it } from 'vitest';
 
 import type { DirectEffect } from '../../application-core/simulation-engine/direct-effect';
@@ -17,6 +18,8 @@ import {
     toInputOrderName,
 } from '../../application-core/simulation-engine/run-input';
 import { toCount } from '../../domain/system/math/math';
+import { Coordinates } from '../../domain/map-and-routing/coordinates';
+import { toDegrees } from '../../domain/map-and-routing/numbers';
 import { toSimTime } from '../../domain/simulation-engine/sim-time';
 import { toCommitId } from '../../application-core/simulation-engine/commit-id';
 import { withIndirectEffect } from '../../application-core/simulation-engine/main-root';
@@ -26,6 +29,7 @@ import {
     LATE,
     REFUSED,
 } from '../../application-core/simulation-engine/indirect-effects.testing';
+import { versionChain } from '../../domain/system/records/version-chain';
 
 /** The one-order run's last root, with a drawn stream added. */
 function fullRoot(): IMainRoot {
@@ -58,8 +62,18 @@ describe('a persisted main root', () => {
     });
 });
 
+const PLACE = Coordinates.create({ latitude: toDegrees(10.33), longitude: toDegrees(20.82) });
+const OTHER_PLACE = Coordinates.create({
+    latitude: toDegrees(10.331),
+    longitude: toDegrees(20.821),
+});
+
 describe('a persisted direct effect', () => {
-    const { values } = oneOrderRun().root.effects.direct;
+    const { root: latest } = oneOrderRun();
+    const { values } = latest.effects.direct;
+    const order = latest.state.orders.orderVersions.first()!;
+    const firstOrder = versionChain(order).first()!;
+    const driver = latest.state.drivers.driverVersions.first()!;
 
     it.each<[string, DirectEffect]>([
         [
@@ -72,6 +86,8 @@ describe('a persisted direct effect', () => {
                 order: toInputOrderName('A'),
                 response: { isOk: false, refusal: 'UnknownOrder' },
                 followsFrom: null,
+                isOnArrival: false,
+                reads: [],
             },
         ],
         [
@@ -84,6 +100,8 @@ describe('a persisted direct effect', () => {
                 order: toInputOrderName('A'),
                 response: { isOk: true, orderId: null },
                 followsFrom: toCommitId('commit-7'),
+                isOnArrival: false,
+                reads: [],
             },
         ],
         [
@@ -93,6 +111,49 @@ describe('a persisted direct effect', () => {
                 at: toSimTime(3),
                 job: RunJob.DispatchPass,
                 stateCommits: toCount(2),
+                reads: [],
+            },
+        ],
+        [
+            'an input that read an earlier version of its order, and its driver',
+            {
+                kind: EffectKind.Input,
+                at: toSimTime(5),
+                actor: toInputActor('driver-1'),
+                command: 'accept',
+                order: toInputOrderName('A'),
+                response: { isOk: true, orderId: null },
+                followsFrom: null,
+                isOnArrival: false,
+                reads: [firstOrder, driver],
+            },
+        ],
+        [
+            "one driver's app sending its location alone, as before sends were batched",
+            {
+                kind: EffectKind.Input,
+                at: toSimTime(6),
+                actor: toInputActor('driver-1'),
+                command: 'send-location',
+                location: PLACE,
+                response: { isOk: true, orderId: null },
+                followsFrom: null,
+                reads: [driver],
+            },
+        ],
+        [
+            'the apps due at one moment sending their locations',
+            {
+                kind: EffectKind.Input,
+                at: toSimTime(7),
+                command: 'send-locations',
+                sends: List.of(
+                    { actor: toInputActor('driver-1'), location: PLACE },
+                    { actor: toInputActor('driver-2'), location: OTHER_PLACE },
+                ),
+                response: { isOk: true, orderId: null },
+                followsFrom: null,
+                reads: [driver],
             },
         ],
         [
@@ -103,12 +164,13 @@ describe('a persisted direct effect', () => {
                 isScripted: true,
                 before: values,
                 after: values,
+                followsFrom: null,
             },
         ],
     ])('maps back exactly, for %s', (_name, effect) => {
         const persisted = toPersistedDirectEffect(effect);
 
-        const loaded = fromPersistedDirectEffect(persisted);
+        const loaded = fromPersistedDirectEffect(persisted, latest);
         expect(loaded).toEqual(effect);
     });
 
@@ -119,6 +181,7 @@ describe('a persisted direct effect', () => {
             at: toSimTime(2),
             job: RunJob.DispatchPass,
             stateCommits: toCount(0),
+            reads: [],
         };
         const withJob = withDirectEffect(root, job);
 

@@ -1,3 +1,4 @@
+import type { FunctionLookup } from '../../application-core/simulation-engine/function-lookup';
 import type { List } from 'immutable';
 
 import { runDigest } from '../../application-core/simulation-engine/run-digest';
@@ -13,10 +14,7 @@ import type {
 } from '../../application-core/scenarios/scenario';
 import { problemAt } from '../../application-core/scenarios/scenario';
 
-/**
- * The versions this simulator can run. The Versions module takes this over in the Versions and
- * comparison stage.
- */
+/** The versions this simulator can run. The Versions module takes this over in I06. */
 const AVAILABLE_VERSIONS: readonly string[] = ['V1.0.0'];
 
 const versionProblems = (): List<IScenarioProblem> =>
@@ -37,12 +35,15 @@ export type ScenarioRunResult =
     | { readonly isOk: true; readonly run: IScenarioRun }
     | { readonly isOk: false; readonly problems: List<IScenarioProblem> };
 
-/** Runs a scenario to its end. Speed never changes a run, so this goes straight through. */
-export function runScenario(scenario: IScenario): ScenarioRunResult {
+/**
+ * Runs a scenario to its end, calling its state functions through a lookup, at their newest
+ * versions (FND-81). Speed never changes a run, so this goes straight through.
+ */
+export function runScenario(scenario: IScenario, functions: FunctionLookup): ScenarioRunResult {
     if (!AVAILABLE_VERSIONS.includes(scenario.version)) {
         return { isOk: false, problems: versionProblems() };
     }
-    const created = createRun({ seed: scenario.seed });
+    const created = createRun({ seed: scenario.seed, functions });
     const start = scheduleScenario(created, scenario.start, scenario.steps);
     const run = new SimulationRun(start);
     run.advanceTo(scenario.runUntil);
@@ -62,6 +63,9 @@ export function runnableScenario(result: ScenarioResult): ScenarioResult {
 }
 
 /** Runs a scenario that was read, unless it has problems. */
-export function runScenarioResult(result: ScenarioResult): ScenarioRunResult {
-    return result.isOk ? runScenario(result.scenario) : result;
+export function runScenarioResult(
+    result: ScenarioResult,
+    functions: FunctionLookup,
+): ScenarioRunResult {
+    return result.isOk ? runScenario(result.scenario, functions) : result;
 }

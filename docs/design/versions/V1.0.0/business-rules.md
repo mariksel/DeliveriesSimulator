@@ -3,16 +3,19 @@
 ## Version and status
 
 - **Version:** `V1.0.0`, a built snapshot
-  ([FND-40](../../decisions/project-foundation.md#fnd-40--kinds-of-version)).
+  ([FND-40](../../decisions/project-foundation/versions.md#fnd-40--kinds-of-version)).
 - **State described:** the real service's working tree on 2026-11-03
-  ([FND-45](../../decisions/project-foundation.md#fnd-45--version-folder-layout)).
-- **Status:** Observed in the real service's code.
+  ([FND-45](../../decisions/project-foundation/versions.md#fnd-45--version-folder-layout)).
+- **Status:** Observed in the real service's code, and confirmed by the user on 2026-11-03.
+  [I01-E02-002](../../../backlogs/Initiatives/Archive/Done/I01-requirements-and-backlog-creation/Archive/Done/I01-E02-delivery-domain-inventory/Archive/Done/High/I01-E02-002-business-decisions.md)
+  recorded the confirmation.
 
 Every value and rule on this page is tunable
-([FND-25](../../decisions/project-foundation.md#fnd-25--simulatable-visible-and-tunable)), and
-rules can be replaced, not only their values (the Rule editor in
-[FND-34](../../decisions/project-foundation.md#fnd-34--required-capabilities) ). Every decision
-shows why it was made (the Decision explainer). The allowed transitions of an order are in the
+([FND-25](../../decisions/project-foundation/purpose-and-scope.md#fnd-25--simulatable-visible-and-tunable)),
+and rules can be replaced, not only their values (the Rule editor in
+[FND-34](../../decisions/project-foundation/capabilities-and-inventory.md#fnd-34--required-capabilities)
+). Every decision shows why it was made (the Decision explainer). The allowed transitions of an
+order are in the
 [lifecycle](lifecycle.md).
 
 ## Eligibility
@@ -49,7 +52,7 @@ Each eligible driver gets a score between 0 and 1. A higher score is notified fi
 Equal scores are not ordered: the real service sorts by score alone, over a database read with
 no order. The simulator breaks a tie by the lowest driver ID, and goes through open requests
 oldest first
-([FND-68](../../decisions/project-foundation.md#fnd-68--equal-scores-and-open-request-order)).
+([FND-68](../../decisions/project-foundation/simulation-model.md#fnd-68--equal-scores-and-open-request-order)).
 
 ## Notification sequence
 
@@ -103,7 +106,7 @@ A reason is trimmed, must not be blank, and is at most 500 characters.
 | Rule | Value |
 | --- | --- |
 | Quantity of each product line | 1 to 999 |
-| Preparation time | 0 to 120 minutes |
+| Preparation time | 0 to 120 minutes; the unit was confirmed by the user on 2026-11-03 |
 | Product line positions | Exactly 1 to the number of lines |
 | Expected prices | Must match the current prices, or the order is refused |
 | Restaurant price | The sum of each line's restaurant price × quantity |

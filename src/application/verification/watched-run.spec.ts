@@ -1,3 +1,4 @@
+import { TESTING_FUNCTIONS } from '../../application-core/simulation-engine/function-lookup.testing';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -22,6 +23,8 @@ import {
 import { toSpeedMultiple } from '../../domain/simulation-engine/numbers';
 import type { ClockSpeed } from '../scenarios/live-scenario-run';
 import { MAX_SPEED } from '../scenarios/live-scenario-run';
+import { toSimTime } from '../../domain/simulation-engine/sim-time';
+import { toIndirectLabel } from '../../application-core/simulation-engine/run-input';
 import { toWallTime } from '../../domain/simulation-engine/numbers';
 import type { WallTime } from '../../domain/simulation-engine/numbers';
 
@@ -51,7 +54,7 @@ function opened(scenario: IScenario = ONE_ORDER_SCENARIO): {
     const wall = new FakeWallClock();
     const ticker = new FakeTicker();
     let count = 0;
-    const live = new LiveScenarioRun(scenario, wall);
+    const live = new LiveScenarioRun(scenario, wall, TESTING_FUNCTIONS);
     const watched = new WatchedRun(live, ticker, () => {
         count += 1;
     });
@@ -583,6 +586,60 @@ const SPEEDS: readonly ClockSpeed[] = [MAX_SPEED, A_FAST_SPEED];
 
 /** More resumes or steps than a one-order run has hits, to go on until there are none. */
 const ENOUGH_TURNS = 100;
+
+describe("a watched run's labels", () => {
+    const ignoredAt = toSimTime(45_000);
+    const ignoredStep = { at: ignoredAt, indirect: DRIVER_IGNORES };
+    /** The one-order scenario with the driver ignoring the request, labelled, at 45 seconds. */
+    const withLabel: IScenario = {
+        ...ONE_ORDER_SCENARIO,
+        steps: ONE_ORDER_SCENARIO.steps.push(ignoredStep),
+    };
+    const faster = changesOf(DISPATCH_PASS, DISPATCH_PASS_INTERVAL, 5000);
+
+    function ended(): ReturnType<typeof opened> {
+        const parts = opened(withLabel);
+        runToTheEnd(parts);
+        return parts;
+    }
+
+    it("offer the scenario's label once its indirect commit is made by the place shown", () => {
+        const { watched } = ended();
+        const atEnd = watched.status.followableLabels;
+
+        watched.showPlace(1);
+
+        expect(atEnd).toEqual(['ignored']);
+        expect(watched.status.followableLabels).toEqual([]);
+    });
+
+    it('count a scripted label as used before it runs, and one given by hand once stated', () => {
+        const parts = opened(withLabel);
+        const before = parts.watched.status.usedLabels;
+        runToTheEnd(parts);
+
+        parts.watched.stateIndirect({ ...CUSTOMER_WONT, label: toIndirectLabel('by-hand') });
+
+        expect(before).toEqual(['ignored']);
+        expect(parts.watched.status.usedLabels).toEqual(['ignored', 'by-hand']);
+        expect(parts.watched.status.followableLabels).toEqual(['ignored']);
+    });
+
+    it('record the indirect commit a rule change follows from', () => {
+        const { watched } = ended();
+
+        const label = toIndirectLabel('ignored');
+        watched.changeRules(faster, label);
+
+        const line = watched.status.branchLines.find((each) => each.isCurrent)!.line;
+        const indirect = line.find((commit) => commit.indirect?.label === 'ignored');
+        const last = line.last();
+        expect(last?.effect).toMatchObject({
+            kind: 'ConfigChange',
+            followsFrom: indirect?.id,
+        });
+    });
+});
 
 describe("a watched run's breakpoints", () => {
     /** Starts the run at a speed, and ticks until it stops of its own accord. */

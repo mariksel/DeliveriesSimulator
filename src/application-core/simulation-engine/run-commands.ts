@@ -1,7 +1,6 @@
 import type { List } from 'immutable';
 
 import type { ICallOrders } from '../../domain/drivers/deliveries/call-orders';
-import { DeliveriesState } from '../../domain/drivers/deliveries/deliveries-state';
 import type {
     DriverCallResult,
     IDeliveriesAndDriversStep,
@@ -13,7 +12,6 @@ import { FollowUpKind } from '../../domain/drivers/deliveries/follow-up-kind';
 import type { OrdersAnswer } from '../../domain/drivers/deliveries/orders-answer';
 import type { DriverId } from '../../domain/drivers/driver';
 import type { OrderId } from '../../domain/orders/order';
-import { OrdersState } from '../../domain/orders/orders-state';
 import type { IOrdersStep, OrderCommandResult } from '../../domain/orders/orders-state';
 import type { ISendHandoff } from '../../domain/orders/send-handoff';
 import { required } from '../../domain/system/validation/required';
@@ -27,6 +25,9 @@ import type { IRunState } from './run-state';
 import { commitTo, withLog } from './run-state';
 import type { ICalled } from './state-call';
 import { callState } from './state-call';
+import { functionInUse } from './function-lookup';
+import { FunctionName } from './function-name';
+import { sessionMaker } from './session-maker';
 import type { SimTime } from '../../domain/simulation-engine/sim-time';
 
 /** A run after a command, and what the command came to. */
@@ -50,7 +51,7 @@ export function applyOrdersStep(
     const root = withOrders(run.root, step.state);
     const log = writeOrdersReports(run.cache.log, step.reports, cause);
     const logged = withLog(run, log);
-    return commitTo(logged, root, called.call);
+    return commitTo(logged, root, called.call, step.made);
 }
 
 /**
@@ -67,34 +68,47 @@ export function applyDeliveriesStep(
     const root = withDeliveries(withNewDrivers, step.state);
     const log = writeDeliveriesReports(run.cache.log, step.reports, cause);
     const logged = withLog(run, log);
-    return commitTo(logged, root, called.call);
+    return commitTo(logged, root, called.call, step.made);
 }
 
 function sendHandoff(run: IRunState, followUp: ISendHandoff, cause: ICause): ICommandDone {
+    const madeBy = sessionMaker(run.line);
+    const receiveDeliveryRequestFunction = functionInUse(
+        run,
+        FunctionName.DeliveriesReceiveDeliveryRequest,
+    );
     const received = callState(
-        DeliveriesState.receiveDeliveryRequest,
+        receiveDeliveryRequestFunction,
         run.root.state.deliveries,
         followUp.at,
         followUp.handoff,
+        madeBy,
     );
     const delivered = applyDeliveriesStep(run, received, cause);
+    const completeHandoffFunction = functionInUse(delivered, FunctionName.OrdersCompleteHandoff);
     const completed = callState(
-        OrdersState.completeHandoff,
+        completeHandoffFunction,
         delivered.root.state.orders,
         followUp.at,
         followUp.handoff.orderId,
         received.result.orderDeliveryId,
+        madeBy,
     );
     return { run: applyOrdersStep(delivered, completed, cause), outcome: OK };
 }
 
 function ordersDecide(run: IRunState, call: ICallOrders): ICalled<OrderCommandResult> {
     const state = run.root.state.orders;
+    const madeBy = sessionMaker(run.line);
     switch (call.eventKind) {
-        case DeliveryEventKind.OrderPickedUp:
-            return callState(OrdersState.pickUp, state, call.at, call.orderId, call.driverId);
-        case DeliveryEventKind.OrderDelivered:
-            return callState(OrdersState.deliver, state, call.at, call.orderId, call.driverId);
+        case DeliveryEventKind.OrderPickedUp: {
+            const pickUpFunction = functionInUse(run, FunctionName.OrdersPickUp);
+            return callState(pickUpFunction, state, call.at, call.orderId, call.driverId, madeBy);
+        }
+        case DeliveryEventKind.OrderDelivered: {
+            const deliverFunction = functionInUse(run, FunctionName.OrdersDeliver);
+            return callState(deliverFunction, state, call.at, call.orderId, call.driverId, madeBy);
+        }
         default:
             return unreachable(call.eventKind);
     }
@@ -120,12 +134,18 @@ function callOrders(run: IRunState, call: ICallOrders, cause: ICause): ICommandD
         ? applyOrdersStep(run, { result, call: decision.call }, cause)
         : run;
     const answer = answerOf(result, decided, call);
+    const madeBy = sessionMaker(decided.line);
+    const answerFromOrdersFunction = functionInUse(
+        decided,
+        FunctionName.DeliveriesAnswerFromOrders,
+    );
     const finished = callState(
-        DeliveriesState.answerFromOrders,
+        answerFromOrdersFunction,
         decided.root.state.deliveries,
         decided.root.state.drivers,
         call,
         answer,
+        madeBy,
     );
     const answered = finished.result;
     if (!answered.isOk) {
@@ -194,7 +214,15 @@ export function requestDelivery(
     orderId: OrderId,
     cause: ICause,
 ): ICommandDone {
-    const requested = callState(OrdersState.requestDelivery, run.root.state.orders, at, orderId);
+    const madeBy = sessionMaker(run.line);
+    const requestDeliveryFunction = functionInUse(run, FunctionName.OrdersRequestDelivery);
+    const requested = callState(
+        requestDeliveryFunction,
+        run.root.state.orders,
+        at,
+        orderId,
+        madeBy,
+    );
     return afterOrders(run, requested, cause);
 }
 
@@ -205,7 +233,9 @@ export function markReady(
     orderId: OrderId,
     cause: ICause,
 ): ICommandDone {
-    const marked = callState(OrdersState.markReady, run.root.state.orders, at, orderId);
+    const madeBy = sessionMaker(run.line);
+    const markReadyFunction = functionInUse(run, FunctionName.OrdersMarkReady);
+    const marked = callState(markReadyFunction, run.root.state.orders, at, orderId, madeBy);
     return afterOrders(run, marked, cause);
 }
 
@@ -217,14 +247,17 @@ export function acceptRequest(
     driverId: DriverId,
     cause: ICause,
 ): ICommandDone {
+    const madeBy = sessionMaker(run.line);
+    const acceptRequestFunction = functionInUse(run, FunctionName.DeliveriesAcceptRequest);
     const accepted = callState(
-        DeliveriesState.acceptRequest,
+        acceptRequestFunction,
         run.root.state.deliveries,
         run.root.state.drivers,
         at,
         orderId,
         driverId,
         run.root.effects.direct.values.drivers,
+        madeBy,
     );
     return afterDeliveries(run, accepted, cause);
 }
@@ -237,13 +270,8 @@ export function pickUp(
     driverId: DriverId,
     cause: ICause,
 ): ICommandDone {
-    const pickedUp = callState(
-        DeliveriesState.pickUp,
-        run.root.state.deliveries,
-        at,
-        orderId,
-        driverId,
-    );
+    const pickUpFunction = functionInUse(run, FunctionName.DeliveriesPickUp);
+    const pickedUp = callState(pickUpFunction, run.root.state.deliveries, at, orderId, driverId);
     return afterDeliveries(run, pickedUp, cause);
 }
 
@@ -255,12 +283,7 @@ export function deliver(
     driverId: DriverId,
     cause: ICause,
 ): ICommandDone {
-    const delivered = callState(
-        DeliveriesState.deliver,
-        run.root.state.deliveries,
-        at,
-        orderId,
-        driverId,
-    );
+    const deliverFunction = functionInUse(run, FunctionName.DeliveriesDeliver);
+    const delivered = callState(deliverFunction, run.root.state.deliveries, at, orderId, driverId);
     return afterDeliveries(run, delivered, cause);
 }

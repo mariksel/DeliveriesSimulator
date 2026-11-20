@@ -1,3 +1,11 @@
+import {
+    TableFunctionLookup,
+    TESTING_FUNCTIONS,
+    TODAYS_FUNCTIONS,
+} from '../../application-core/simulation-engine/function-lookup.testing';
+import { FunctionName } from '../../application-core/simulation-engine/function-name';
+import { OrdersState } from '../../domain/orders/orders-state';
+import { toVersionNumber } from '../../domain/system/records/version-chain';
 import { List } from 'immutable';
 import { describe, expect, it } from 'vitest';
 
@@ -168,7 +176,7 @@ describe('repeating a run from a place', () => {
     });
 
     it('makes a config change made by hand again at its commit', () => {
-        const created = createRun({ seed: toSeed(1) });
+        const created = createRun({ functions: TESTING_FUNCTIONS, seed: toSeed(1) });
         const steps = List(HAPPY_PATH);
         const start = scheduleInputs(created, ONE_ORDER_START, steps);
         const run = new SimulationRun(start);
@@ -190,7 +198,7 @@ describe('repeating a run from a place', () => {
     });
 
     it('states an indirect effect made by hand again at its commit', () => {
-        const created = createRun({ seed: toSeed(1) });
+        const created = createRun({ functions: TESTING_FUNCTIONS, seed: toSeed(1) });
         const steps = List(HAPPY_PATH);
         const start = scheduleInputs(created, ONE_ORDER_START, steps);
         const run = new SimulationRun(start);
@@ -207,6 +215,32 @@ describe('repeating a run from a place', () => {
             .valueSeq()
             .some((commit) => commit.kind === CommitKind.Indirect);
         expect(hasIndirect).toBe(true);
+        expect(result.differsAt).toBeNull();
+    });
+
+    it('switches a function made by hand again at its commit', () => {
+        const markReady = [OrdersState.markReady, OrdersState.markReady];
+        const table = { ...TODAYS_FUNCTIONS, [FunctionName.OrdersMarkReady]: markReady };
+        const functions = new TableFunctionLookup(table);
+        const created = createRun({ functions, seed: toSeed(1) });
+        const steps = List(HAPPY_PATH);
+        const start = scheduleInputs(created, ONE_ORDER_START, steps);
+        const run = new SimulationRun(start);
+        const second = toSimTime(1000);
+        run.advanceTo(second);
+        const version = toVersionNumber(1);
+        const uses = List([{ function: FunctionName.OrdersMarkReady, version }]);
+        run.switchVersions(uses);
+        const end = toSimTime(300_000);
+        run.advanceTo(end);
+        const atStart = toPosition(0);
+
+        const result = repeatFrom(run.state, atStart);
+
+        const hasSwitch = run.state.line.commits
+            .valueSeq()
+            .some((commit) => commit.kind === CommitKind.ImplementationChange);
+        expect(hasSwitch).toBe(true);
         expect(result.differsAt).toBeNull();
     });
 
@@ -243,6 +277,7 @@ describe('repeating a run from a place', () => {
                 isScripted: false,
                 before: values,
                 after: values,
+                followsFrom: null,
             },
             entries: List([entry]),
         };

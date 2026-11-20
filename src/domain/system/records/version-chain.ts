@@ -43,6 +43,21 @@ export function assertVersionLink<TVersion extends IVersion<TVersion>>(
     }
 }
 
+/**
+ * A record's version with a number, found by following its versions back from a later one only as
+ * far as that number, or undefined when it has none: what an effect read is nearly always its
+ * latest version or the one before, so this costs nothing like the whole chain (FND-90).
+ */
+export function versionNumbered<TVersion extends IVersion<TVersion>>(
+    later: TVersion | null,
+    number: VersionNumber,
+): TVersion | undefined {
+    if (later === null || later.number < number) {
+        return undefined;
+    }
+    return later.number === number ? later : versionNumbered(later.previous, number);
+}
+
 /** A record's states, oldest first, found by following each version back to the one before it. */
 export function versionChain<TVersion extends IVersion<TVersion>>(
     latest: TVersion,

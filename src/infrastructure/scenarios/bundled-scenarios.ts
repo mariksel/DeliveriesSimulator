@@ -4,6 +4,7 @@ import type { IBuiltInScenario } from '../../application-core/scenarios/built-in
 import { BuiltInScenarios } from '../../application-core/scenarios/built-in-scenarios';
 import type { ScenarioResult } from '../../application-core/scenarios/scenario';
 import { refusedScenario } from '../../application-core/scenarios/scenario';
+import DEMONSTRATION from './built-in/demonstration.json';
 import ONE_ORDER from './built-in/one-order.json';
 import { readScenario } from './read-scenario';
 import type { BuiltInScenarioId } from '../../application-core/scenarios/built-in-scenarios';
@@ -17,12 +18,22 @@ interface IBundledFile {
     readonly contents: unknown;
 }
 
-/** The built-in library for V1.0.0. FND-49 lists what it grows into. */
-const FILES: List<IBundledFile> = List.of({
-    id: toBuiltInScenarioId('one-order'),
-    name: ONE_ORDER.name,
-    contents: ONE_ORDER,
-});
+/**
+ * The built-in library for V1.0.0, in the order the start page lists it: first the demonstration,
+ * a busy lunch that shows the whole process, then the one-order case the tests pin (FND-49).
+ */
+const FILES: List<IBundledFile> = List.of(
+    {
+        id: toBuiltInScenarioId('demonstration'),
+        name: DEMONSTRATION.name,
+        contents: DEMONSTRATION,
+    },
+    {
+        id: toBuiltInScenarioId('one-order'),
+        name: ONE_ORDER.name,
+        contents: ONE_ORDER,
+    },
+);
 
 /** The built-in scenarios, from the scenario files bundled with the simulator. */
 export class BundledScenarios extends BuiltInScenarios {

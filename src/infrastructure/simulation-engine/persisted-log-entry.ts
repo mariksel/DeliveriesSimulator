@@ -1,3 +1,8 @@
+import { isFunctionName } from '../../application-core/simulation-engine/function-name';
+import type {
+    EngineEntry,
+    IFunctionVersionSwitchedData,
+} from '../../application-core/simulation-engine/run-log-entry';
 import { List } from 'immutable';
 
 import { DeliveryEventKind } from '../../domain/drivers/deliveries/delivery-event-kind';
@@ -6,6 +11,8 @@ import { LogSource, TechnicalLogKind } from '../../domain/event-log/log-vocabula
 import { toDriverId } from '../../domain/drivers/driver';
 import { toOrderId } from '../../domain/orders/order';
 import { toRestaurantId } from '../../domain/restaurants/restaurant-place';
+import { toCustomerId } from '../../domain/restaurants/customers/customer';
+import { toAddressId } from '../../domain/restaurants/customers/delivery-address';
 import { OrderEventKind } from '../../domain/orders/order-event-kind';
 import type { OrderStatus } from '../../domain/orders/order-status';
 import type {
@@ -17,6 +24,7 @@ import type {
     RunLogRecord,
 } from '../../application-core/simulation-engine/run-log-entry';
 import {
+    isEngineEntry,
     isModuleEvent,
     isOutboxEntry,
 } from '../../application-core/simulation-engine/run-log-entry';
@@ -63,6 +71,8 @@ import {
 export interface IPersistedOrderCreatedData {
     readonly id: string;
     readonly restaurantId: string;
+    readonly customerId: string;
+    readonly addressId: string;
     readonly status: OrderStatus;
     readonly version: number;
     readonly isDeliveryRequestPending: boolean;
@@ -84,6 +94,13 @@ export interface IPersistedNotificationSentData extends IPersistedNotification {
 /** A config change's log data, persisted. */
 export interface IPersistedConfigChangedData {
     readonly changes: readonly IPersistedValueChanged[];
+}
+
+/** A function's switch to another version, persisted: its name, and its versions. */
+export interface IPersistedFunctionVersionSwitchedData {
+    readonly function: string;
+    readonly before: number;
+    readonly after: number;
 }
 
 /** One kind of persisted log entry: its source and kind, and its data persisted. */
@@ -126,10 +143,21 @@ export type PersistedLogRecord =
           IPersistedConfigChangedData
       >
     | IPersistedRecord<
+          typeof LogSource.SimulationEngine,
+          Kinds['FunctionVersionSwitched'],
+          IPersistedFunctionVersionSwitchedData
+      >
+    | IPersistedRecord<
           typeof LogSource.Actors,
           Kinds['IndirectEffectHappened'],
           PersistedIndirectEffect
       >;
+
+/** A record the Simulation engine wrote, persisted. */
+type PersistedEngineRecord = Extract<
+    PersistedLogRecord,
+    { readonly source: typeof LogSource.SimulationEngine }
+>;
 
 /** A log entry, persisted: where it sits in the log, and what it recorded. */
 /** Where an entry sits in the log, persisted with its moment as milliseconds. */
@@ -185,9 +213,32 @@ function unknownKind(entry: never): never {
     );
 }
 
+/** A record the Simulation engine wrote, persisted. */
+function toPersistedEngineRecord(entry: EngineEntry): PersistedEngineRecord {
+    if (entry.kind === TechnicalLogKind.ConfigChanged) {
+        const changes = entry.data.changes.map(toPersistedValueChanged).toArray();
+        return { source: entry.source, kind: entry.kind, data: { changes } };
+    }
+    return { source: entry.source, kind: entry.kind, data: { ...entry.data } };
+}
+
+/** A record the Simulation engine wrote, from its persisted form. */
+function fromPersistedEngineRecord(record: PersistedEngineRecord): RunLogRecord {
+    if (record.kind === TechnicalLogKind.ConfigChanged) {
+        const persisted = List(record.data.changes);
+        const changes = persisted.map(fromPersistedValueChanged);
+        return { source: record.source, kind: record.kind, data: { changes } };
+    }
+    const data = fromPersistedSwitch(record.data);
+    return { source: record.source, kind: record.kind, data };
+}
+
 function toPersistedRecord(entry: RunLogEntry): PersistedLogRecord {
     if (isModuleEvent(entry)) {
         return toPersistedEventRecord(entry);
+    }
+    if (isEngineEntry(entry)) {
+        return toPersistedEngineRecord(entry);
     }
     if (isOutboxEntry(entry)) {
         return toPersistedOutboxRecord(entry);
@@ -206,10 +257,6 @@ function toPersistedRecord(entry: RunLogEntry): PersistedLogRecord {
             const data = { ...notification, isOutstanding: entry.data.isOutstanding };
             return { source: entry.source, kind: entry.kind, data };
         }
-        case TechnicalLogKind.ConfigChanged: {
-            const changes = entry.data.changes.map(toPersistedValueChanged).toArray();
-            return { source: entry.source, kind: entry.kind, data: { changes } };
-        }
         case TechnicalLogKind.IndirectEffectHappened: {
             const data = toPersistedIndirectEffect(entry.data);
             return { source: entry.source, kind: entry.kind, data };
@@ -217,6 +264,18 @@ function toPersistedRecord(entry: RunLogEntry): PersistedLogRecord {
         default:
             return unknownKind(entry);
     }
+}
+
+/** A function's switch, from its persisted form, refusing a name no function has. */
+function fromPersistedSwitch(
+    data: IPersistedFunctionVersionSwitchedData,
+): IFunctionVersionSwitchedData {
+    if (!isFunctionName(data.function)) {
+        throw new Error(`No state function is named ${data.function}.`);
+    }
+    const before = toVersionNumber(data.before);
+    const after = toVersionNumber(data.after);
+    return { function: data.function, before, after };
 }
 
 function fromPersistedEventRecord(record: PersistedEventRecord): RunLogRecord {
@@ -250,6 +309,8 @@ function fromPersistedOrderCreated(
             ...data,
             id: toOrderId(data.id),
             restaurantId: toRestaurantId(data.restaurantId),
+            customerId: toCustomerId(data.customerId),
+            addressId: toAddressId(data.addressId),
             driverId: data.driverId === null ? null : toDriverId(data.driverId),
             version: toVersionNumber(data.version),
         },
@@ -271,6 +332,9 @@ function fromPersistedRecord(record: PersistedLogRecord): RunLogRecord {
     if (isPersistedEvent(record)) {
         return fromPersistedEventRecord(record);
     }
+    if (record.source === LogSource.SimulationEngine) {
+        return fromPersistedEngineRecord(record);
+    }
     if (isPersistedOutbox(record)) {
         return fromPersistedOutboxRecord(record);
     }
@@ -288,11 +352,6 @@ function fromPersistedRecord(record: PersistedLogRecord): RunLogRecord {
             return { source: record.source, kind: record.kind, data: { ...record.data } };
         case TechnicalLogKind.CommandRefused:
             return { source: record.source, kind: record.kind, data: { ...record.data } };
-        case TechnicalLogKind.ConfigChanged: {
-            const persisted = List(record.data.changes);
-            const changes = persisted.map(fromPersistedValueChanged);
-            return { source: record.source, kind: record.kind, data: { changes } };
-        }
         case TechnicalLogKind.IndirectEffectHappened: {
             const data = fromPersistedIndirectEffect(record.data);
             return { source: record.source, kind: record.kind, data };

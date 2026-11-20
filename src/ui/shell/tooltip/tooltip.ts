@@ -11,6 +11,9 @@ import { Directive, inject, Injector, input, signal } from '@angular/core';
 
 import { TooltipBubble } from './tooltip-bubble';
 
+/** The class of a tooltip's pane, which lets the pointer through to what it covers. */
+export const TOOLTIP_PANE = 'tooltip-pane';
+
 /** How long the pointer or the focus rests on a control before its tooltip shows. */
 export const TOOLTIP_DELAY_MS = 400;
 
@@ -109,7 +112,11 @@ export class Tooltip implements OnDestroy {
         );
         const positionStrategy = placed.withPositions([below, above]).withPush(true);
         const scrollStrategy = createRepositionScrollStrategy(this.injector);
-        return createOverlayRef(this.injector, { positionStrategy, scrollStrategy });
+        return createOverlayRef(this.injector, {
+            positionStrategy,
+            scrollStrategy,
+            panelClass: TOOLTIP_PANE,
+        });
     }
 
     private cancel(): void {

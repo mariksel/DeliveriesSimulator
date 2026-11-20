@@ -1,3 +1,4 @@
+import type { VersionNumber } from '../../../domain/system/records/version-chain';
 /** Where a registered function's state comes from in a main root. */
 export const StateModule = {
     Orders: 'orders',
@@ -16,12 +17,20 @@ export const ArgumentKind = {
     Value: 'Value',
     /** A moment, persisted as its milliseconds. */
     Instant: 'Instant',
+    /** What made the versions a call makes: a job run or API call, or the run's start. */
+    Maker: 'Maker',
     /** The call to orders a driver's command asked for, with its moment as milliseconds. */
     CallOrders: 'CallOrders',
     /** A restaurant's place, a Domain instance, persisted through its own mapping. */
     RestaurantPlace: 'RestaurantPlace',
     /** What orders hands over with a delivery request, persisted through its own mapping. */
     DeliveryHandoff: 'DeliveryHandoff',
+    /** A customer's stored delivery address, persisted through its own mapping (FND-90). */
+    DeliveryAddress: 'DeliveryAddress',
+    /** A point on the map, such as a location a driver's app sent, persisted as its numbers. */
+    Coordinates: 'Coordinates',
+    /** The locations the apps due at one moment sent, each with its driver (FND-90). */
+    SentLocations: 'SentLocations',
     OrdersOutbox: 'OrdersOutbox',
     DeliveriesOutbox: 'DeliveriesOutbox',
     /** One event of the orders outbox, found by its ID. */
@@ -42,13 +51,23 @@ export type ArgumentKind = (typeof ArgumentKind)[keyof typeof ArgumentKind];
 export type RegisteredStateFunction = (state: never, ...args: never) => unknown;
 
 /**
- * A state function with its stored ID, which is readable and fixed once assigned. A behaviour
- * change registers a new version with a new ID, and the old one stays while a saved run needs it.
+ * A state function with its name and version, and its stored ID made from them, such as
+ * `orders.pick-up@1`, which is readable and fixed once assigned. A behaviour change registers a
+ * new version under the same name, and every old version stays, so any saved run can be worked
+ * out again (FND-81).
  */
 export interface IRegisteredFunction {
+    readonly name: string;
+    readonly version: VersionNumber;
     readonly id: string;
     readonly fn: RegisteredStateFunction;
     readonly module: StateModule;
     /** How each argument after the state is persisted, in order. */
     readonly args: readonly ArgumentKind[];
 }
+
+/** A function registered under a name and a version, its stored ID made from the two. */
+export const registered = (fields: Omit<IRegisteredFunction, 'id'>): IRegisteredFunction => ({
+    ...fields,
+    id: `${fields.name}@${fields.version}`,
+});

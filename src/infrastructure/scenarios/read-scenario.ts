@@ -1,6 +1,16 @@
+import type { Map as ImmutableMap } from 'immutable';
 import { List, Set as ImmutableSet } from 'immutable';
 
-import { toAreaId } from '../../domain/map-and-routing/area-id';
+import type { AreaId } from '../../domain/map-and-routing/area-id';
+import type { City } from '../../domain/map-and-routing/city';
+import type { Coordinates } from '../../domain/map-and-routing/coordinates';
+import { readCity } from './read-city';
+import type { IKnownCustomer } from './read-customers';
+import { readCustomers } from './read-customers';
+import { readDestination } from './read-order-destination';
+import { readRiders } from './read-rider';
+import { readAtItsTime } from './read-at-its-time';
+import { placeIn, readArea, readPlace, restaurantPoint } from './read-place';
 import { toDriverId } from '../../domain/drivers/driver';
 import { toRestaurantId } from '../../domain/restaurants/restaurant-place';
 import {
@@ -15,6 +25,9 @@ import { ScriptedCommand } from '../../application-core/scenarios/scripted-comma
 import type { ScenarioStep } from '../../application-core/scenarios/scripted-step';
 import { readRuleSettings } from './read-rule-settings';
 import { readAfter, readIndirectStep } from './read-indirect-step';
+import { readFunctionUses } from './read-use-step';
+import type { FunctionLookup } from '../../application-core/simulation-engine/function-lookup';
+import { REGISTERED_FUNCTIONS } from '../simulation-engine/function-registry';
 import type { IScenarioProblem, ScenarioResult } from '../../application-core/scenarios/scenario';
 import { problemAt } from '../../application-core/scenarios/scenario';
 import type { Fields, IReading } from './scenario-reader';
@@ -23,6 +36,7 @@ import {
     readClockTime,
     readCoordinates,
     readList,
+    readSeed,
     readText,
     unknownFields,
 } from './scenario-reader';
@@ -49,9 +63,10 @@ const AVAILABILITIES: readonly (typeof OFFLINE | DriverAvailability)[] = [
 
 const VERSION = /^V\d+\.\d+\.\d+(-[a-z0-9-]+)?$/;
 
-const MAX_SEED = 4294967295;
-
 const NONE = List<IScenarioProblem>();
+
+/** Nothing read, with no problems: a place whose fields are wrong says so itself. */
+const NONE_READ: IReading<AreaId> = { value: null, problems: NONE };
 
 /** Something read from a list in the file, with its place there. */
 interface IReadEntry<T> {
@@ -63,10 +78,14 @@ interface IHasId {
     readonly id: string;
 }
 
-/** The restaurants and drivers a step may name. */
+/** The restaurants and drivers a step may name, and the functions a `use` step may name. */
 interface IKnownActors {
     readonly restaurants: ImmutableSet<string>;
     readonly drivers: ImmutableSet<string>;
+    /** The customers a CreateOrder step may name, with their restaurants and addresses. */
+    readonly customers: ImmutableMap<string, IKnownCustomer>;
+    /** Every version of every state function, which a `use` step's versions must be (FND-81). */
+    readonly functions: FunctionLookup;
 }
 
 /** How far reading the steps has got. */
@@ -81,23 +100,43 @@ interface IStepsSoFar {
     readonly previous: number;
 }
 
-function readRestaurant(fields: Fields, path: string): IReading<RestaurantPlace> {
+/** A restaurant, once its id and area are known, at its point or one picked in its area. */
+function restaurantOf(
+    city: City,
+    id: string,
+    areaId: AreaId,
+    point: Coordinates | null,
+): RestaurantPlace | null {
+    const coordinates = restaurantPoint(city, areaId, point, id);
+    return coordinates === null
+        ? null
+        : RestaurantPlace.create({ id: toRestaurantId(id), areaId, coordinates });
+}
+
+/**
+ * Reads a restaurant, which gives its point, its area, or both when they agree. One given only an
+ * area gets a point the city's seed picks there (FND-90).
+ */
+function readRestaurant(
+    fields: Fields,
+    path: string,
+    city: City | null,
+): IReading<RestaurantPlace> {
     const id = readText(fields, path, 'id');
-    const areaId = readText(fields, path, 'area');
-    const coordinates = readCoordinates(fields, path);
+    const area = readArea(fields, path);
+    const point = readPlace(fields, path);
+    const isRead = area.problems.isEmpty() && point.problems.isEmpty();
+    const areaId = isRead ? placeIn(city, path, area.value, point.value) : NONE_READ;
     return {
         value:
-            id.value !== null && areaId.value !== null && coordinates.value !== null
-                ? RestaurantPlace.create({
-                      id: toRestaurantId(id.value),
-                      areaId: toAreaId(areaId.value),
-                      coordinates: coordinates.value,
-                  })
+            city !== null && id.value !== null && areaId.value !== null
+                ? restaurantOf(city, id.value, areaId.value, point.value)
                 : null,
         problems: unknownFields(fields, path, ['id', 'area', 'location']).concat(
             id.problems,
+            area.problems,
+            point.problems,
             areaId.problems,
-            coordinates.problems,
         ),
     };
 }
@@ -130,18 +169,25 @@ function readLocation(fields: Fields, path: string): IReading<DriverLocation> {
     };
 }
 
-function readDriver(fields: Fields, path: string): IReading<NewDriver> {
+/**
+ * Reads a driver, who gives their location, their area, or both when they agree. One given only an
+ * area has no location until they send one (FND-90).
+ */
+function readDriver(fields: Fields, path: string, city: City | null): IReading<NewDriver> {
     const id = readText(fields, path, 'id');
-    const areaId = readText(fields, path, 'area');
+    const area = readArea(fields, path);
     const availability = fields['availability'];
     const validAvailability = AVAILABILITIES.find((option) => option === availability);
     const location = readLocation(fields, path);
+    const isRead = area.problems.isEmpty() && location.problems.isEmpty();
+    const point = location.value?.coordinates ?? null;
+    const areaId = isRead ? placeIn(city, path, area.value, point) : NONE_READ;
     return {
         value:
             id.value !== null && areaId.value !== null && validAvailability !== undefined
                 ? NewDriver.create({
                       id: toDriverId(id.value),
-                      areaId: toAreaId(areaId.value),
+                      areaId: areaId.value,
                       availability: validAvailability === OFFLINE ? null : validAvailability,
                       location: location.value,
                   })
@@ -152,8 +198,11 @@ function readDriver(fields: Fields, path: string): IReading<NewDriver> {
             'availability',
             'location',
             'locatedAt',
+            'sendsEvery',
+            'speedKmh',
         ]).concat(
             id.problems,
+            area.problems,
             areaId.problems,
             validAvailability === undefined
                 ? problemAt(`${path}availability`, `must be one of ${AVAILABILITIES.join(', ')}`)
@@ -236,7 +285,10 @@ function stepOrderProblems(
         : problemAt(`${path}order`, `"${order}" is not created by an earlier step`);
 }
 
-/** Reads a step that changes rules at its time, in place of an action (FND-84). */
+/**
+ * Reads a step that changes rules at its time, in place of an action (FND-84), which may follow
+ * from an earlier indirect step, as an action may (FND-89).
+ */
 function readRulesStep(
     soFar: IStepsSoFar,
     step: Fields,
@@ -245,20 +297,60 @@ function readRulesStep(
 ): IStepsSoFar {
     const at = readClockTime(step, path, 'at');
     const settings = readRuleSettings(step, path, 'set', true);
+    const after = readAfter(step, path, soFar.labels);
     const timeProblems = stepTimeProblems(path, at.value, soFar.previous, runUntil);
-    const problems = unknownFields(step, path, ['at', 'set']).concat(
+    const problems = unknownFields(step, path, ['at', 'set', 'after']).concat(
         at.problems,
         timeProblems,
         settings.problems,
+        after.problems,
     );
+    const followsFrom = after.value === null ? {} : { after: after.value };
     return {
         ...soFar,
         steps:
             at.value !== null && settings.problems.isEmpty()
-                ? soFar.steps.push({ at: toSimTime(at.value), set: settings.changes })
+                ? soFar.steps.push({
+                      at: toSimTime(at.value),
+                      set: settings.changes,
+                      ...followsFrom,
+                  })
                 : soFar.steps,
         problems: soFar.problems.concat(problems),
         warnings: soFar.warnings.concat(settings.warnings),
+        previous: Math.max(soFar.previous, at.value ?? soFar.previous),
+    };
+}
+
+/**
+ * Reads a step that switches state functions to other versions at its time, in place of an
+ * action (FND-81), which may follow from an earlier indirect step, as a rules step may.
+ */
+function readUseStep(
+    soFar: IStepsSoFar,
+    step: Fields,
+    path: string,
+    known: IKnownActors,
+    runUntil: number | null,
+): IStepsSoFar {
+    const at = readClockTime(step, path, 'at');
+    const uses = readFunctionUses(step, path, known.functions);
+    const after = readAfter(step, path, soFar.labels);
+    const timeProblems = stepTimeProblems(path, at.value, soFar.previous, runUntil);
+    const problems = unknownFields(step, path, ['at', 'use', 'after']).concat(
+        at.problems,
+        timeProblems,
+        uses.problems,
+        after.problems,
+    );
+    const followsFrom = after.value === null ? {} : { after: after.value };
+    return {
+        ...soFar,
+        steps:
+            at.value !== null && uses.value !== null
+                ? soFar.steps.push({ at: toSimTime(at.value), use: uses.value, ...followsFrom })
+                : soFar.steps,
+        problems: soFar.problems.concat(problems),
         previous: Math.max(soFar.previous, at.value ?? soFar.previous),
     };
 }
@@ -289,7 +381,7 @@ function readIndirect(
     };
 }
 
-/** Reads a step: an action, rules to change, or an indirect effect. */
+/** Reads a step: an action, rules to change, functions to switch, or an indirect effect. */
 function readStep(
     soFar: IStepsSoFar,
     step: Fields,
@@ -299,6 +391,9 @@ function readStep(
 ): IStepsSoFar {
     if (step['set'] !== undefined) {
         return readRulesStep(soFar, step, path, runUntil);
+    }
+    if (step['use'] !== undefined) {
+        return readUseStep(soFar, step, path, known, runUntil);
     }
     if (step['indirect'] !== undefined) {
         return readIndirect(soFar, step, path, known, runUntil);
@@ -322,9 +417,23 @@ function readAction(
     const scenarioProblems = stepActorProblems(path, command, actor.value, known);
     const secondScenarioProblems = stepOrderProblems(path, command, order.value, soFar.created);
     const after = readAfter(step, path, soFar.labels);
-    const fields = ['at', 'actor', 'command', 'order', 'after'];
+    const named = { actor: actor.value, customers: known.customers };
+    const destination = readDestination(step, path, command, named);
+    const timing = readAtItsTime(step, path, command);
+    const fields = [
+        'at',
+        'actor',
+        'command',
+        'order',
+        'after',
+        'customer',
+        'address',
+        'atItsTime',
+    ];
     const problems = unknownFields(step, path, fields).concat(
         after.problems,
+        destination.problems,
+        timing.problems,
         at.problems,
         actor.problems,
         order.problems,
@@ -348,6 +457,8 @@ function readAction(
                       command,
                       order: toScenarioOrderName(order.value),
                       ...(after.value === null ? {} : { after: after.value }),
+                      ...destination.value,
+                      ...timing.value,
                   })
                 : soFar.steps,
         problems: soFar.problems.concat(problems),
@@ -381,16 +492,6 @@ function readVersion(value: Fields): IReading<string> {
         : version;
 }
 
-function readSeed(value: Fields): IReading<number> {
-    const seed = value['seed'];
-    return typeof seed === 'number' && Number.isInteger(seed) && seed >= 0 && seed <= MAX_SEED
-        ? { value: seed, problems: NONE }
-        : {
-              value: null,
-              problems: problemAt('seed', `must be a whole number from 0 to ${MAX_SEED}`),
-          };
-}
-
 /**
  * Everything read from one list in the file: its entries, and what is wrong with the list and each
  * entry.
@@ -409,6 +510,16 @@ function readEntries<T>(
     };
 }
 
+/**
+ * The IDs a list's entries give, whether or not the rest of each entry is right, so a step naming
+ * an actor whose place is wrong is not reported too.
+ */
+const namedIds = (value: Fields, key: string): List<string> =>
+    readList(value, key).entries.flatMap(([fields, path]) => {
+        const id = readText(fields, path, 'id');
+        return id.value === null ? [] : [id.value];
+    });
+
 const present = <T>(entries: List<IReadEntry<T>>): List<T> =>
     entries.flatMap(({ value }) => (value === null ? [] : [value]));
 
@@ -425,7 +536,9 @@ const topLevelProblems = (value: Fields): List<IScenarioProblem> =>
         'version',
         'seed',
         'runUntil',
+        'city',
         'restaurants',
+        'customers',
         'drivers',
         'rules',
         'steps',
@@ -437,9 +550,13 @@ const topLevelProblems = (value: Fields): List<IScenarioProblem> =>
 
 /**
  * Checks that a value read from JSON is a well-formed scenario. Says everything that is wrong with
- * it.
+ * it. A `use` step's functions and versions are checked against a lookup, the registry's unless
+ * one is given (FND-81).
  */
-export function readScenario(value: unknown): ScenarioResult {
+export function readScenario(
+    value: unknown,
+    functions: FunctionLookup = REGISTERED_FUNCTIONS,
+): ScenarioResult {
     if (!isFields(value)) {
         return {
             isOk: false,
@@ -449,19 +566,29 @@ export function readScenario(value: unknown): ScenarioResult {
     const name = readText(value, '', 'name');
     const description = readDescription(value);
     const version = readVersion(value);
-    const seed = readSeed(value);
+    const seed = readSeed(value, '');
     const runUntil = readClockTime(value, '', 'runUntil');
-    const restaurantEntries = readEntries(value, 'restaurants', readRestaurant);
-    const driverEntries = readEntries(value, 'drivers', readDriver);
+    const city = readCity(value);
+    const restaurantEntries = readEntries(value, 'restaurants', (fields, path) =>
+        readRestaurant(fields, path, city.value),
+    );
+    const driverEntries = readEntries(value, 'drivers', (fields, path) =>
+        readDriver(fields, path, city.value),
+    );
     const restaurants = present(restaurantEntries.entries);
     const drivers = present(driverEntries.entries);
-    const secondRestaurants = restaurants.map((restaurant) => restaurant.id);
-    const secondDrivers = drivers.map((driver) => driver.id);
+    const restaurantIds = namedIds(value, 'restaurants');
+    const driverIds = namedIds(value, 'drivers');
+    const riders = readRiders(value);
+    const knownRestaurants = ImmutableSet(restaurantIds);
+    const customers = readCustomers(value, city.value, restaurants, knownRestaurants);
     const steps = readSteps(
         value,
         {
-            restaurants: ImmutableSet(secondRestaurants),
-            drivers: ImmutableSet(secondDrivers),
+            restaurants: knownRestaurants,
+            drivers: ImmutableSet(driverIds),
+            customers: customers.known,
+            functions,
         },
         runUntil.value,
     );
@@ -474,8 +601,11 @@ export function readScenario(value: unknown): ScenarioResult {
         version.problems,
         seed.problems,
         runUntil.problems,
+        city.problems,
         restaurantEntries.problems,
+        customers.problems,
         driverEntries.problems,
+        riders.problems,
         valuesOrCollections,
         scenarioProblems,
         rules.problems,
@@ -486,7 +616,8 @@ export function readScenario(value: unknown): ScenarioResult {
         name.value === null ||
         version.value === null ||
         seed.value === null ||
-        runUntil.value === null
+        runUntil.value === null ||
+        city.value === null
     ) {
         return { isOk: false, problems };
     }
@@ -498,7 +629,15 @@ export function readScenario(value: unknown): ScenarioResult {
             version: toVersionId(version.value),
             seed: toSeed(seed.value),
             runUntil: toSimTime(runUntil.value),
-            start: { restaurants, drivers, rules: rules.changes },
+            start: {
+                city: city.value,
+                restaurants,
+                customers: customers.customers,
+                addresses: customers.addresses,
+                drivers,
+                riders: riders.riders,
+                rules: rules.changes,
+            },
             steps: steps.steps,
         },
         warnings: rules.warnings.concat(steps.warnings),

@@ -3,21 +3,29 @@ import type { ICommit } from '../../application-core/simulation-engine/commit';
 import { CommitKind } from '../../application-core/simulation-engine/commit';
 import { formatClockTime } from '../../domain/simulation-engine/clock-time';
 import type { Position } from '../../domain/system/math/math';
-import type { IGridCommit, IsOpen, ITimelineColumn, ITimelineRow } from './timeline-grid';
+import type {
+    IGridCommit,
+    IsOpen,
+    ITimelineColumn,
+    ITimelineNode,
+    ITimelineRow,
+} from './timeline-grid';
 import type { TimelineModule } from './timeline-grid';
-import { NodeKind, RowMode } from './timeline-grid';
+import { holdsPlace, NodeKind, TimelineView } from './timeline-grid';
+import type { SubjectId } from './timeline-subjects';
 import type { IUnaware } from './unaware-spans';
 import { UnawarePart, unawareRows } from './unaware-spans';
 import { choiceOf } from './indirect-effect-form/indirect-statement';
 
 /**
  * How far in the timeline is zoomed (FND-87): which groups start open. By time the levels are
- * hours, minutes, and commits; by number, hundreds, tens, and commits.
+ * hours, minutes, and commits; by number, hundreds, tens, and commits; by order, orders, work,
+ * and commits, and by driver the same with drivers (FND-81).
  */
 export const TimelineZoom = {
-    /** Only the top groups: hours, or hundreds of job runs and API calls. */
+    /** Only the top groups: hours, hundreds of job runs and API calls, orders, or drivers. */
     Top: 'Top',
-    /** The top groups open, showing theirs: minutes, or tens. */
+    /** The top groups open, showing theirs: minutes, tens, or job runs and API calls. */
     Middle: 'Middle',
     /** Every group open, down to the commits. */
     Commits: 'Commits',
@@ -26,24 +34,47 @@ export const TimelineZoom = {
 /** One of the values of {@link TimelineZoom}. */
 export type TimelineZoom = (typeof TimelineZoom)[keyof typeof TimelineZoom];
 
-/** What each zoom level is called in a mode. */
-export function zoomLabel(zoom: TimelineZoom, mode: RowMode): string {
+/** What the top and middle zoom levels are called in each view. */
+const ZOOM_LABELS: Readonly<Record<TimelineView, readonly [string, string]>> = {
+    [TimelineView.ByTime]: ['Hours', 'Minutes'],
+    [TimelineView.ByNumber]: ['Hundreds', 'Tens'],
+    [TimelineView.ByOrder]: ['Orders', 'Work'],
+    [TimelineView.ByDriver]: ['Drivers', 'Work'],
+};
+
+/** The kinds of group the middle zoom level opens: the top ones of each view. */
+const TOP_KINDS: ReadonlySet<NodeKind> = new Set([
+    NodeKind.Hour,
+    NodeKind.Hundred,
+    NodeKind.Order,
+    NodeKind.Driver,
+]);
+
+/** What each zoom level is called in a view. */
+export function zoomLabel(zoom: TimelineZoom, view: TimelineView): string {
     if (zoom === TimelineZoom.Commits) {
         return 'Commits';
     }
-    const isTop = zoom === TimelineZoom.Top;
-    if (mode === RowMode.ByTime) {
-        return isTop ? 'Hours' : 'Minutes';
-    }
-    return isTop ? 'Hundreds' : 'Tens';
+    const [top, middle] = ZOOM_LABELS[view];
+    return zoom === TimelineZoom.Top ? top : middle;
 }
+
+/**
+ * The kinds of group no zoom level opens: collapsed empty job runs, which open by hand, or to show
+ * the commit shown or the event selected (FND-81).
+ */
+export const COLLAPSED_KINDS: ReadonlySet<NodeKind> = new Set([
+    NodeKind.EmptyRuns,
+    NodeKind.JobRuns,
+]);
 
 /** Whether a zoom level opens a kind of group. */
 export function opensAt(zoom: TimelineZoom, kind: NodeKind): boolean {
     if (zoom === TimelineZoom.Commits) {
-        return kind !== NodeKind.Commit;
+        const isGroup = kind !== NodeKind.Commit && kind !== NodeKind.Gap;
+        return isGroup && !COLLAPSED_KINDS.has(kind);
     }
-    return zoom === TimelineZoom.Middle && (kind === NodeKind.Hour || kind === NodeKind.Hundred);
+    return zoom === TimelineZoom.Middle && TOP_KINDS.has(kind);
 }
 
 /** A branch's column heading: its name, where it came from, and what its controls do. */
@@ -56,6 +87,9 @@ export interface IColumnHeading {
     readonly colour: number;
     readonly watchLabel: string;
     readonly renameLabel: string;
+    /** Whether its branch can be deleted: any but Main, once no branch forks from it (FND-81). */
+    readonly canDelete: boolean;
+    readonly deleteLabel: string;
 }
 
 /**
@@ -108,6 +142,11 @@ export interface ITimelineCell {
     readonly text: string;
     /** The kind of commit, which marks it, or null for a group or an event. */
     readonly mark: CommitKind | null;
+    /**
+     * A commit of the order or driver selected, or a group holding one, which every view
+     * highlights (FND-81).
+     */
+    readonly isHighlighted: boolean;
     /** On the branch watched, after the commit shown: it had not happened yet (FND-86). */
     readonly isLater: boolean;
     /** The commit shown, on the branch watched. */
@@ -151,9 +190,21 @@ export interface ITimelineRowView {
     readonly isEvent: boolean;
     /** A fork's connector row, where its line curves off its parent and into its own lane. */
     readonly isConnector: boolean;
+    /** For a row stating a gap, how long it is in simulated milliseconds; null for the rest. */
+    readonly gapMs: number | null;
     readonly canOpen: boolean;
     readonly isOpen: boolean;
+    /** For an order's or a driver's group, its ID, which selects it; null for other rows. */
+    readonly subject: SubjectId | null;
+    /** The group of the order or driver selected. */
+    readonly isHighlighted: boolean;
     readonly cells: readonly ITimelineCell[];
+}
+
+/** The order or driver selected: its group's key, and its commits in each column. */
+export interface IHighlight {
+    readonly key: string;
+    readonly commits: ReadonlyMap<BranchId, readonly IGridCommit[]>;
 }
 
 /** Where the run is, which the rows are drawn against. */
@@ -164,6 +215,13 @@ export interface ITimelineContext {
     readonly place: Position;
     readonly selected: number | null;
     readonly isOpen: IsOpen;
+    /** The order or driver selected, whose commits every view highlights, if one is. */
+    readonly highlight?: IHighlight | null;
+    /**
+     * The gaps to state, by the index of the row each goes before, in simulated milliseconds:
+     * in the view by time only (FND-81).
+     */
+    readonly gaps?: ReadonlyMap<number, number>;
 }
 
 const NO_SPANS: ReadonlyMap<BranchId, IUnaware> = new Map();
@@ -189,6 +247,10 @@ export function columnHeadings(columns: readonly ITimelineColumn[]): readonly IC
                 ? `Watching ${column.name}`
                 : `Watch ${column.name}, at its latest commit`,
             renameLabel: `Rename ${column.name}`,
+            canDelete:
+                column.forkedFrom !== null &&
+                !columns.some((other) => other.forkedFrom === column.id),
+            deleteLabel: `Delete ${column.name}, with its own commits`,
         };
     });
 }
@@ -212,7 +274,9 @@ function commitText(commit: ICommit): string {
     if (effect.kind === CommitKind.Input) {
         return effect.command;
     }
-    return 'Config change';
+    return effect.kind === CommitKind.ImplementationChange
+        ? 'Implementation change'
+        : 'Config change';
 }
 
 const emptyCell = (column: BranchId, text: string): ITimelineCell => ({
@@ -222,6 +286,7 @@ const emptyCell = (column: BranchId, text: string): ITimelineCell => ({
     eventKind: null,
     text,
     mark: null,
+    isHighlighted: false,
     isLater: false,
     isShown: false,
     isSelected: false,
@@ -305,21 +370,37 @@ function callsText(kind: NodeKind, own: readonly IGridCommit[]): string {
 
 function summaryCell(
     column: BranchId,
-    own: readonly IGridCommit[],
+    node: ITimelineNode,
     context: ITimelineContext,
-    kind: NodeKind,
 ): ITimelineCell {
-    const first = own[0]?.place;
-    const last = own.at(-1)?.place;
-    const hasShown =
-        first !== undefined &&
-        last !== undefined &&
-        isOnLine(context, column, context.place) &&
-        first <= context.place &&
-        context.place <= last;
+    const own = node.commits.get(column) ?? [];
+    // A commit the filter hides still marks the group holding it, as the nearest shown row.
+    const all = (node.held ?? node.commits).get(column);
+    const hasShown = isOnLine(context, column, context.place) && holdsPlace(all, context.place);
+    const { kind } = node;
     const calls = callsText(kind, own);
     const text = own.length === 0 ? '' : `${commitsText(own.length)}${calls}`;
-    return { ...emptyCell(column, text), count: own.length, hasShown };
+    const isHighlighted = holdsHighlighted(context, column, own);
+    return { ...emptyCell(column, text), count: own.length, hasShown, isHighlighted };
+}
+
+/**
+ * Whether a column's commits hold one of the order's or driver's selected. It looks each of the
+ * selected one's few commits up among them, so a large group costs little.
+ */
+function holdsHighlighted(
+    context: ITimelineContext,
+    column: BranchId,
+    own: readonly IGridCommit[],
+): boolean {
+    const highlighted = context.highlight?.commits.get(column) ?? [];
+    return highlighted.some((gridCommit) => holdsPlace(own, gridCommit.place));
+}
+
+/** Whether a column's commit at a place is one of the order's or driver's selected. */
+function isHighlightedAt(context: ITimelineContext, column: BranchId, place: Position): boolean {
+    const highlighted = context.highlight?.commits.get(column);
+    return holdsPlace(highlighted, place);
 }
 
 /** Whether a column's commit at a place is on the line of the branch watched. */
@@ -357,6 +438,7 @@ function commitCell(
         // Choosing a commit selects its first event, whose payload the detail panel shows.
         sequence: first?.sequence ?? null,
         mark: commit.kind,
+        isHighlighted: isHighlightedAt(context, column, place),
         isLater: isWatched && place > context.place,
         isShown: isWatched && place === context.place,
         forks,
@@ -385,15 +467,7 @@ function labelOf(row: ITimelineRow): string {
 /** Whether a row's own line holds a column's commit at a place, as one of its events does not. */
 function rowHolds(row: ITimelineRow, column: BranchId, place: Position): boolean {
     const own = row.node.commits.get(column);
-    const first = own?.[0];
-    const last = own?.at(-1);
-    return (
-        row.entry === null &&
-        first !== undefined &&
-        last !== undefined &&
-        first.place <= place &&
-        place <= last.place
-    );
+    return row.entry === null && holdsPlace(own, place);
 }
 
 /**
@@ -528,8 +602,40 @@ function connectorRow(
         label: `${fork.name} branches off`,
         isEvent: false,
         isConnector: true,
+        gapMs: null,
         canOpen: false,
         isOpen: false,
+        subject: null,
+        isHighlighted: false,
+        cells,
+    };
+}
+
+/** A row stating a gap in simulated time, just before the row after it, its lanes running on. */
+function gapRow(
+    next: ITimelineRowView,
+    gapMs: number,
+    lanes: readonly ILane[],
+    columns: readonly ITimelineColumn[],
+): ITimelineRowView {
+    const cells = columns.map((column, at) => ({
+        ...emptyCell(column.id, ''),
+        lane: lanes[at] ?? NO_LANE,
+        unaware: next.cells[at]?.unaware?.part === UnawarePart.Middle ? MIDDLE : null,
+    }));
+    return {
+        id: `${next.id}~gap`,
+        key: '',
+        kind: NodeKind.Gap,
+        depth: next.depth,
+        label: `Gap of ${formatClockTime(gapMs)}`,
+        isEvent: false,
+        isConnector: false,
+        gapMs,
+        canOpen: false,
+        isOpen: false,
+        subject: null,
+        isHighlighted: false,
         cells,
     };
 }
@@ -549,13 +655,22 @@ export function timelineRowViews(
     ): readonly ITimelineRowView[] => {
         const forks = forksStartingAt(index, columns, starts);
         const lanes = lanesAt(index, columns, starts);
-        const below = unaware[index] ?? NO_SPANS;
+        const below = unaware.get(index) ?? NO_SPANS;
         return forks.map((fork, order) => {
             const later = forks.slice(order + 1).map((after) => after.at);
             const notYet = new Set(later);
             const forkLanes = connectorLanes(lanes, fork, notYet);
             return connectorRow(next, fork, forkLanes, columns, below);
         });
+    };
+    /** The row stating the gap before a row, if one is long enough to show. */
+    const gapRowsAt = (
+        index: number,
+        next: ITimelineRowView,
+        lanes: readonly ILane[],
+    ): readonly ITimelineRowView[] => {
+        const gap = context.gaps?.get(index);
+        return gap === undefined ? [] : [gapRow(next, gap, lanes, columns)];
     };
     const views = rows.flatMap((row, index) => {
         const { node, entry } = row;
@@ -569,9 +684,9 @@ export function timelineRowViews(
                     ? commitCell(gridCommit, columns, context)
                     : eventCell(gridCommit, context, entry);
             }
-            return summaryCell(column.id, own, context, node.kind);
+            return summaryCell(column.id, node, context);
         });
-        const spans = unaware[index] ?? NO_SPANS;
+        const spans = unaware.get(index) ?? NO_SPANS;
         const laned = cells.map((cell, at) => ({
             ...cell,
             lane: lanes[at] ?? NO_LANE,
@@ -588,13 +703,17 @@ export function timelineRowViews(
             label,
             isEvent: entry !== null,
             isConnector: false,
+            gapMs: null,
             canOpen: entry === null && (!isCommit || hasEvents),
             isOpen: context.isOpen(node),
+            subject: entry === null ? node.subject : null,
+            isHighlighted: entry === null && node.key === context.highlight?.key,
             cells: laned,
         };
         // Each fork starting here gets a row of its own first, so the curves never overlap.
         const connectors = connectorsAt(index, view);
-        return [...connectors, view];
+        const gapRows = gapRowsAt(index, view, lanes);
+        return [...gapRows, ...connectors, view];
     });
     // A fork whose lane would start below the last row still shows where it leaves.
     const last = views.at(-1);

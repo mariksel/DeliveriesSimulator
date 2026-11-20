@@ -4,25 +4,28 @@
 
 - **Design version:** `D0.6.0`.
 - **Status:** Approved in
-  [FND-83](../decisions/project-foundation.md#fnd-83--types-owned-by-their-modules), and built
-  in the Full V1.0.0 lifecycle and rules stage.
+  [FND-83](../decisions/project-foundation/architecture-and-code.md#fnd-83--types-owned-by-their-modules),
+  and built in
+  [I03-E02-019](../../backlogs/Initiatives/I03-full-v1-0-0-lifecycle-and-rules/Archive/Done/I03-E02-run-history/Archive/Done/High/I03-E02-019-types-owned-by-their-modules.md).
   The clock and the random source are interfaces nothing calls yet.
-  [FND-85](../decisions/project-foundation.md#fnd-85--system-submodules) split it into eight
-  submodules and moved the shared helpers of the Domain and Infrastructure roots into them,
-  as built on 2026-11-07.
+  [FND-85](../decisions/project-foundation/architecture-and-code.md#fnd-85--system-submodules) split
+  it into eight submodules and moved the shared helpers of the Domain and Infrastructure roots into
+  them;
+  [I03-E02-020](../../backlogs/Initiatives/I03-full-v1-0-0-lifecycle-and-rules/Archive/Done/I03-E02-run-history/Archive/Done/High/I03-E02-020-system-submodules.md)
+  built that on 2026-11-07.
 
 ## Current and approved responsibilities
 
 The abstractions about time, randomness, and math that the business modules use, so that they
-never know they are simulated: the business modules depend on a world whose implementation they
-do not know
-([FND-83](../decisions/project-foundation.md#fnd-83--types-owned-by-their-modules)). It holds
-abstractions only. The [Simulation engine](simulation-engine.md) provides their
+never know they are simulated. In the user's words, the business modules "should just depend on
+some world whose implementation is not known"
+([FND-83](../decisions/project-foundation/architecture-and-code.md#fnd-83--types-owned-by-their-modules)).
+It holds abstractions only. The [Simulation engine](simulation-engine.md) provides their
 implementations: a simulated time is one implementation of time.
 
 It also holds what every module shares, so that no layer's root holds a file of its own
-([FND-85](../decisions/project-foundation.md#fnd-85--system-submodules)). Each kind of thing is a
-submodule, a folder in `src/domain/system/`:
+([FND-85](../decisions/project-foundation/architecture-and-code.md#fnd-85--system-submodules)). Each
+kind of thing is a submodule, a folder in `src/domain/system/`:
 
 | Submodule | Holds |
 | --- | --- |
@@ -55,7 +58,7 @@ refuses a file added directly in `src/domain` or `src/infrastructure`.
   source implements.
 - **Math:** `Fraction`, `Count`, and `Position`.
 - **Records:** a record that changes keeps a chain of versions, each linked to the one before
-  ([FND-81](../decisions/project-foundation.md#fnd-81--runs-as-a-tree-of-state-transitions)).
+  ([FND-81](../decisions/project-foundation/run-history.md#fnd-81--runs-as-a-tree-of-state-transitions)).
 - **Messaging:** an inbox's position says where it starts scanning and the latest event it has
   read, so it can leave out events older than its read lag.
 
@@ -78,7 +81,8 @@ From the confirmed [dependency graph](README.md#dependency-graph):
 | `src/domain/system/validation/required.ts`, `unreachable.ts`, `refuse.ts` | The checks for a bug: a value that must exist, a case the compiler proved cannot happen, and a number that breaks its rule |
 | `src/domain/system/classes/fields-of.ts`, `deep-freeze.testing.ts` | The fields a Domain class is made from, and, for tests, a deep-frozen copy of a value |
 | `src/domain/system/records/version-chain.ts` | A record's version number, and the checks on its chain of versions |
+| `src/domain/system/records/maker.ts`, `maker.testing.ts` | What made a version: a piece of work by its ID, or the run's start, so Domain names no Simulation engine type; and a maker for tests |
 | `src/domain/system/messaging/inbox-position.ts` | How far an inbox has read |
-| `src/infrastructure/system/json/`, `records/`, `messaging/`, `functions/` | Infrastructure's shared code: the JSON check, persisted record groups and counts, a persisted inbox, and the stored function contract |
+| `src/infrastructure/system/json/`, `records/`, `messaging/`, `functions/` | Infrastructure's shared code: the JSON check, persisted record groups and counts and makers, a persisted inbox, and the stored function contract |
 | `src/domain/system/digests/digest-parts.ts` | How a record is written out for a digest, and the check typed equality is built from |
 | `src/domain/system/time/time-equality.testing.ts` | For tests, a moment or a length equals its number of milliseconds, and moments compare whichever implementation made them |

@@ -1,0 +1,42 @@
+<div class="heading">
+    <h3>{{ title() }}: its versions</h3>
+    <button
+        type="button"
+        data-testid="clear-selected-subject"
+        appTooltip="Stop highlighting it on the timeline, and close its versions"
+        (click)="clear.emit()"
+    >
+        Clear
+    </button>
+</div>
+@for (view of views(); track view.id) {
+<section class="record" data-testid="record-versions" [attr.aria-label]="view.title">
+    <h4>{{ view.title }}</h4>
+    @if (view.rows.length === 0) {
+    <p class="none">No versions yet at the commit shown.</p>
+    } @else {
+    <ol class="versions">
+        @for (row of view.rows; track row.id) {
+        <li class="version" data-testid="record-version">
+            <span class="number">v{{ row.number }}</span>
+            <span class="summary">{{ row.summary }}</span>
+            <span class="made-by">{{ row.madeBy }}</span>
+            @if (row.place !== null) {
+            <button
+                type="button"
+                class="commit"
+                data-testid="record-version-commit"
+                [appTooltip]="row.tooltip"
+                (click)="chooseRow(row)"
+            >
+                {{ row.commitText }}
+            </button>
+            } @else {
+            <span class="commit" [appTooltip]="row.tooltip">{{ row.commitText }}</span>
+            }
+        </li>
+        }
+    </ol>
+    }
+</section>
+}

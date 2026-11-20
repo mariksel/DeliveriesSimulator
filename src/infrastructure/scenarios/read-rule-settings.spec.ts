@@ -9,7 +9,16 @@ const BASE = {
     version: 'V1.0.0',
     seed: 1,
     runUntil: 'h00:m10:s00:ms00',
+    city: {
+        origin: { latitude: 10.325, longitude: 20.815 },
+        widthKm: 2,
+        heightKm: 2,
+        across: 2,
+        down: 2,
+        seed: 7,
+    },
     restaurants: [],
+    customers: [],
     drivers: [],
 };
 

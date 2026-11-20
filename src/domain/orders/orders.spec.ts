@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import { deliveryAddressOf } from '../restaurants/customers/delivery-address.testing';
 
 import { HANDOFF_RETRIES_PER_RUN, MAX_HANDOFF_RETRIES } from './orders-rule-definitions';
 import { tunedOrdersRules } from './orders-rules.testing';
@@ -12,7 +13,9 @@ import { toOrderId } from './order';
 import { versionChain } from '../system/records/version-chain';
 import { DeliveriesOutboxEvent } from '../drivers/deliveries/deliveries-outbox-event';
 import type { DeliveryEventKind } from '../drivers/deliveries/delivery-event-kind';
-import type { Order, OrderVersion } from './order';
+import type { Order } from './order';
+import type { OrderView } from './order-view';
+import { required } from '../system/validation/required';
 import {
     FakeDeliveriesForOrders,
     OrdersHarness,
@@ -22,6 +25,7 @@ import type { OrderCommandResult } from './orders-state';
 import { restaurantPlaceOf } from '../restaurants/restaurant-place.testing';
 import { instantAt } from '../system/time/instant.testing';
 import { toDeliveriesOutboxEventId } from '../drivers/deliveries/deliveries-outbox-event';
+import { orderFacts } from './order-facts.testing';
 
 const RESTAURANT = restaurantPlaceOf();
 
@@ -58,11 +62,13 @@ const accepted = (
 const notStarted = (id: string, orderId: OrderId, at = 0): DeliveriesOutboxEvent =>
     deliveriesEvent(id, orderId, at, 'OrderReady');
 
-function order(result: OrderCommandResult): OrderVersion {
+/** An order's full view after a command, which must have been allowed. */
+function order(orders: OrdersHarness, result: OrderCommandResult): OrderView {
     if (!result.isOk) {
         throw new Error(`Refused: ${result.refusal}`);
     }
-    return result.version;
+    const view = orders.order(result.version.orderId);
+    return required(view, 'the order');
 }
 
 describe('OrdersModule', () => {
@@ -87,21 +93,21 @@ describe('OrdersModule', () => {
         const id = orders.createOrder(0, RESTAURANT).id;
 
         const requestDelivery = orders.requestDelivery(10, id);
-        const afterRequest = order(requestDelivery);
+        const afterRequest = order(orders, requestDelivery);
         const markReady = orders.markReady(20, id);
-        const afterReady = order(markReady);
+        const afterReady = order(orders, markReady);
         deliveries.outbox = [accepted('a', id, 30)];
         orders.readDeliveriesOutbox(30);
         const afterAccepted = orders.order(id)!;
         const driverId = toDriverId('driver-1');
         const pickUp = orders.pickUp(40, id, driverId);
-        const afterPickUp = order(pickUp);
+        const afterPickUp = order(orders, pickUp);
         const secondDriverId = toDriverId('driver-1');
         const deliver = orders.deliver(50, id, secondDriverId);
-        const afterDeliver = order(deliver);
+        const afterDeliver = order(orders, deliver);
 
         const map = [afterRequest, afterReady, afterAccepted, afterPickUp, afterDeliver].map(
-            (step) => [step.status, step.number],
+            (step) => [step.status, step.version.number],
         );
         expect(map).toEqual([
             ['DeliveryRequested', 3],
@@ -149,12 +155,12 @@ describe('OrdersModule', () => {
         const id = orders.createOrder(0, RESTAURANT).id;
         orders.markReady(10, id);
 
-        const secondVersionChain = versionChain(orders.order(id)!)
-            .map((version) => [version.number, version.isReady])
+        const secondVersionChain = versionChain(orders.order(id)!.version)
+            .map((version) => [version.number, version.isDeliveryRequestPending])
             .toArray();
         expect(secondVersionChain).toEqual([
             [1, false],
-            [2, true],
+            [2, false],
         ]);
     });
 
@@ -178,13 +184,13 @@ describe('OrdersModule', () => {
             {
                 at: 5,
                 order: expect.objectContaining({ id }) as Order,
-                version: expect.objectContaining({ orderId: id, number: 1 }) as OrderVersion,
+                view: expect.objectContaining({ status: 'Created' }) as OrderView,
             },
         ]);
         const recorded = reporter.recorded.map((entry) => [
             entry.event.kind,
-            entry.version.isReady,
-            entry.version.number,
+            entry.view.isReady,
+            entry.view.version.number,
         ]);
         expect(recorded).toEqual([['OrderReady', true, 2]]);
     });
@@ -197,8 +203,8 @@ describe('OrdersModule', () => {
         const pickUp = orders.pickUp(1, id, driverId);
 
         expect(pickUp).toEqual({ isOk: false, refusal: 'NotAllowedFromStatus' });
-        const orderVersion = orders.order(id);
-        expect(orderVersion).toBe(before);
+        const after = orders.order(id);
+        expect(after?.version).toBe(before?.version);
         const events = orders.eventsOf(id);
         expect(events).toEqual([]);
         expect(reporter.recorded).toEqual([]);
@@ -250,12 +256,14 @@ describe('OrdersModule', () => {
                 {
                     orderId: id,
                     restaurant: RESTAURANT,
+                    destination: deliveryAddressOf().coordinates,
                     requestEventId: 'order-1:2',
                     orderVersion: 2,
                     orderStatus: 'Created',
                 },
             ]);
-            const orderVersion = orders.order(id);
+            const view = orders.order(id);
+            const orderVersion = orderFacts(view);
             expect(orderVersion).toMatchObject({
                 status: 'DeliveryRequested',
                 number: 3,
@@ -276,7 +284,9 @@ describe('OrdersModule', () => {
 
             const id = requested();
 
-            const orderVersion = orders.order(id);
+            const view = orders.order(id);
+
+            const orderVersion = orderFacts(view);
             expect(orderVersion).toMatchObject({
                 status: 'Created',
                 number: 2,
@@ -300,7 +310,7 @@ describe('OrdersModule', () => {
             expect(deliveries.handoffs).toHaveLength(calls + 1);
             expect(deliveries.handoffs.at(-1)?.orderId).toBe(id);
             expect(orders.order(id)?.status).toBe('DeliveryRequested');
-            expect(orders.order(done)?.number).toBe(3);
+            expect(orders.order(done)?.version.number).toBe(3);
         });
 
         it('retries at most the limit in one run', () => {
@@ -365,7 +375,9 @@ describe('OrdersModule', () => {
 
             orders.readDeliveriesOutbox(7);
 
-            const orderVersion = orders.order(id);
+            const view = orders.order(id);
+
+            const orderVersion = orderFacts(view);
             expect(orderVersion).toMatchObject({
                 status: 'DriverAssigned',
                 driverId: 'driver-1',

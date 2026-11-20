@@ -3,6 +3,12 @@ import type { SimTime } from '../../domain/simulation-engine/sim-time';
 import { laterOf } from '../../domain/system/time/instant';
 import { ClockedWork } from './clocked-work';
 import { changeConfig } from '../../application-core/simulation-engine/config-change';
+import { labelledCommit } from '../../application-core/simulation-engine/run-cache';
+import type {
+    IFunctionUse,
+    IndirectLabel,
+} from '../../application-core/simulation-engine/run-input';
+import { switchVersions } from '../../application-core/simulation-engine/implementation-change';
 import { stateIndirectEffect } from '../../application-core/simulation-engine/indirect-commit';
 import type { IndirectStatement } from '../../application-core/simulation-engine/indirect-effect';
 import { nextWork } from '../../application-core/simulation-engine/due-work';
@@ -118,8 +124,18 @@ export class SimulationRun extends ClockedWork {
     }
 
     /** Tunes rule parameters now, by rule ID, as a config change commit. */
-    changeConfig(changes: List<ParameterChange>): void {
-        this.latest = changeConfig(this.latest, this.reached, changes);
+    changeConfig(changes: List<ParameterChange>, after?: IndirectLabel): void {
+        const followsFrom = labelledCommit(this.latest.cache, after);
+        this.latest = changeConfig(this.latest, this.reached, changes, followsFrom);
+    }
+
+    /**
+     * Switches state functions to other versions now, as an implementation change commit, which
+     * follows from the labelled indirect commit when one is named (FND-81).
+     */
+    switchVersions(uses: List<IFunctionUse>, after?: IndirectLabel): void {
+        const followsFrom = labelledCommit(this.latest.cache, after);
+        this.latest = switchVersions(this.latest, this.reached, uses, followsFrom);
     }
 
     /** States a decision or change outside the service now, as an indirect commit (FND-89). */

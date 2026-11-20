@@ -1,3 +1,4 @@
+import type { FunctionLookup } from '../../application-core/simulation-engine/function-lookup';
 import type { List } from 'immutable';
 
 import { checkRun } from '../../application-core/verification/check-run';
@@ -37,8 +38,11 @@ export function judgeScenarioRun(run: IScenarioRun): ICheckedRun {
  * Runs a scenario that was read, and judges the run. The browser and the command line both use
  * this.
  */
-export function checkScenario(result: ScenarioResult): ScenarioCheckResult {
-    const ran = runScenarioResult(result);
+export function checkScenario(
+    result: ScenarioResult,
+    functions: FunctionLookup,
+): ScenarioCheckResult {
+    const ran = runScenarioResult(result, functions);
     if (!ran.isOk) {
         return ran;
     }
@@ -49,16 +53,18 @@ export function checkScenario(result: ScenarioResult): ScenarioCheckResult {
 export function checkBuiltInScenario(
     library: BuiltInScenarios,
     id: BuiltInScenarioId,
+    functions: FunctionLookup,
 ): ScenarioCheckResult {
     const result = library.scenario(id);
-    return checkScenario(result);
+    return checkScenario(result, functions);
 }
 
 /** Reads a chosen scenario file, runs it, and judges the run. */
 export async function checkScenarioFile(
     files: ScenarioFiles,
     file: IChosenFile,
+    functions: FunctionLookup,
 ): Promise<ScenarioCheckResult> {
     const result = await files.readScenario(file);
-    return checkScenario(result);
+    return checkScenario(result, functions);
 }

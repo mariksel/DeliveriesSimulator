@@ -1,4 +1,9 @@
+import type { FunctionVersions } from './function-lookup';
+import { switchVersions } from './implementation-change';
+import type { IFunctionUse } from './run-input';
 import { List, Range, Set as ImmutableSet } from 'immutable';
+import { isStatedIndirect } from './indirect-effect';
+import type { IndirectEffect, StatedIndirectEffect } from './indirect-effect';
 
 import { ParameterChange } from '../../domain/business-rules/parameter-change';
 import { TechnicalLogKind } from '../../domain/event-log/log-vocabulary';
@@ -49,7 +54,8 @@ function cutBackTo(run: IRunState, place: Position): IRunState {
     const noEntries = List<RunLogEntry>();
     const cache = rebuildRunCache(line, noEntries);
     const root = rootAt(run, place);
-    return { script: run.script, history: run.history, line, root, cache };
+    const { script, history, functions } = run;
+    return { script, history, line, root, cache, functions };
 }
 
 /** The changes a config change made by hand made, from its log entry, to make again. */
@@ -68,8 +74,27 @@ function changesOf(commit: ICommit): List<ParameterChange> {
 }
 
 /**
- * The repeat one step on: the original's next commit again if it was a config change or an
- * indirect effect made by hand, which no script holds, or else the next work due.
+ * Every function at the version a switch made by hand put in use, to switch again: the ones
+ * already at it write no entry, so it switches what the original switched.
+ */
+const usesOf = (versions: FunctionVersions): List<IFunctionUse> =>
+    versions
+        .entrySeq()
+        .map(([name, version]) => ({ function: name, version }))
+        .toList();
+
+/**
+ * Whether an indirect commit was made by hand, so a repeat makes it again: a script's steps make
+ * theirs, and a riding driver's decisions are the engine's own, which the work that made them
+ * makes again (FND-90).
+ */
+const isMadeByHand = (indirect: IndirectEffect | null): indirect is StatedIndirectEffect =>
+    indirect !== null && !indirect.isScripted && isStatedIndirect(indirect);
+
+/**
+ * The repeat one step on: the original's next commit again if it was a config change, an
+ * implementation change, or an indirect effect made by hand, which no script holds, or else the
+ * next work due.
  */
 function stepOn(original: IRunState, repeat: IRunState): IRunState {
     const next = toPosition(repeat.cache.commitIds.size + 1);
@@ -80,9 +105,13 @@ function stepOn(original: IRunState, repeat: IRunState): IRunState {
     const { effect, indirect } = commit;
     if (effect?.kind === EffectKind.ConfigChange && !effect.isScripted) {
         const changes = changesOf(commit);
-        return changeConfig(repeat, commit.at, changes);
+        return changeConfig(repeat, commit.at, changes, effect.followsFrom);
     }
-    if (indirect !== null && !indirect.isScripted) {
+    if (effect?.kind === EffectKind.ImplementationChange && !effect.isScripted) {
+        const uses = usesOf(effect.after);
+        return switchVersions(repeat, commit.at, uses, effect.followsFrom);
+    }
+    if (isMadeByHand(indirect)) {
         return stateIndirectEffect(repeat, commit.at, indirect);
     }
     return runNextWork(repeat);

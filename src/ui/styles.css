@@ -1,6 +1,15 @@
 /* Where the CDK places what floats over the page, such as tooltips. */
 @import '@angular/cdk/overlay-prebuilt.css';
 
+/*
+ * A tooltip only says what a control does, so its pane lets the pointer through to whatever it
+ * covers: otherwise a tooltip left showing on a focused button takes a click meant for the one
+ * below it. Both classes are named, as the CDK adds its own pane rule to the page when it runs.
+ */
+.cdk-overlay-pane.tooltip-pane {
+    pointer-events: none;
+}
+
 :root {
     --color-text: #1b2430;
     --color-muted: #5a6675;
@@ -40,6 +49,9 @@
     /* The timeline's branch lanes, in the order branches are made: distinct from each other (FND-87). */
     /* A group's band on the timeline, a shade off the surface. */
     --color-band: #f4f6f8;
+    /* The order or driver selected, highlighted in every timeline view (FND-81). */
+    --color-highlight: #fdf0c2;
+    --color-highlight-edge: #b45f06;
     --color-lane-1: #1f5fbf;
     --color-lane-2: #c2410c;
     --color-lane-3: #8a4baf;

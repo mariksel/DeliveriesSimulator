@@ -1,0 +1,65 @@
+<form
+    class="save-form"
+    data-testid="save-form"
+    aria-label="Save the run"
+    [attr.aria-busy]="isSaving()"
+    (submit)="save($event, name.value)"
+>
+    <label>
+        Name
+        <input
+            #name
+            type="text"
+            data-testid="save-name"
+            appTooltip="A label for the saved run, which another saved run may share"
+            [value]="defaultName()"
+        />
+    </label>
+    <label>
+        Keep
+        <select
+            #levelChoice
+            data-testid="save-level"
+            appTooltip="How much of the run to keep: everything opens fast, the minimum takes less room"
+            (change)="chooseLevel(levelChoice.value)"
+        >
+            @for (choice of levels; track choice.level) {
+            <option [value]="choice.level" [selected]="choice.level === level()">
+                {{ choice.label }}
+            </option>
+            }
+        </select>
+    </label>
+    <button
+        type="submit"
+        data-testid="save-run"
+        appTooltip="Save the run as it stands, pausing it while it saves"
+        [disabled]="isSaving()"
+    >
+        {{ isSaving() ? 'Saving…' : 'Save' }}
+    </button>
+    <button
+        type="button"
+        data-testid="save-cancel"
+        appTooltip="Close the form, saving nothing"
+        [disabled]="isSaving()"
+        (click)="closed.emit()"
+    >
+        Cancel
+    </button>
+    @if (nameProblem(); as message) {
+    <span class="invalid" data-testid="save-name-problem" role="alert">{{ message }}</span>
+    } @if (problem(); as message) {
+    <span class="invalid" data-testid="save-problem" role="alert">{{ message }}</span>
+    @if (level() !== minimum) {
+    <button
+        type="button"
+        data-testid="save-minimum"
+        appTooltip="Save only the minimum, which takes less room and opens by running the run again"
+        [disabled]="isSaving()"
+        (click)="saveAtMinimum(name.value)"
+    >
+        Save at minimum
+    </button>
+    } }
+</form>

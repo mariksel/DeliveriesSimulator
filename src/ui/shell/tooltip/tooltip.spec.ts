@@ -2,7 +2,7 @@ import { ApplicationRef, ChangeDetectionStrategy, Component, signal } from '@ang
 import { TestBed } from '@angular/core/testing';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { Tooltip, TOOLTIP_DELAY_MS } from './tooltip';
+import { Tooltip, TOOLTIP_DELAY_MS, TOOLTIP_PANE } from './tooltip';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -70,6 +70,17 @@ describe('the tooltip', () => {
         const bubble = document.querySelector('[role="tooltip"]');
         const describedBy = button.getAttribute('aria-describedby');
         expect(describedBy).toBe(bubble?.id);
+    });
+
+    it('sits in a pane that lets the pointer through to what it covers', async () => {
+        const button = await control();
+
+        rest(button);
+
+        const bubble = document.querySelector('[role="tooltip"]');
+        const pane = bubble?.closest('.cdk-overlay-pane');
+        const isTooltipPane = pane?.classList.contains(TOOLTIP_PANE);
+        expect(isTooltipPane).toBe(true);
     });
 
     it('shows on keyboard focus too', async () => {

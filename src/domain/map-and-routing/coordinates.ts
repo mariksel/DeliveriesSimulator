@@ -1,13 +1,10 @@
 import type { FieldsOf } from '../system/classes/fields-of';
 import type { Degrees, Metres } from './numbers';
 import { toMetres } from './numbers';
+import { EARTH_RADIUS_METRES, radians } from './sphere';
 
-const EARTH_RADIUS_METRES = 6_371_000;
-const DEGREES_PER_HALF_TURN = 180;
 const MAX_LATITUDE = 90;
 const MAX_LONGITUDE = 180;
-
-const radians = (degrees: number): number => (degrees * Math.PI) / DEGREES_PER_HALF_TURN;
 
 const isWithin = (degrees: number, limit: number): boolean =>
     Number.isFinite(degrees) && Math.abs(degrees) <= limit;

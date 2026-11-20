@@ -14,7 +14,7 @@ import {
     keysHolding,
     lineThrough,
     NodeKind,
-    RowMode,
+    TimelineView,
     timelineGrid,
     timelineRows,
 } from './timeline-grid';
@@ -56,7 +56,7 @@ function forkedAndRunOn(): IRunState {
 const FORKED = forkedAndRunOn();
 const FORK = FORKED.history.current;
 const LINES = branchLinesOf(FORKED).toArray();
-const GRID = timelineGrid(LINES, RowMode.ByTime);
+const GRID = timelineGrid(LINES, TimelineView.ByTime);
 
 /** The rows with every group down to a commit of Main open, and that commit too. */
 function rowsOpenTo(place: Position, context: ITimelineContext): readonly ITimelineRowView[] {
@@ -81,12 +81,14 @@ describe('the timeline as drawn', () => {
         const headings = columnHeadings(GRID.columns);
 
         expect(headings).toMatchObject([
-            { id: MAIN_BRANCH, origin: 'The first branch', isCurrent: false },
+            { id: MAIN_BRANCH, origin: 'The first branch', isCurrent: false, canDelete: false },
             {
                 id: FORK,
                 origin: `From Main at commit ${FORK_PLACE}`,
                 isCurrent: true,
                 renameLabel: 'Rename Fork 1',
+                canDelete: true,
+                deleteLabel: 'Delete Fork 1, with its own commits',
             },
         ]);
     });
@@ -177,11 +179,16 @@ describe('the timeline as drawn', () => {
 
 describe('zooming the timeline', () => {
     it.each([
-        [TimelineZoom.Top, RowMode.ByTime, 'Hours'],
-        [TimelineZoom.Middle, RowMode.ByTime, 'Minutes'],
-        [TimelineZoom.Top, RowMode.ByNumber, 'Hundreds'],
-        [TimelineZoom.Middle, RowMode.ByNumber, 'Tens'],
-        [TimelineZoom.Commits, RowMode.ByNumber, 'Commits'],
+        [TimelineZoom.Top, TimelineView.ByTime, 'Hours'],
+        [TimelineZoom.Middle, TimelineView.ByTime, 'Minutes'],
+        [TimelineZoom.Top, TimelineView.ByNumber, 'Hundreds'],
+        [TimelineZoom.Middle, TimelineView.ByNumber, 'Tens'],
+        [TimelineZoom.Commits, TimelineView.ByNumber, 'Commits'],
+        [TimelineZoom.Top, TimelineView.ByOrder, 'Orders'],
+        [TimelineZoom.Middle, TimelineView.ByOrder, 'Work'],
+        [TimelineZoom.Top, TimelineView.ByDriver, 'Drivers'],
+        [TimelineZoom.Middle, TimelineView.ByDriver, 'Work'],
+        [TimelineZoom.Commits, TimelineView.ByDriver, 'Commits'],
     ])('calls %s by %s %s', (zoom, mode, label) => {
         const named = zoomLabel(zoom, mode);
 
@@ -197,8 +204,16 @@ describe('zooming the timeline', () => {
 
         expect(opened).toEqual([
             [],
-            [NodeKind.Hour, NodeKind.Hundred],
-            [NodeKind.Hour, NodeKind.Minute, NodeKind.Hundred, NodeKind.Ten, NodeKind.Session],
+            [NodeKind.Hour, NodeKind.Hundred, NodeKind.Order, NodeKind.Driver],
+            [
+                NodeKind.Hour,
+                NodeKind.Minute,
+                NodeKind.Hundred,
+                NodeKind.Ten,
+                NodeKind.Order,
+                NodeKind.Driver,
+                NodeKind.Session,
+            ],
         ]);
     });
 
@@ -214,5 +229,60 @@ describe('zooming the timeline', () => {
         const holding = mainCells.filter((cell) => cell?.hasShown === true);
         expect(total).toBe(MAIN.line.commits.size);
         expect(holding).toHaveLength(1);
+    });
+});
+
+describe('the order or driver selected', () => {
+    const byOrder = timelineGrid(LINES, TimelineView.ByOrder);
+    const [order] = byOrder.nodes;
+    const highlight = { key: order!.key, commits: order!.commits };
+    const highlighting: ITimelineContext = { ...AT_FORK, highlight };
+    const ownOnMain = order!.commits.get(MAIN_BRANCH)!;
+    const highlighted = ownOnMain.map((commit) => commit.place);
+    const closed = new Set<string>();
+
+    it('highlights its commits in another view, and no others', () => {
+        const rows = timelineRows(GRID.nodes, () => true);
+
+        const views = timelineRowViews(rows, GRID.columns, highlighting);
+
+        const commitRows = views.filter((view) => view.kind === NodeKind.Commit && !view.isEvent);
+        const mainCells = commitRows.map((view) => view.cells[0]!);
+        const marked = mainCells.filter((cell) => cell.place !== null && cell.isHighlighted);
+        const places = marked.map((cell) => cell.place);
+        const distinct = [...new Set(places)];
+        const found = distinct.toSorted();
+        const expected = highlighted.toSorted();
+        expect(found).toEqual(expected);
+    });
+
+    it('highlights a closed group holding one of its commits', () => {
+        const rows = timelineRows(GRID.nodes, closed);
+
+        const views = timelineRowViews(rows, GRID.columns, highlighting);
+
+        const groups = views.map((view) => view.cells[0]!.isHighlighted);
+        expect(groups).toContain(true);
+    });
+
+    it('marks its own group, and names the order on that row only', () => {
+        const rows = timelineRows(byOrder.nodes, closed);
+
+        const views = timelineRowViews(rows, byOrder.columns, highlighting);
+
+        const own = views.filter((view) => !view.isConnector);
+        const marks = own.map((view) => [view.subject, view.isHighlighted]);
+        expect(marks).toEqual([[order!.subject, true]]);
+    });
+
+    it('highlights nothing while none is selected', () => {
+        const rows = timelineRows(GRID.nodes, () => true);
+
+        const views = timelineRowViews(rows, GRID.columns, AT_FORK);
+
+        const isAny = views.some(
+            (view) => view.isHighlighted || view.cells.some((cell) => cell.isHighlighted),
+        );
+        expect(isAny).toBe(false);
     });
 });

@@ -3,10 +3,13 @@
 ## Version and status
 
 - **Version:** `V1.0.0`, a built snapshot
-  ([FND-40](../../decisions/project-foundation.md#fnd-40--kinds-of-version)).
+  ([FND-40](../../decisions/project-foundation/versions.md#fnd-40--kinds-of-version)).
 - **State described:** the real service's working tree on 2026-11-03
-  ([FND-45](../../decisions/project-foundation.md#fnd-45--version-folder-layout)).
-- **Status:** Observed in the real service's code and documents.
+  ([FND-45](../../decisions/project-foundation/versions.md#fnd-45--version-folder-layout)).
+- **Status:** Observed in the real service's code and documents, and confirmed by the user on
+  2026-11-03.
+  [I01-E02-004](../../../backlogs/Initiatives/Archive/Done/I01-requirements-and-backlog-creation/Archive/Done/I01-E02-delivery-domain-inventory/Archive/Done/High/I01-E02-004-failure-modes-races-and-drift.md)
+  recorded the confirmation.
 
 Each entry names the failure, what the real service does, and what can still go wrong. The IDs
 are the simulator's, except C1 to C4, which are the real service's own conflict cases. The
@@ -61,7 +64,7 @@ mechanisms are in the [module communication](module-communication.md) page.
 - **Push provider:** temporary failures are retried up to 5 times; an invalid device is removed;
   other errors are permanent failures.
 - **Devices:** a device can be offline, in the background, or receive duplicates
-  ([FND-46](../../decisions/project-foundation.md#fnd-46--simulation-detail)).
+  ([FND-46](../../decisions/project-foundation/simulation-model.md#fnd-46--simulation-detail)).
 
 ## Data problems
 

@@ -15,6 +15,92 @@
     </li>
     }
 </ul>
+<h3>Saved runs</h3>
+@if (savedRuns().length === 0) {
+<p class="empty" data-testid="no-saved-runs">
+    No saved runs yet. Save one from the run controls while it runs.
+</p>
+} @else {
+<ul class="saved-runs">
+    @for (item of savedRuns(); track item.id) {
+    <li class="card saved-card" data-testid="saved-run">
+        <div class="saved-heading">
+            <span class="card-name" data-testid="saved-run-name">{{ item.row.name }}</span>
+            <span class="saved-details" data-testid="saved-run-details"
+                >{{ item.row.level }} · {{ item.row.size }} · {{ item.row.commits }} · {{
+                item.row.branches }} · saved {{ item.row.savedAt }}</span
+            >
+        </div>
+        <div class="saved-actions">
+            <button
+                type="button"
+                data-testid="saved-run-open"
+                appTooltip="Open the run where it was saved, in place of the run being watched"
+                [attr.aria-label]="'Open saved run: ' + item.row.name"
+                [disabled]="opening() !== null"
+                (click)="askToOpen(item.id)"
+            >
+                Open
+            </button>
+            <button
+                type="button"
+                data-testid="saved-run-move"
+                appTooltip="Keep more or less of the run: everything opens fast, the minimum takes less room"
+                [disabled]="opening() !== null"
+                (click)="askToMove(item.id, item.row)"
+            >
+                {{ item.row.moveLabel }}
+            </button>
+            <button
+                type="button"
+                data-testid="saved-run-snapshot"
+                appTooltip="Rerun the saved run with its own versions and the newest, and say whether every commit comes out the same"
+                [disabled]="opening() !== null || testing() !== null"
+                (click)="snapshotTest(item.id)"
+            >
+                {{ testing() === item.id ? 'Testing…' : 'Snapshot test' }}
+            </button>
+            <button
+                type="button"
+                data-testid="saved-run-delete"
+                appTooltip="Delete the saved run from this browser"
+                [disabled]="opening() !== null"
+                (click)="askToDelete(item.id, item.row)"
+            >
+                Delete
+            </button>
+        </div>
+        @if (pending(); as asked) { @if (asked.id === item.id) {
+        <div class="confirm" data-testid="saved-run-confirm" role="alertdialog">
+            <span>{{ asked.question }}</span>
+            <button type="button" data-testid="saved-run-confirm-yes" (click)="confirm(item.row)">
+                {{ asked.confirmLabel }}
+            </button>
+            <button type="button" data-testid="saved-run-confirm-no" (click)="pending.set(null)">
+                Cancel
+            </button>
+        </div>
+        } } @if (opening(); as progress) { @if (progress.id === item.id) {
+        <span class="progress" data-testid="saved-run-progress" role="status"
+            >Opening… {{ progress.done }} of {{ progress.total }} commits</span
+        >
+        } } @if (snapshot(); as found) { @if (found.id === item.id) {
+        <ul class="snapshot" data-testid="saved-run-snapshot-result" role="status">
+            @for (line of found.lines; track $index) {
+            <li [class.is-match]="line.isMatch" [class.invalid]="!line.isMatch">
+                {{ line.text }}
+            </li>
+            }
+        </ul>
+        } } @if (rowProblem(); as problem) { @if (problem.id === item.id) {
+        <span class="invalid" data-testid="saved-run-problem" role="alert"
+            >{{ problem.message }}</span
+        >
+        } }
+    </li>
+    }
+</ul>
+}
 <h3>Your own scenario</h3>
 <div
     class="drop-area"
