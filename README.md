@@ -44,6 +44,18 @@ npm run dev        # start the app (Vite)
 Design, architecture and decisions are in [`docs/`](docs/README.md); start with
 [`docs/design/README.md`](docs/design/README.md).
 
+## Ownership
+
+DeliveriesSimulator is written and owned by Mariksel Azemaj, who holds the copyright in
+[LICENSE](LICENSE). All the code, documents, and history in this repository are the author's own
+work.
+
+The deliveries service it simulates, called "the real service" in the documents, has the same
+owner. Its documentation and source code are used as sources of business rules with the owner's
+consent. Its name and location are left out on purpose: see
+[FND-2](docs/design/decisions/project-foundation/purpose-and-scope.md#fnd-2--real-service-not-named)
+and [FND-23](docs/design/decisions/project-foundation/stages-and-process.md#fnd-23--safe-to-publish).
+
 ## License
 
 [MIT](LICENSE)

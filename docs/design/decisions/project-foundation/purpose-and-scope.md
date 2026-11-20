@@ -18,6 +18,11 @@ These documents do not name the real service. They call it "the real service".
 Amended 2026-11-03 by the user: the documents do not record its name or location either, which
 resolves the former U1. See [FND-23](stages-and-process.md#fnd-23--safe-to-publish).
 
+Amended 2026-11-20 by the user: the real service has the same owner as this project, so its
+documentation and source code are used as rule sources
+([FND-9](#fnd-9--sources-of-business-rules)) with the owner's consent. See
+[Ownership](../../../../README.md#ownership).
+
 ### FND-5 — No integrations today
 
 The Integrations section stays, with an empty map. There are no integrations today.
